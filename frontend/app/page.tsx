@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import NewTaskForm from "./NewTaskForm";
-import TaskList from "./TaskList";
+import TaskList from "./taskList";
 
 // Defining data structure of task
 export interface Task {

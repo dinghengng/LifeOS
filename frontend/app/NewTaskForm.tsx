@@ -3,23 +3,27 @@
 // “This component must run in the browser (client side), not only on the server.”
 "use client"; 
 
-import { useState } from "react"; // In short, useState allows a React component to: remember data, change data when users interact, automatically update the UI when the data changes
+import { useState, SyntheticEvent } from "react"; // In short, useState allows a React component to: remember data, change data when users interact, automatically update the UI when the data changes
 
-export default function NewTaskForm() {
+// 1. Tell TypeScript we expect a function called 'onAddTask'
+interface NewTaskFormProps {
+  onAddTask: (task: string) => void;
+}
+
+export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
   // 2. This is React State! 
   // 'taskTitle' is the current text. 
   // 'setTaskTitle' is the function we use to update it.
   const [taskTitle, setTaskTitle] = useState("");
 
   // 3. This function runs when the user clicks "Add" or hits Enter
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault(); // Prevents the browser from refreshing the page
     
     if (taskTitle.trim() === "") return; // Don't add empty tasks
 
-    // For now, we will just alert the screen to prove it works!
-    // Later, this is where we will send the data to Person B's backend database.
-    alert("You are trying to add: " + taskTitle);
+    //we trigger the wire and send the text!
+    onAddTask(taskTitle);
 
     // Clear the input box after adding
     setTaskTitle(""); 

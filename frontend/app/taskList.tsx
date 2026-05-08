@@ -15,6 +15,20 @@ export default function TaskList({ tasks, onToggleTask }: TaskListProps) {
     return <p className="text-slate-500 text-center mt-4">No tasks yet. Add one above!</p>;
   }
 
+export default function TaskList({ tasks, onDeleteTask }) {
+  return (
+    <div>
+      <h2>Your Tasks</h2>
+      <ul>
+        {tasks.map((task, index) => (
+          <li key={index}>
+            {task}
+            <button 
+              onClick={() => onDeleteTask(index)}
+              className="ml-2 text-red-500 hover:text-red-700 font-bold"
+            >
+              ✕
+            </button>
   return (
     <div>
       <h2 className="text-xl font-bold text-slate-700 mb-4">Your Tasks</h2>

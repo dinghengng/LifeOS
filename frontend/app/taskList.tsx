@@ -1,48 +1,44 @@
-"use client"; // Always at the very top!
+"use client"; // Tells Next.js this component is interactive (checkboxes/buttons)
 
-// Import the Task interface we just created in the Page file
 import { Task } from "./page";
 
-//defines what it takes in and produces
+// We added 'onDeleteTask' to the list of required items.
 interface TaskListProps {
-  tasks: Task[]; // Now it expects an array of Task objects!
-  onToggleTask: (id: number) => void; //takes in id of type number and returns void
+  tasks: Task[]; 
+  onToggleTask: (id: number) => void; 
+  onDeleteTask: (id: number) => void; 
 }
 
-export default function TaskList({ tasks, onToggleTask }: TaskListProps) {
+// THE COMPONENT: We grab all three props at once here.
+export default function TaskList({ tasks, onToggleTask, onDeleteTask }: TaskListProps) {
   
+  // Shows a friendly message if the user has a clear schedule.
   if (tasks.length === 0) {
-    return <p className="text-slate-500 text-center mt-4">No tasks yet. Add one above!</p>;
+    return (
+      <p className="text-slate-500 text-center mt-6 italic">
+        No tasks yet. Take a break!
+      </p>
+    );
   }
 
-export default function TaskList({ tasks, onDeleteTask }) {
   return (
-    <div>
-      <h2>Your Tasks</h2>
-      <ul>
-        {tasks.map((task, index) => (
-          <li key={index}>
-            {task}
-            <button 
-              onClick={() => onDeleteTask(index)}
-              className="ml-2 text-red-500 hover:text-red-700 font-bold"
-            >
-              ✕
-            </button>
-  return (
-    <div>
-      <h2 className="text-xl font-bold text-slate-700 mb-4">Your Tasks</h2>
+    <div className="mt-6">
+      <h2 className="text-xl font-bold text-slate-700 mb-4 border-b pb-2">
+        Your Tasks
+      </h2>
       
       <ul className="space-y-3">
         {tasks.map((task) => (
           <li 
-            key={task.id} 
-            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-              task.isCompleted ? "bg-slate-100 border-slate-200" : "bg-slate-50 border-slate-300"
-            }`} // If the task is completed, we give it a lighter background and border color
+            key={task.id} // Essential for React to keep track of which item is which
+            className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+              task.isCompleted 
+                ? "bg-slate-100 border-slate-200 opacity-75" 
+                : "bg-white border-slate-300 shadow-sm"
+            }`}
           > 
-          {/* We have a checkbox and the task title on the left, and a delete button on the right. */}
             <div className="flex items-center gap-3">
+              {/* CHECKBOX: Triggers the toggle function */}
               <input 
                 type="checkbox" 
                 checked={task.isCompleted}
@@ -50,13 +46,22 @@ export default function TaskList({ tasks, onDeleteTask }) {
                 className="w-5 h-5 cursor-pointer accent-indigo-600" 
               /> 
 
-              {/* If the task is completed, we strike through the text and make it lighter. Otherwise, it's normal. */}
-              <span className={`font-medium ${
+              {/* TEXT: Strikes through if task.isCompleted is true */}
+              <span className={`font-medium transition-all ${
                 task.isCompleted ? "line-through text-slate-400" : "text-slate-700"
               }`}>
                 {task.title}
               </span>
             </div>
+
+            {/* DELETE BUTTON: Triggers the delete function */}
+            <button 
+              onClick={() => onDeleteTask(task.id)}
+              className="text-slate-400 hover:text-red-500 transition-colors px-2 text-xl"
+              title="Delete task"
+            >
+              ✕
+            </button>
           </li>
         ))}
       </ul>

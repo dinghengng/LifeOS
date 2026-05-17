@@ -1,6 +1,6 @@
 "use client"; // Tells Next.js this component is interactive (checkboxes/buttons)
 
-import { Task } from "./page";
+import { Task } from "../app/page";
 
 // We added 'onDeleteTask' to the list of required items.
 interface TaskListProps {

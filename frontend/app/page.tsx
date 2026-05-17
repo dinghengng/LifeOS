@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import NewTaskForm from "./NewTaskForm";
-import TaskList from "./TaskList";
+import NewTaskForm from "../components/NewTaskForm";
+import TaskList from "../components/TaskList";
 
 // Defining data structure of task
 export interface Task {

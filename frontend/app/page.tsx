@@ -3,65 +3,114 @@
 import { useState, useEffect } from 'react';
 import NewTaskForm from "../components/NewTaskForm";
 import TaskList from "../components/TaskList";
+// our UI for adding and displaying tasks
 
-
-// Defining data structure of task
+// Defining data structure of task (React or frontend version)
 export interface Task {
   id: number;
   title: string;
   isCompleted: boolean;
 }
 
+// Database/backend format
+interface DBTask {
+  id: number;
+  title: string;
+  is_completed: boolean;
+}
+
 export default function Page() {
-  // Start with empty array (server and client both see this initially)
+  // Start with empty array 
   // Task objects will be stored in an array in React State.
   const [tasks, setTasks] = useState<Task[]>([]);
-
-  // LOCALSTORAGE STEP 1: Load tasks from browser storage AFTER first render
-  // This runs only once when the component mounts (empty [] dependency)
-  // By loading AFTER hydration, we avoid server/client mismatch
+  // run when pages load then fetch tasks from PostgreSQL when the page loads
   useEffect(() => {
-    const savedTasks = localStorage.getItem('lifeos-tasks');
-    if (savedTasks) {
-      // If we found saved tasks, parse the JSON string back into an array
-      setTasks(JSON.parse(savedTasks) as Task[]);
-    }
-  }, []); // Empty array = run once on mount, never again
-
-  // LOCALSTORAGE STEP 2: Automatically save to browser storage whenever tasks change
-  // useEffect runs AFTER the component renders
-  // The [tasks] dependency means: "run this effect whenever the tasks array changes"
-  useEffect(() => {
-    // Convert our tasks array to a JSON string and save it
-    // This happens automatically after every add, delete, or toggle!
-    localStorage.setItem('lifeos-tasks', JSON.stringify(tasks));
-  }, [tasks]); // Watch the tasks array - save whenever it changes
-
-  // #1: ADDING TASKS
-  const addTask = (titleString: string) => {
-    const newTask: Task = {
-      id: Date.now(), // Unique ID
-      title: titleString,
-      isCompleted: false,
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch('http://localhost:5001/tasks');
+        const jsonData = await response.json();
+        // map the data here cos SQL uses snake but react uses camelcase
+        const formattedTasks = jsonData.map((task: DBTask) => ({
+          id: task.id,
+          title: task.title,
+          isCompleted: task.is_completed
+        }));
+        
+        setTasks(formattedTasks); //save into react state
+      } catch (err: unknown) {
+          if (err instanceof Error) {
+            console.error("Error fetching tasks:", err.message);
+          }
+        }
     };
-    setTasks([...tasks, newTask]);
+
+    fetchTasks();
+  }, []); // Empty array = runs once on mount
+
+  // Add a new task to PostgreSQL
+  const addTask = async (titleString: string) => {
+    try {
+      const response = await fetch('http://localhost:5001/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: titleString })
+      });
+      
+      // The backend gives us back the newly created row, complete with its real Database ID
+      const newTaskDB = await response.json();
+      
+      const newTask: Task = {
+        id: newTaskDB.id, 
+        title: newTaskDB.title,
+        isCompleted: newTaskDB.is_completed,
+      };
+
+      setTasks([...tasks, newTask]); //adds new task to list
+    } catch (err: unknown) {
+  if (err instanceof Error) {
+      console.error("Error adding task:", err.message);
+      }
+    }
   };
 
-  // #2: TOGGLING TASKS (Check/Uncheck)
-  const toggleTask = (taskId: number) => {
-    setTasks(tasks.map((task) => 
-      task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task
-    ));
+  // Update task completion status 
+  const toggleTask = async (taskId: number) => {
+    // Find the current status so we can flip it
+    const taskToToggle = tasks.find(t => t.id === taskId);
+    if (!taskToToggle) return;
+    const newStatus = !taskToToggle.isCompleted;
+    try {
+      await fetch(`http://localhost:5001/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isCompleted: newStatus })
+      });
+      // Update the React UI to show changes
+      setTasks(tasks.map((task) => 
+        task.id === taskId ? { ...task, isCompleted: newStatus } : task
+      )); //only update that one
+    } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error("Error toggling task:", err.message);
+    }
+  }
   };
 
-  // #3: DELETING TASKS
-  // Instead of index, we use the unique ID to find the task to remove
-  const deleteTask = (idToDelete: number) => {
-    // .filter keeps everything that DOES NOT match the ID we want to kill
-    setTasks(tasks.filter((task) => task.id !== idToDelete));
+  // Remove a task from PostgreSQL
+  const deleteTask = async (idToDelete: number) => {
+    try {
+      await fetch(`http://localhost:5001/tasks/${idToDelete}`, {
+        method: 'DELETE'
+      });
+      // Remove it from the UI
+      setTasks(tasks.filter((task) => task.id !== idToDelete));
+    } catch (err: unknown) {
+  if (err instanceof Error) {
+    console.error("Error deleting task:", err.message);
+  }
+}
   };
 
-  // 3. THE BODY: One single return statement for the whole UI
   return (
     <main className="min-h-screen bg-slate-100 flex flex-col items-center py-10">
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
@@ -70,20 +119,13 @@ export default function Page() {
           LifeOS Tasks
         </h1>
 
-        {/* Handing the 'Add' wire to the form */}
         <NewTaskForm onAddTask={addTask} />
 
-        {/* Handing THREE things to the list:
-          1. The data (tasks)
-          2. The toggle wire (onToggleTask)
-          3. The delete wire (onDeleteTask)
-        */}
         <TaskList 
           tasks={tasks} 
           onToggleTask={toggleTask} 
           onDeleteTask={deleteTask} 
         />
-
       </div>
     </main>
   );

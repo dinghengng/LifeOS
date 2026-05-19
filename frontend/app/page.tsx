@@ -36,7 +36,10 @@ export default function Page() {
       try {
         setError(null);            // clear any previous error
         setLoading(true);          // load
-        const response = await fetch('http://localhost:5001/tasks');
+
+        await new Promise((resolve) => setTimeout(resolve, 1500)); // artificial delay
+
+        const response = await fetch('http://localhost:5001/tasks'); // test wrong path here
 
         if (!response.ok) {
           throw new Error(`Failed to fetch tasks (status ${response.status})`);
@@ -69,7 +72,7 @@ export default function Page() {
   const addTask = async (titleString: string) => {
     try {
       setError(null);
-      const response = await fetch('http://localhost:5001/tasks', {
+      const response = await fetch('http://localhost:5001/tasks', { // test wrong path here
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: titleString })
@@ -107,7 +110,7 @@ export default function Page() {
 
     try {
       setError(null);
-      const response = await fetch(`http://localhost:5001/tasks/${taskId}`, {
+      const response = await fetch(`http://localhost:5001/tasks/${taskId}`, { // test wrong path here
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isCompleted: newStatus })
@@ -134,7 +137,7 @@ export default function Page() {
   const deleteTask = async (idToDelete: number) => {
     try {
       setError(null);
-      const response = await fetch(`http://localhost:5001/tasks/${idToDelete}`, {
+      const response = await fetch(`http://localhost:5001/tasks/${idToDelete}`, { // test wrong path here
         method: 'DELETE'
       });
 

@@ -32,11 +32,11 @@ app.get('/tasks', async (req, res) => {
 // Triggers when the client pushes new entry details to local host for tasks 
 app.post('/tasks', async (req, res) => {
   try {
-    const { title } = req.body;
+    const { title, dueDate } = req.body;
     // insert the dynamic title variable into our database 
     const newTask = await pool.query(
-      "INSERT INTO tasks (title) VALUES($1) RETURNING *",
-      [title]
+      "INSERT INTO tasks (title, due_date) VALUES($1, $2) RETURNING *",
+      [title, dueDate || null] // allow empty deadlines
     );
     // Return the newly spawned table row record directly back to our active client interface
     res.json(newTask.rows[0]);

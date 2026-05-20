@@ -9,6 +9,18 @@ interface TaskListProps {
   onDeleteTask: (id: number) => void; 
 }
 
+// helper function for deadline formatting
+function formatDeadline(isoString: string): string {
+  const date = new Date(isoString);
+  return `Due: ${date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+}
+
 // THE COMPONENT: We grab all three props at once here.
 export default function TaskList({ tasks, onToggleTask, onDeleteTask }: TaskListProps) {
   
@@ -46,12 +58,21 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask }: TaskList
                 className="w-5 h-5 cursor-pointer accent-indigo-600" 
               /> 
 
-              {/* TEXT: Strikes through if task.isCompleted is true */}
-              <span className={`font-medium transition-all ${
-                task.isCompleted ? "line-through text-slate-400" : "text-slate-700"
-              }`}>
-                {task.title}
-              </span>
+              <div className="flex flex-col">
+                {/* TEXT: Strikes through if task.isCompleted is true */}
+                <span className={`font-medium transition-all ${
+                  task.isCompleted ? "line-through text-slate-400" : "text-slate-700"
+                  }`}>
+                  {task.title}
+                </span>
+
+                {/* DEADLINE: Only show if we have one */}
+                {task.dueDate && (
+                  <span className="text-xs text-slate-500">
+                  {formatDeadline(task.dueDate)}
+                   </span>
+                )}
+              </div>
             </div>
 
             {/* DELETE BUTTON: Triggers the delete function */}

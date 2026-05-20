@@ -11,6 +11,7 @@ export interface Task {
   id: number;
   title: string;
   isCompleted: boolean;
+  dueDate: string | null; // allow empty deadline
 }
 
 
@@ -19,6 +20,7 @@ interface DBTask {
   id: number;
   title: string;
   is_completed: boolean;
+  due_date: string | null; // allow empty deadline
 }
 
 
@@ -37,7 +39,7 @@ export default function Page() {
         setError(null);            // clear any previous error
         setLoading(true);          // load
 
-        await new Promise((resolve) => setTimeout(resolve, 1500)); // artificial delay
+        // await new Promise((resolve) => setTimeout(resolve, 1500)); // artificial delay
 
         const response = await fetch('http://localhost:5001/tasks'); // test wrong path here
 
@@ -50,7 +52,8 @@ export default function Page() {
         const formattedTasks = jsonData.map((task: DBTask) => ({
           id: task.id,
           title: task.title,
-          isCompleted: task.is_completed
+          isCompleted: task.is_completed,
+          dueDate: task.due_date,
         }));
         
         setTasks(formattedTasks); //save into react state
@@ -69,13 +72,13 @@ export default function Page() {
 
 
   // Add a new task to PostgreSQL
-  const addTask = async (titleString: string) => {
+  const addTask = async (titleString: string, dueDate: string | null) => {
     try {
       setError(null);
       const response = await fetch('http://localhost:5001/tasks', { // test wrong path here
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: titleString })
+        body: JSON.stringify({ title: titleString, dueDate })
       });
 
       if (!response.ok) {
@@ -89,6 +92,7 @@ export default function Page() {
         id: newTaskDB.id, 
         title: newTaskDB.title,
         isCompleted: newTaskDB.is_completed,
+        dueDate: newTaskDB.due_date,
       };
 
       setTasks([...tasks, newTask]); //adds new task to list
@@ -157,8 +161,8 @@ export default function Page() {
 
 
   return (
-    <main className="min-h-screen bg-slate-100 flex flex-col items-center py-10">
-      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+    <main className="min-h-screen bg-slate-100 flex justify-center py-10 px-4">
+      <div className="bg-white p-10 rounded-2xl shadow-md w-full max-w-3xl">
         
         <h1 className="text-3xl font-bold text-slate-800 mb-4 text-center">
           LifeOS Tasks

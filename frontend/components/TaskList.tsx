@@ -91,19 +91,20 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask }: TaskList
                     {task.title}
                   </span>
 
-                  {/* DEADLINE: Only show if we have one */}
-                  {task.dueDate && (
-                    <span className="text-xs text-slate-500">
-                      {formatDeadline(task.dueDate)}
-                    </span>
-                  )}
+                  {/* Deadline and priority on the same row */}
+{(task.dueDate || task.priority !== "none") && (
+  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+    {task.dueDate && (
+      <span>{formatDeadline(task.dueDate)}</span>
+    )}
 
-                  {/* TASK PRIORITY: default none */}
-                  {task.priority !== "none" && (
-                    <span className="inline-block mt-2 w-fit text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
-                      {priorityLabel[task.priority]}
-                    </span>
-                  )}
+    {task.priority !== "none" && (
+      <span className="inline-block rounded-full bg-slate-100 px-2 py-1 text-slate-700">
+        {priorityLabel[task.priority]}
+      </span>
+    )}
+  </div>
+)}
                 </div>
               </div>
 

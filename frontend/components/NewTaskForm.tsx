@@ -63,52 +63,51 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
   };
 
   return (
-    // 4. We use a <form> tag so the user can press the 'Enter' key to submit
-    <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
-      <div className="flex gap-2">
-        <input 
-        type="text" 
-        placeholder="What needs to be done?" 
-        // 5. We connect the input box directly to our React State memory
+  <form
+    onSubmit={handleSubmit}
+    className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+  >
+    <div className="flex flex-col gap-3 md:flex-row md:items-center">
+      <input
+        type="text"
+        placeholder="What needs to be done?"
         value={taskTitle}
         onChange={(e) => setTaskTitle(e.target.value)}
-        className="border border-slate-300 rounded-lg p-2 w-full focus:outline-none focus:border-indigo-500"
-        />
-        <button 
-          type="submit" 
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
-        >
-          Add
-        </button>
-      </div>
+        className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
 
-      <div className="flex flex-wrap gap-3 items-center">
-        <select
-          value={taskPriority}
-          onChange={(e) => setTaskPriority(e.target.value as Priority)}
-          className="border rounded px-3 py-2"
-        >
-          <option value="none">None</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="low">Low</option>
-        </select>
-        <label className="text-sm text-slate-600">
-          Deadline:
-        </label>
-        <input
-          type="date"
-          value={taskDueDate}
-          onChange={(e) => setTaskDueDate(e.target.value)}
-          className="border border-slate-300 rounded-lg p-1 text-sm focus:outline-none focus:border-indigo-500"
-        />
-        <input
-          type="time"
-          value={taskDueTime}
-          onChange={(e) => setTaskDueTime(e.target.value)}
-          className="border border-slate-300 rounded-lg p-1 text-sm focus:outline-none focus:border-indigo-500"
-        />
-      </div>
-    </form>
-  );
+      <select
+        value={taskPriority}
+        onChange={(e) => setTaskPriority(e.target.value as Priority)}
+        className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        <option value="none">Priority</option>
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="low">Low</option>
+      </select>
+
+      <input
+        type="date"
+        value={taskDueDate}
+        onChange={(e) => setTaskDueDate(e.target.value)}
+        className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+
+      <input
+        type="time"
+        value={taskDueTime}
+        onChange={(e) => setTaskDueTime(e.target.value)}
+        className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+
+      <button
+        type="submit"
+        className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white transition-colors hover:bg-indigo-700"
+      >
+        Add Task
+      </button>
+    </div>
+  </form>
+);
 }

@@ -5,9 +5,10 @@
 
 import { useState, SyntheticEvent } from "react"; // In short, useState allows a React component to: remember data, change data when users interact, automatically update the UI when the data changes
 
+type Priority = "critical" | "high" | "low" | "none";
 // 1. Tell TypeScript we expect a function called 'onAddTask'
 interface NewTaskFormProps {
-  onAddTask: (task: string, dueDate: string | null) => void;
+  onAddTask: (task: string, dueDate: string | null, priority: Priority) => void;
 }
 
 export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
@@ -17,6 +18,7 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDueDate, setTaskDueDate] = useState(""); // due date state
   const [taskDueTime, setTaskDueTime] = useState(""); // due time state
+  const [taskPriority, setTaskPriority] = useState<Priority>("none"); // priority state
 
   // 3. This function runs when the user clicks "Add" or hits Enter
   const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
@@ -41,12 +43,6 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
       // Build a LOCAL date, not a UTC string.
       const localDate = new Date(year, month - 1, day, hour, minute);
 
-      // Debug logs (you can remove later)
-      console.log("taskDueDate:", taskDueDate);
-      console.log("taskDueTime:", taskDueTime);
-      console.log("localDate (local):", localDate.toString());
-      console.log("combinedDueDate (ISO UTC):", localDate.toISOString());
-
       // validation to ensure deadline is in the future
       if (localDate.getTime() <= now.getTime()) {
         alert("Deadline must be in the future.");
@@ -57,12 +53,13 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
     }
 
     //we trigger the wire and send the text!
-    onAddTask(taskTitle, combinedDueDate);
+    onAddTask(taskTitle, combinedDueDate, taskPriority);
 
     // Clear the input box after adding
     setTaskTitle("");
     setTaskDueDate("");
     setTaskDueTime("");
+    setTaskPriority("none");
   };
 
   return (
@@ -86,6 +83,16 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">
+        <select
+          value={taskPriority}
+          onChange={(e) => setTaskPriority(e.target.value as Priority)}
+          className="border rounded px-3 py-2"
+        >
+          <option value="none">None</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="low">Low</option>
+        </select>
         <label className="text-sm text-slate-600">
           Deadline:
         </label>

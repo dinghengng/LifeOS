@@ -5,13 +5,14 @@ import NewTaskForm from "../components/NewTaskForm";
 import TaskList from "../components/TaskList";
 // our UI for adding and displaying tasks
 
-
+export type Priority = "critical" | "high" | "low" | "none";
 // Defining data structure of task (React or frontend version)
 export interface Task {
   id: number;
   title: string;
   isCompleted: boolean;
   dueDate: string | null; // allow empty deadline
+  priority: Priority; // using defined type above
 }
 
 
@@ -21,7 +22,23 @@ interface DBTask {
   title: string;
   is_completed: boolean;
   due_date: string | null; // allow empty deadline
+  priority: Priority;
 }
+
+// sorting logic
+const priorityRank: Record<Priority, number> = {
+  critical: 1,
+  high: 2,
+  low: 3,
+  none: 4,
+};
+
+// boolean to check if due date is present
+const hasDueTime = (dueDate: string | null) => {
+  if (!dueDate) return false;
+  // For now, treat any non-null dueDate as “timed”
+  return true;
+};
 
 
 export default function Page() {
@@ -30,6 +47,7 @@ export default function Page() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);   // loading flag
   const [error, setError] = useState<string | null>(null); // error
+  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all"); // prio flag
 
 
   // run when pages load then fetch tasks from PostgreSQL when the page loads
@@ -54,6 +72,7 @@ export default function Page() {
           title: task.title,
           isCompleted: task.is_completed,
           dueDate: task.due_date,
+          priority: task.priority ?? "none", // default is none
         }));
         
         setTasks(formattedTasks); //save into react state
@@ -72,13 +91,13 @@ export default function Page() {
 
 
   // Add a new task to PostgreSQL
-  const addTask = async (titleString: string, dueDate: string | null) => {
+  const addTask = async (titleString: string, dueDate: string | null, priority: Priority = "none") => {
     try {
       setError(null);
       const response = await fetch('http://localhost:5001/tasks', { // test wrong path here
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: titleString, dueDate })
+        body: JSON.stringify({ title: titleString, dueDate, priority, })
       });
 
       if (!response.ok) {
@@ -93,6 +112,7 @@ export default function Page() {
         title: newTaskDB.title,
         isCompleted: newTaskDB.is_completed,
         dueDate: newTaskDB.due_date,
+        priority: newTaskDB.priority ?? "none",
       };
 
       setTasks([...tasks, newTask]); //adds new task to list
@@ -159,6 +179,33 @@ export default function Page() {
     }
   };
 
+  // apply the priority filter
+  const filteredTasks = tasks.filter((task) => {
+  if (priorityFilter === "all") return true;
+  return task.priority === priorityFilter;
+  });
+
+  // nested sort: timed tasks first, then by priority
+  const visibleTasks = [...filteredTasks].sort((a, b) => {
+  const aHasTime = hasDueTime(a.dueDate);
+  const bHasTime = hasDueTime(b.dueDate);
+
+  if (aHasTime && !bHasTime) return -1;
+  if (!aHasTime && bHasTime) return 1;
+
+  const priorityDiff = priorityRank[a.priority] - priorityRank[b.priority];
+  if (priorityDiff !== 0) return priorityDiff;
+
+  if (a.dueDate && b.dueDate) {
+    return (
+      new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+    );
+  }
+
+  // default to task created first in the list
+  return a.id - b.id;
+  });
+
 
   return (
     <main className="min-h-screen bg-slate-100 flex justify-center py-10 px-4">
@@ -180,8 +227,27 @@ export default function Page() {
           <>
             <NewTaskForm onAddTask={addTask} />
 
+            {/* Priority filter buttons */}
+            <div className="flex gap-2 mb-4 flex-wrap justify-center">
+              {["all", "critical", "high", "low", "none"].map((level) => (
+    <button
+      key={level}
+      onClick={() => setPriorityFilter(level as Priority | "all")}
+      className={`px-3 py-1.5 rounded-full text-sm border ${
+        priorityFilter === level
+          ? "bg-slate-900 text-white border-slate-900"
+          : "bg-white text-slate-700 border-slate-300"
+      }`}
+    >
+      {level === "all"
+        ? "All"
+        : level.charAt(0).toUpperCase() + level.slice(1)}
+    </button>
+  ))}
+            </div>
+
             <TaskList 
-              tasks={tasks} 
+              tasks={visibleTasks} 
               onToggleTask={toggleTask} 
               onDeleteTask={deleteTask} 
             />

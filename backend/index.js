@@ -32,14 +32,15 @@ app.get('/tasks', async (req, res) => {
 // Triggers when the client pushes new entry details to local host for tasks 
 app.post('/tasks', async (req, res) => {
   try {
-    const { title, dueDate } = req.body;
+    const { title, dueDate, priority } = req.body;
+    const safePriority = ["critical", "high", "low", "none"].includes(priority) ? priority : "none";
     // insert the dynamic title variable into our database 
     const newTask = await pool.query(
-      "INSERT INTO tasks (title, due_date) VALUES($1, $2) RETURNING *",
-      [title, dueDate || null] // allow empty deadlines
+      "INSERT INTO tasks (title, due_date, priority) VALUES($1, $2, $3) RETURNING *",
+      [title, dueDate || null, safePriority] // allow empty deadlines
     );
     // Return the newly spawned table row record directly back to our active client interface
-    res.json(newTask.rows[0]);
+    res.status(201).json(newTask.rows[0]);
   } catch (err) {
     // Handle failures gracefully by outputting error details and returning server error code 500
     console.error(err.message);

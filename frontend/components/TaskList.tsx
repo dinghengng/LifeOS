@@ -6,7 +6,8 @@ import { Task, type Priority } from "../app/page";
 interface TaskListProps {
   tasks: Task[]; 
   onToggleTask: (id: number) => void; 
-  onDeleteTask: (id: number) => void; 
+  onDeleteTask: (id: number) => void;
+  onEditTask: (task: Task) => void; 
 }
 
 // helper function for deadline formatting
@@ -37,7 +38,7 @@ const priorityLabel: Record<Priority, string> = {
 };
 
 // THE COMPONENT: We grab all three props at once here.
-export default function TaskList({ tasks, onToggleTask, onDeleteTask }: TaskListProps) {
+export default function TaskList({ tasks, onToggleTask, onDeleteTask, onEditTask, }: TaskListProps) {
   
   // Shows a friendly message if the user has a clear schedule.
   if (tasks.length === 0) {
@@ -108,14 +109,25 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask }: TaskList
                 </div>
               </div>
 
-              {/* DELETE BUTTON: Triggers the delete function */}
-              <button
-                onClick={() => onDeleteTask(task.id)}
-                className="text-slate-400 hover:text-red-500 transition-colors px-2 text-xl"
-                title="Delete task"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-1">
+  {/* EDIT BUTTON: opens the edit popup */}
+  <button
+    onClick={() => onEditTask(task)}
+    className="text-slate-400 hover:text-slate-700 transition-colors px-2 text-lg"
+    title="Edit task"
+  >
+    ✎
+  </button>
+
+  {/* DELETE BUTTON: Triggers the delete function */}
+  <button
+    onClick={() => onDeleteTask(task.id)}
+    className="text-slate-400 hover:text-red-500 transition-colors px-2 text-xl"
+    title="Delete task"
+  >
+    ✕
+  </button>
+</div>
             </div>
           </div>
         </li>

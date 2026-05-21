@@ -8,13 +8,13 @@ require('dotenv').config();
 // Instantiating our application instance by calling the express function
 const app = express();
 //Setting our deployment port to check our .env file first, otherwise default to local port 5000
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json()); 
 
 
 // RETRIEVE ALL TASKS (GET REQUEST)
-// Triggers when the client accesses http://localhost:5000/tasks
+// Triggers when the client accesses http://localhost:5001/tasks
 app.get('/tasks', async (req, res) => {
   try {
     const allTasks = await pool.query("SELECT * FROM tasks ORDER BY id ASC");
@@ -49,7 +49,7 @@ app.post('/tasks', async (req, res) => {
 });
 
 // UPDATE TASK STATUS (PUT REQUEST)
-// Triggers when the client toggles completion at http://localhost:5000/tasks/:id
+// Triggers when the client toggles completion at http://localhost:5001/tasks/:id
 app.put('/tasks/:id', async (req, res) => {
   try {
     // Extract the variable route parameter target string (:id) out from the request URL path context
@@ -73,8 +73,39 @@ app.put('/tasks/:id', async (req, res) => {
   }
 });
 
+// EDIT TASK DETAILS (PATCH REQUEST)
+// Allows updating title, due date, and priority for a task
+app.patch('/tasks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, dueDate, priority } = req.body;
+
+    const safePriority = ["critical", "high", "low", "none"].includes(priority)
+      ? priority
+      : "none";
+
+    const updateTask = await pool.query(
+      `
+      UPDATE tasks
+      SET 
+        title = COALESCE($1, title),
+        due_date = COALESCE($2, due_date),
+        priority = COALESCE($3, priority)
+      WHERE id = $4
+      RETURNING *
+      `,
+      [title ?? null, dueDate ?? null, safePriority, id]
+    );
+
+    res.json(updateTask.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 // PERMANENTLY ERASE A TASK (DELETE REQUEST)
-// Triggers when the client strikes out a line item using http://localhost:5000/tasks/:id
+// Triggers when the client strikes out a line item using http://localhost:5001/tasks/:id
 app.delete('/tasks/:id', async (req, res) => {
   try {
     const { id } = req.params;

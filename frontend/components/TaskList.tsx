@@ -30,6 +30,14 @@ const priorityColors: Record<Priority, string> = {
   none: "bg-gray-300",
 };
 
+// to match label colours
+const priorityBadgeStyles: Record<Priority, string> = {
+  critical: "bg-red-50 text-red-700 border-red-200",
+  high: "bg-amber-50 text-amber-700 border-amber-200",
+  low: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  none: "bg-slate-50 text-slate-600 border-slate-200",
+};
+
 const priorityLabel: Record<Priority, string> = {
   critical: "Critical",
   high: "High",
@@ -100,10 +108,10 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onEditTask
     )}
 
     {task.priority !== "none" && (
-      <span className="inline-block rounded-full bg-slate-100 px-2 py-1 text-slate-700">
-        {priorityLabel[task.priority]}
-      </span>
-    )}
+  <span className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider ${priorityBadgeStyles[task.priority]}`}>
+    {priorityLabel[task.priority]}
+  </span>
+  )}
   </div>
 )}
                 </div>

@@ -1,4 +1,4 @@
-// 1. We MUST put this at the very top of interactive Next.js components!
+// We MUST put this at the very top of interactive Next.js components!
 // It tells Next.js: "Hey, this file needs to run in the user's browser, not just on the server."
 // “This component must run in the browser (client side), not only on the server.”
 "use client"; 
@@ -12,20 +12,16 @@ interface NewTaskFormProps {
 }
 
 export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
-  // 2. This is React State! 
-  // 'taskTitle' is the current text. 
-  // 'setTaskTitle' is the function we use to update it.
+  // taskTitle is the current text, then'setTaskTitle' is the function we use to update it.
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDueDate, setTaskDueDate] = useState(""); // due date state
   const [taskDueTime, setTaskDueTime] = useState(""); // due time state
   const [taskPriority, setTaskPriority] = useState<Priority>("none"); // priority state
 
-  // 3. This function runs when the user clicks "Add" or hits Enter
+  // runs when the user clicks "Add" or hits Enter
   const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault(); // Prevents the browser from refreshing the page
-    
     if (taskTitle.trim() === "") return; // Don't add empty tasks
-
     let combinedDueDate: string | null = null;
 
     if (taskDueDate || taskDueTime) {

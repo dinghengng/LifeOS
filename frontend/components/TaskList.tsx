@@ -70,65 +70,65 @@ export default function TaskList({ tasks, onToggleTask, onDeleteTask, onEditTask
             {/* PRIORITY BAR: shows task priority visually on the left */}
             <div className={`w-2 ${priorityColors[task.priority]}`} />
 
-            <div className="flex-1 flex items-center justify-between p-3">
-              <div className="flex items-center gap-3">
-                {/* CHECKBOX: Triggers the toggle function */}
-                <input
-                  type="checkbox"
-                  checked={task.isCompleted}
-                  onChange={() => onToggleTask(task.id)}
-                  className="w-5 h-5 cursor-pointer accent-indigo-600"
-                />
+            <div className="flex-1 flex items-center justify-between p-3 gap-3">
+  <div className="flex items-center gap-3 min-w-0">
+    {/* CHECKBOX: Triggers the toggle function */}
+    <input
+      type="checkbox"
+      checked={task.isCompleted}
+      onChange={() => onToggleTask(task.id)}
+      className="w-5 h-5 cursor-pointer accent-indigo-600 flex-none"
+    />
 
-                <div className="flex flex-col">
-                  {/* TEXT: Strikes through if task.isCompleted is true */}
-                  <span
-                    className={`font-medium transition-all ${
-                      task.isCompleted
-                        ? "line-through text-slate-400"
-                        : "text-slate-700"
-                    }`}
-                  >
-                    {task.title}
-                  </span>
-
-                  {/* Deadline and priority on the same row */}
-{(task.dueDate || task.priority !== "none") && (
-  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-    {task.dueDate && (
-      <span>{formatDeadline(task.dueDate)}</span>
-    )}
-
-    {task.priority !== "none" && (
-      <span className="inline-block rounded-full bg-slate-100 px-2 py-1 text-slate-700">
-        {priorityLabel[task.priority]}
+    <div className="flex flex-col min-w-0">
+      {/* TEXT: Strikes through if task.isCompleted is true */}
+      <span
+        className={`font-medium transition-all truncate ${
+          task.isCompleted
+            ? "line-through text-slate-400"
+            : "text-slate-700"
+        }`}
+      >
+        {task.title}
       </span>
-    )}
+
+      {/* Deadline and priority on the same row */}
+      {(task.dueDate || task.priority !== "none") && (
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          {task.dueDate && (
+            <span>{formatDeadline(task.dueDate)}</span>
+          )}
+
+          {task.priority !== "none" && (
+            <span className="inline-block rounded-full bg-slate-100 px-2 py-1 text-slate-700">
+              {priorityLabel[task.priority]}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
   </div>
-)}
-                </div>
-              </div>
 
-              <div className="flex items-center gap-1">
-  {/* EDIT BUTTON: opens the edit popup */}
-  <button
-    onClick={() => onEditTask(task)}
-    className="text-slate-400 hover:text-slate-700 transition-colors px-2 text-lg"
-    title="Edit task"
-  >
-    ✎
-  </button>
+  <div className="flex items-center gap-1 flex-none">
+    {/* EDIT BUTTON: opens the edit popup */}
+    <button
+      onClick={() => onEditTask(task)}
+      className="text-slate-400 hover:text-slate-700 transition-colors px-2 text-lg"
+      title="Edit task"
+    >
+      ✎
+    </button>
 
-  {/* DELETE BUTTON: Triggers the delete function */}
-  <button
-    onClick={() => onDeleteTask(task.id)}
-    className="text-slate-400 hover:text-red-500 transition-colors px-2 text-xl"
-    title="Delete task"
-  >
-    ✕
-  </button>
+    {/* DELETE BUTTON: Triggers the delete function */}
+    <button
+      onClick={() => onDeleteTask(task.id)}
+      className="text-slate-400 hover:text-red-500 transition-colors px-2 text-xl"
+      title="Delete task"
+    >
+      ✕
+    </button>
+  </div>
 </div>
-            </div>
           </div>
         </li>
       ))}

@@ -6,6 +6,13 @@ import TaskList from "../components/TaskList";
 import EditTaskForm from "../components/EditTaskForm";
 // our UI for adding and displaying tasks
 
+const BACKGROUNDS = [
+  "/bg-1.jpg",
+  "/bg-2.jpg",
+  "/bg-3.webp",
+  "/bg-4.avif"
+];
+
 export type Priority = "critical" | "high" | "low" | "none";
 // Defining data structure of task (React or frontend version)
 export interface Task {
@@ -51,6 +58,14 @@ export default function Page() {
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all"); // prio flag
   const [editingTask, setEditingTask] = useState<Task | null>(null); // edit state
   const [recentlyDeleted, setRecentlyDeleted] = useState<Task | null>(null); // undo delete
+
+  // for background
+  const [currentBg, setCurrentBg] = useState<string>("");
+  // choose random background
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * BACKGROUNDS.length);
+    setCurrentBg(BACKGROUNDS[randomIndex]);
+  }, []); 
 
   // run when pages load then fetch tasks from PostgreSQL when the page loads
   useEffect(() => {
@@ -264,13 +279,15 @@ export default function Page() {
 };
 
   return (
-    <main className="min-h-screen bg-slate-100 flex justify-center py-10 px-4">
-      <div className="bg-white p-10 rounded-2xl shadow-md w-full max-w-3xl">
-        
+    // Inside your main wrapper div in page.tsx:
+<main 
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex justify-center py-10 px-4 transition-all duration-1000 ease-in-out"
+      style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
+    >
+      <div className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 h-fit">  
         <h1 className="text-3xl font-bold text-slate-800 mb-4 text-center">
           LifeOS Tasks
         </h1>
-
         {error && (
           <p className="mb-4 text-sm text-red-600 text-center">
             {error}

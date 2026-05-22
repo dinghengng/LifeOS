@@ -57,6 +57,7 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null); // error
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all"); // prio flag
   const [editingTask, setEditingTask] = useState<Task | null>(null); // edit state
+  const [recentlyDeleted, setRecentlyDeleted] = useState<Task | null>(null); // undo delete
 
   // for background
   const [currentBg, setCurrentBg] = useState<string>("");

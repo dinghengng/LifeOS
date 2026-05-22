@@ -23,6 +23,9 @@ export default function EditTaskForm({
   const [priority, setPriority] = useState<Priority>(task.priority);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [titleError, setTitleError] = useState<string | null>(null);
+const [deadlineError, setDeadlineError] = useState<string | null>(null);
+const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialise due date fields 
   useEffect(() => {
@@ -43,42 +46,61 @@ export default function EditTaskForm({
     }
   }, [task]);
 
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value.slice(0, 150);
+  setTitle(value);
+
+  if (titleError && value.trim().length > 0) {
+    setTitleError(null);
+  }
+};
+
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    let combinedDueDate: string | null = null;
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) {
+    setTitleError("Title cannot be empty.");
+    return;
+  }
 
-    if (date || time) {
-      const now = new Date();
-      const todayStr = now.toISOString().slice(0, 10);
-      const dateStr = date || todayStr;
-      const [year, month, day] = dateStr.split("-").map(Number);
+  setIsSubmitting(true);
+  setTitleError(null);
+  setDeadlineError(null);
 
-      const timeStr = time || "23:59";
-      const [hour, minute] = timeStr.split(":").map(Number);
+  let combinedDueDate: string | null = null;
+  const now = new Date();
 
-      const localDate = new Date(year, month - 1, day, hour, minute);
+  // Graceful removal: if BOTH fields empty, treat as no deadline
+  if (!date && !time) {
+    combinedDueDate = null;
+  } else {
+    const todayStr = now.toISOString().slice(0, 10);
+    const dateStr = date || todayStr;
+    const [year, month, day] = dateStr.split("-").map(Number);
 
-      if (localDate.getTime() <= now.getTime()) {
-        alert("Deadline must be in the future.");
-        return;
-      }
+    const timeStr = time || "23:59";
+    const [hour, minute] = timeStr.split(":").map(Number);
 
-      combinedDueDate = localDate.toISOString();
+    const localDate = new Date(year, month - 1, day, hour, minute);
+
+    if (localDate.getTime() <= now.getTime()) {
+      setDeadlineError("Deadline must be in the future.");
+      setIsSubmitting(false);
+      return;
     }
-    
-    const trimmedTitle = title.trim();
-if (!trimmedTitle) {
-  alert("Title cannot be empty.");
-  return;
-}
 
-    onSave({
-      title: trimmedTitle,
-      dueDate: combinedDueDate,
-      priority,
-    });
-  };
+    combinedDueDate = localDate.toISOString();
+  }
+
+  onSave({
+    title: trimmedTitle,
+    dueDate: combinedDueDate,
+    priority,
+  });
+
+  setIsSubmitting(false);
+};
 
   return (
     <form
@@ -100,12 +122,13 @@ if (!trimmedTitle) {
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          placeholder="Task title"
-        />
+  type="text"
+  value={title}
+  onChange={handleTitleChange}
+  maxLength={150}
+  className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+  placeholder="Task title"
+/>
 
         <select
           value={priority}
@@ -119,26 +142,43 @@ if (!trimmedTitle) {
         </select>
 
         <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+  type="date"
+  value={date}
+  onChange={(e) => {
+    setDate(e.target.value);
+    if (deadlineError) setDeadlineError(null);
+  }}
+  className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+/>
 
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+<input
+  type="time"
+  value={time}
+  onChange={(e) => {
+    setTime(e.target.value);
+    if (deadlineError) setDeadlineError(null);
+  }}
+  className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+/>
 
         <button
-          type="submit"
-          className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
-        >
-          Save changes
-        </button>
+  type="submit"
+  disabled={isSubmitting || !title.trim()}
+  className={`rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors ${
+    isSubmitting || !title.trim()
+      ? "bg-indigo-300 cursor-not-allowed"
+      : "bg-indigo-600 hover:bg-indigo-700"
+  }`}
+>
+  {isSubmitting ? "Saving..." : "Save changes"}
+</button>
       </div>
+      {titleError && (
+  <p className="mt-2 text-xs text-red-600">{titleError}</p>
+)}
+{deadlineError && (
+  <p className="mt-1 text-xs text-red-600">{deadlineError}</p>
+)}
     </form>
   );
 }

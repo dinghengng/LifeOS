@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import NewTaskForm from "../components/NewTaskForm";
 import TaskList from "../components/TaskList";
 import EditTaskForm from "../components/EditTaskForm";
+import LoginForm from "../components/LoginForm";
+import RegisterForm from "../components/RegisterForm";
 // our UI for adding and displaying tasks
 
 const BACKGROUNDS = ["/bg-1.jpg", "/bg-2.jpg", "/bg-3.webp", "/bg-4.avif"];
@@ -16,6 +18,13 @@ export interface Task {
   isCompleted: boolean;
   dueDate: string | null; // allow empty deadline
   priority: Priority; // using defined type above
+}
+
+//logged in user
+export interface User {
+  id: number;
+  email: string;
+  name: string | null;
 }
 
 // Database/backend format
@@ -51,6 +60,10 @@ export default function Page() {
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all"); // prio flag
   const [editingTask, setEditingTask] = useState<Task | null>(null); // edit state
   const [recentlyDeleted, setRecentlyDeleted] = useState<Task | null>(null); // undo delete
+  const [currentUser, setCurrentUser] = useState<User | null>(null); // current user
+  const [authLoading, setAuthLoading] = useState(true); // loading flag
+  const [authError, setAuthError] = useState<string | null>(null); // error
+  const [authView, setAuthView] = useState<"login" | "register">("login"); // login/register switch
 
   // for background
   const [currentBg, setCurrentBg] = useState<string>("");
@@ -60,8 +73,35 @@ export default function Page() {
     setCurrentBg(BACKGROUNDS[randomIndex]);
   }, []);
 
+  // check if user has session cookie
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch("http://localhost:5001/auth/me", {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const user = await res.json();
+          setCurrentUser(user);
+        }
+      } catch (err) {
+        console.error("Auth check failed:", err);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
   // run when pages load then fetch tasks from PostgreSQL when the page loads
   useEffect(() => {
+    if (!currentUser) {
+      //must login
+      setLoading(false);
+      return;
+    }
+
     const fetchTasks = async () => {
       try {
         setError(null); // clear any previous error
@@ -69,7 +109,9 @@ export default function Page() {
 
         // await new Promise((resolve) => setTimeout(resolve, 1500)); // artificial delay
 
-        const response = await fetch("http://localhost:5001/tasks"); // test wrong path here
+        const response = await fetch("http://localhost:5001/tasks", {
+          credentials: "include",
+        }); // test wrong path here
 
         if (!response.ok) {
           throw new Error(`Failed to fetch tasks (status ${response.status})`);
@@ -97,7 +139,7 @@ export default function Page() {
     };
 
     fetchTasks();
-  }, []); // Empty array = runs once on mount
+  }, [currentUser]); // runs when user logins and logouts
 
   // Add a new task to PostgreSQL
   const addTask = async (
@@ -111,6 +153,7 @@ export default function Page() {
         // test wrong path here
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ title: titleString, dueDate, priority }),
       });
 
@@ -151,6 +194,7 @@ export default function Page() {
         // test wrong path here
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ isCompleted: newStatus }),
       });
 
@@ -181,6 +225,7 @@ export default function Page() {
         {
           // test wrong path here
           method: "DELETE",
+          credentials: "include",
         },
       );
 
@@ -239,6 +284,7 @@ export default function Page() {
       const response = await fetch(`http://localhost:5001/tasks/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           title: updates.title,
           dueDate: updates.dueDate,
@@ -278,6 +324,107 @@ export default function Page() {
     setEditingTask(null);
   };
 
+  // sign out
+  const handleLogout = async () => {
+    try {
+      await fetch("http://localhost:5001/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+    setCurrentUser(null);
+    setTasks([]);
+  };
+
+  // sign in
+  const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
+    setAuthError(null);
+    try {
+      const res = await fetch("http://localhost:5001/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password, rememberMe }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAuthError(data.error || "Login failed");
+        return;
+      }
+      setCurrentUser(data);
+    } catch (err) {
+      setAuthError("Could not connect to server.");
+    }
+  };
+
+  // register
+  const handleRegister = async (email: string, password: string, name: string) => {
+    setAuthError(null);
+    try {
+      const res = await fetch("http://localhost:5001/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password, name }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAuthError(data.error || "Registration failed");
+        return;
+      }
+      setCurrentUser(data); // auto login
+    } catch (err) {
+      setAuthError("Could not connect to server.");
+    }
+  };
+
+  // Checking credentials
+  if (authLoading) {
+    return (
+      <main
+        className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center"
+        style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
+      >
+        <p className="text-white text-lg font-medium drop-shadow">
+          Loading...
+        </p>
+      </main>
+    );
+  }
+
+  // Login or Register screens
+  if (!currentUser) {
+    return (
+      <main
+        className="min-h-screen bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
+      >
+        {authView === "login" ? (
+          <LoginForm
+            onLogin={handleLogin}
+            onSwitchToRegister={() => {
+              setAuthView("register");
+              setAuthError(null);
+            }}
+            error={authError}
+          />
+        ) : (
+          <RegisterForm
+            onRegister={handleRegister}
+            onSwitchToLogin={() => {
+              setAuthView("login");
+              setAuthError(null);
+            }}
+            error={authError}
+          />
+        )}
+      </main>
+    );
+  }
+
+  // After login
   return (
     // Inside your main wrapper div in page.tsx:
     <main

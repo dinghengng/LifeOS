@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Task, Priority } from "../app/page";
+import type { Task, Priority } from "../../shared/types";
 
 interface EditTaskFormProps {
   task: Task;

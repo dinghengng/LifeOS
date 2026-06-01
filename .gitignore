@@ -1,0 +1,24 @@
+# Root/General ensure all env not uploaded
+
+.DS_Store
+.env*
+.vscode/
+.idea/
+
+# Frontend (Next.js) 
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/next-env.d.ts
+frontend/*.tsbuildinfo
+
+# Backend (Express/Node)
+backend/node_modules/
+backend/npm-debug.log*
+
+# Mobile App (Expo) 
+mobile-app/node_modules/
+mobile-app/.expo/
+mobile-app/dist/
+mobile-app/web-build/

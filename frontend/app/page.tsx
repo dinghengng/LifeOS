@@ -6,37 +6,23 @@ import TaskList from "../components/TaskList";
 import EditTaskForm from "../components/EditTaskForm";
 import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
-// our UI for adding and displaying tasks
+
+// Import types and unified API functions from your shared package
+import { Task, Priority, User } from "../../shared/types";
+import { 
+  fetchTasks, 
+  addTask as apiAddTask, 
+  toggleTask as apiToggleTask, 
+  deleteTask as apiDeleteTask, 
+  editTask as apiEditTask,
+  checkAuthStatus,
+  loginUser,
+  registerUser,
+  logoutUser
+} from "../../shared/api";
 
 const BACKGROUNDS = ["/bg-1.jpg", "/bg-2.jpg", "/bg-3.webp", "/bg-4.avif"];
 
-export type Priority = "critical" | "high" | "low" | "none";
-// Defining data structure of task (React or frontend version)
-export interface Task {
-  id: number;
-  title: string;
-  isCompleted: boolean;
-  dueDate: string | null; // allow empty deadline
-  priority: Priority; // using defined type above
-}
-
-//logged in user
-export interface User {
-  id: number;
-  email: string;
-  name: string | null;
-}
-
-// Database/backend format
-interface DBTask {
-  id: number;
-  title: string;
-  is_completed: boolean;
-  due_date: string | null; // allow empty deadline
-  priority: Priority;
-}
-
-// sorting logic
 const priorityRank: Record<Priority, number> = {
   critical: 1,
   high: 2,
@@ -44,44 +30,32 @@ const priorityRank: Record<Priority, number> = {
   none: 4,
 };
 
-// boolean to check if due date is present
-const hasDueTime = (dueDate: string | null) => {
-  if (!dueDate) return false;
-  // For now, treat any non-null dueDate as “timed”
-  return true;
-};
+const hasDueTime = (dueDate: string | null) => !!dueDate;
 
 export default function Page() {
-  // Start with empty array
-  // Task objects will be stored in an array in React State.
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState<boolean>(true); // loading flag
-  const [error, setError] = useState<string | null>(null); // error
-  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all"); // prio flag
-  const [editingTask, setEditingTask] = useState<Task | null>(null); // edit state
-  const [recentlyDeleted, setRecentlyDeleted] = useState<Task | null>(null); // undo delete
-  const [currentUser, setCurrentUser] = useState<User | null>(null); // current user
-  const [authLoading, setAuthLoading] = useState(true); // loading flag
-  const [authError, setAuthError] = useState<string | null>(null); // error
-  const [authView, setAuthView] = useState<"login" | "register">("login"); // login/register switch
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  
+  // Authentication & session management states
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authView, setAuthView] = useState<"login" | "register">("login");
 
-  // for background
   const [currentBg, setCurrentBg] = useState<string>("");
-  // choose random background
   useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * BACKGROUNDS.length);
-    setCurrentBg(BACKGROUNDS[randomIndex]);
+    setCurrentBg(BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)]);
   }, []);
 
-  // check if user has session cookie
+  // Check if user has an active session cookie on mount
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch("http://localhost:5001/auth/me", {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const user = await res.json();
+        const user = await checkAuthStatus();
+        if (user) {
           setCurrentUser(user);
         }
       } catch (err) {
@@ -90,170 +64,130 @@ export default function Page() {
         setAuthLoading(false);
       }
     };
-
     checkAuth();
   }, []);
 
-  // run when pages load then fetch tasks from PostgreSQL when the page loads
+  // Fetch tasks only when an authenticated user is active
   useEffect(() => {
     if (!currentUser) {
-      //must login
       setLoading(false);
       return;
     }
 
-    const fetchTasks = async () => {
+    const loadTasks = async () => {
       try {
-        setError(null); // clear any previous error
-        setLoading(true); // load
-
-        // await new Promise((resolve) => setTimeout(resolve, 1500)); // artificial delay
-
-        const response = await fetch("http://localhost:5001/tasks", {
-          credentials: "include",
-        }); // test wrong path here
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch tasks (status ${response.status})`);
-        }
-
-        const jsonData = await response.json();
-        // map the data here cos SQL uses snake but react uses camelcase
-        const formattedTasks = jsonData.map((task: DBTask) => ({
-          id: task.id,
-          title: task.title,
-          isCompleted: task.is_completed,
-          dueDate: task.due_date,
-          priority: task.priority ?? "none", // default is none
-        }));
-
-        setTasks(formattedTasks); //save into react state
+        setError(null);
+        setLoading(true);
+        const data = await fetchTasks();
+        setTasks(data);
       } catch (err: unknown) {
-        if (err instanceof Error) {
-          console.error("Error fetching tasks:", err.message);
-          setError("Unable to load tasks. Please try again."); // show friendly message
-        }
+        console.error(err);
+        setError("Unable to load tasks. Please try again.");
       } finally {
-        setLoading(false); // done loading
+        setLoading(false);
       }
     };
+    loadTasks();
+  }, [currentUser]);
 
-    fetchTasks();
-  }, [currentUser]); // runs when user logins and logouts
-
-  // Add a new task to PostgreSQL
-  const addTask = async (
-    titleString: string,
-    dueDate: string | null,
-    priority: Priority = "none",
-  ) => {
+  // Task Handlers using API
+  const handleAddTask = async (titleString: string, dueDate: string | null, priority: Priority = "none") => {
     try {
       setError(null);
-      const response = await fetch("http://localhost:5001/tasks", {
-        // test wrong path here
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ title: titleString, dueDate, priority }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to add task (status ${response.status})`);
-      }
-
-      // The backend gives us back the newly created row, complete with its real Database ID
-      const newTaskDB: DBTask = await response.json();
-
-      const newTask: Task = {
-        id: newTaskDB.id,
-        title: newTaskDB.title,
-        isCompleted: newTaskDB.is_completed,
-        dueDate: newTaskDB.due_date,
-        priority: newTaskDB.priority ?? "none",
-      };
-
-      setTasks([...tasks, newTask]); //adds new task to list
+      const newTask = await apiAddTask(titleString, dueDate, priority);
+      setTasks([...tasks, newTask]);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        console.error("Error adding task:", err.message);
-        setError("Could not add task. Please try again.");
-      }
+      console.error(err);
+      setError("Could not add task. Please try again.");
     }
   };
 
-  // Update task completion status
-  const toggleTask = async (taskId: number) => {
-    // Find the current status so we can flip it
+  const handleToggleTask = async (taskId: number) => {
     const taskToToggle = tasks.find((t) => t.id === taskId);
     if (!taskToToggle) return;
     const newStatus = !taskToToggle.isCompleted;
 
     try {
       setError(null);
-      const response = await fetch(`http://localhost:5001/tasks/${taskId}`, {
-        // test wrong path here
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ isCompleted: newStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to toggle task (status ${response.status})`);
-      }
-
-      // Update the React UI to show changes
-      setTasks(
-        tasks.map((task) =>
-          task.id === taskId ? { ...task, isCompleted: newStatus } : task,
-        ),
-      ); //only update that one
+      await apiToggleTask(taskId, newStatus);
+      setTasks(tasks.map((task) => (task.id === taskId ? { ...task, isCompleted: newStatus } : task)));
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        console.error("Error toggling task:", err.message);
-        setError("Could not update task. Please try again.");
-      }
+      console.error(err);
+      setError("Could not update task. Please try again.");
     }
   };
 
-  // Remove a task from PostgreSQL
-  const deleteTask = async (idToDelete: number) => {
+  const handleDeleteTask = async (idToDelete: number) => {
     try {
       setError(null);
-      const response = await fetch(
-        `http://localhost:5001/tasks/${idToDelete}`,
-        {
-          // test wrong path here
-          method: "DELETE",
-          credentials: "include",
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete task (status ${response.status})`);
-      }
-
-      // Remove it from the UI
+      await apiDeleteTask(idToDelete);
       setTasks(tasks.filter((task) => task.id !== idToDelete));
     } catch (err: unknown) {
+      console.error(err);
+      setError("Could not delete task. Please try again.");
+    }
+  };
+
+  const saveTaskEdits = async (id: number, updates: { title: string; dueDate: string | null; priority: Priority }) => {
+    try {
+      setError(null);
+      const updatedTask = await apiEditTask(id, updates);
+      setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? updatedTask : t)));
+      setEditingTask(null);
+    } catch (err: unknown) {
+      console.error(err);
+      setError("Could not update task. Please try again.");
+    }
+  };
+
+  // 4. Authentication Flow Handlers via Shared API Layer
+  const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
+    setAuthError(null);
+    try {
+      const user = await loginUser(email, password, rememberMe);
+      setCurrentUser(user);
+    } catch (err: unknown) {
       if (err instanceof Error) {
-        console.error("Error deleting task:", err.message);
-        setError("Could not delete task. Please try again.");
+        setAuthError(err.message);
+      } else {
+        setAuthError("Could not connect to server.");
       }
     }
   };
 
-  // apply the priority filter
+  const handleRegister = async (email: string, password: string, name: string) => {
+    setAuthError(null);
+    try {
+      const user = await registerUser(email, password, name);
+      setCurrentUser(user);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setAuthError(err.message);
+      } else {
+        setAuthError("Could not connect to server.");
+      }
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+    setCurrentUser(null);
+    setTasks([]);
+  };
+
+  // Sorting and structural presentation filtering logic
   const filteredTasks = tasks.filter((task) => {
     if (priorityFilter === "all") return true;
     return task.priority === priorityFilter;
   });
 
-  // nested sort: timed tasks first, then by priority
   const visibleTasks = [...filteredTasks].sort((a, b) => {
     const aHasTime = hasDueTime(a.dueDate);
     const bHasTime = hasDueTime(b.dueDate);
-
     if (aHasTime && !bHasTime) return -1;
     if (!aHasTime && bHasTime) return 1;
 
@@ -263,138 +197,22 @@ export default function Page() {
     if (a.dueDate && b.dueDate) {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     }
-
-    // default to task created first in the list
     return a.id - b.id;
   });
 
-  // open edit popup
-  const startEditingTask = (task: Task) => {
-    setEditingTask(task);
-  };
-
-  // saving edit
-  const saveTaskEdits = async (
-    id: number,
-    updates: { title: string; dueDate: string | null; priority: Priority },
-  ) => {
-    try {
-      setError(null);
-
-      const response = await fetch(`http://localhost:5001/tasks/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          title: updates.title,
-          dueDate: updates.dueDate,
-          priority: updates.priority,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to edit task (status ${response.status})`);
-      }
-
-      const updatedDBTask: DBTask = await response.json();
-
-      const updatedTask: Task = {
-        id: updatedDBTask.id,
-        title: updatedDBTask.title,
-        isCompleted: updatedDBTask.is_completed,
-        dueDate: updatedDBTask.due_date,
-        priority: updatedDBTask.priority ?? "none",
-      };
-
-      setTasks((prevTasks) =>
-        prevTasks.map((t) => (t.id === id ? updatedTask : t)),
-      );
-
-      setEditingTask(null);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        console.error("Error editing task:", err.message);
-        setError("Could not update task. Please try again.");
-      }
-    }
-  };
-
-  // cancel edit
-  const cancelEditing = () => {
-    setEditingTask(null);
-  };
-
-  // sign out
-  const handleLogout = async () => {
-    try {
-      await fetch("http://localhost:5001/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (err) {
-      console.error("Logout error:", err);
-    }
-    setCurrentUser(null);
-    setTasks([]);
-  };
-
-  // sign in
-  const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
-    setAuthError(null);
-    try {
-      const res = await fetch("http://localhost:5001/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password, rememberMe }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setAuthError(data.error || "Login failed");
-        return;
-      }
-      setCurrentUser(data);
-    } catch (err) {
-      setAuthError("Could not connect to server.");
-    }
-  };
-
-  // register
-  const handleRegister = async (email: string, password: string, name: string) => {
-    setAuthError(null);
-    try {
-      const res = await fetch("http://localhost:5001/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password, name }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setAuthError(data.error || "Registration failed");
-        return;
-      }
-      setCurrentUser(data); // auto login
-    } catch (err) {
-      setAuthError("Could not connect to server.");
-    }
-  };
-
-  // Checking credentials
+  // Display verification loading block
   if (authLoading) {
     return (
       <main
         className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center"
         style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
       >
-        <p className="text-white text-lg font-medium drop-shadow">
-          Loading...
-        </p>
+        <p className="text-white text-lg font-medium drop-shadow">Loading...</p>
       </main>
     );
   }
 
-  // Login or Register screens
+  // Display registration or access authentication views
   if (!currentUser) {
     return (
       <main
@@ -424,77 +242,75 @@ export default function Page() {
     );
   }
 
-  // After login
+  // Display Core App Dashboard Interface
   return (
-    // Inside your main wrapper div in page.tsx:
     <main
-      className="min-h-screen bg-cover bg-center bg-no-repeat flex justify-center py-10 px-4 transition-all duration-1000 ease-in-out"
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col items-center py-10 px-4 transition-all duration-1000 ease-in-out"
       style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
     >
+      {/* Dynamic Identity & Action Header Line Layout */}
+      <div className="w-full max-w-3xl flex justify-between items-center mb-4 px-2">
+        <span className="text-white/90 text-sm font-medium bg-slate-900/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10 shadow-sm">
+          Welcome back! <span className="font-semibold">{currentUser.name || currentUser.email}</span>
+        </span>
+        <button
+          onClick={handleLogout}
+          className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-red-50 hover:text-red-600 shadow-sm transition"
+        >
+          Logout
+        </button>
+      </div>
+
       <div className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 h-fit">
         <h1 className="text-3xl font-bold text-slate-800 mb-4 text-center">
           LifeOS Tasks
         </h1>
-        {error && (
-          <p className="mb-4 text-sm text-red-600 text-center">{error}</p>
-        )}
+        {error && <p className="mb-4 text-sm text-red-600 text-center">{error}</p>}
 
         {loading ? (
           <p className="text-slate-500 text-center mt-4">Loading tasks...</p>
         ) : (
           <>
-            <NewTaskForm onAddTask={addTask} />
+            <NewTaskForm onAddTask={handleAddTask} />
 
-            {/* Priority filter buttons with Dynamic Counts */}
+            {/* Filter controls */}
             <div className="flex gap-2 mb-6 flex-wrap justify-center">
-              {(["all", "critical", "high", "low", "none"] as const).map(
-                (level) => {
-                  // Calculate how many tasks match this specific pill
-                  const count =
-                    level === "all"
-                      ? tasks.length
-                      : tasks.filter((t) => t.priority === level).length;
-                  const isActive = priorityFilter === level;
+              {(["all", "critical", "high", "low", "none"] as const).map((level) => {
+                const count = level === "all" ? tasks.length : tasks.filter((t) => t.priority === level).length;
+                const isActive = priorityFilter === level;
 
-                  return (
-                    <button
-                      key={level}
-                      onClick={() => setPriorityFilter(level)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 ${
-                        isActive
-                          ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-300 ring-offset-1"
-                          : "bg-white/80 backdrop-blur-sm text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                      }`}
-                    >
-                      <span className="uppercase tracking-wider">
-                        {level === "all" ? "All" : level}
-                      </span>
-                      {/* The Count Badge */}
-                      <span
-                        className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}
-                      >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                },
-              )}
+                return (
+                  <button
+                    key={level}
+                    onClick={() => setPriorityFilter(level)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 ${
+                      isActive
+                        ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-300 ring-offset-1"
+                        : "bg-white/80 backdrop-blur-sm text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                  >
+                    <span className="uppercase tracking-wider">{level === "all" ? "All" : level}</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* EDIT TASK PANEL: appears only when a task is being edited */}
             {editingTask && (
               <EditTaskForm
                 task={editingTask}
                 onSave={(updates) => saveTaskEdits(editingTask.id, updates)}
-                onCancel={cancelEditing}
+                onCancel={() => setEditingTask(null)}
               />
             )}
 
             <TaskList
               tasks={visibleTasks}
-              onToggleTask={toggleTask}
-              onDeleteTask={deleteTask}
-              onEditTask={startEditingTask}
+              onToggleTask={handleToggleTask}
+              onDeleteTask={handleDeleteTask}
+              onEditTask={setEditingTask}
             />
           </>
         )}

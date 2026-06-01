@@ -14,10 +14,19 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 app.use(express.json());
 app.use(cookieParser());
+
 app.use(
   cors({
-    origin: "http://localhost:3000", 
-    credentials: true,              //turn on cookies
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      // Allow localhost (web frontend) or your local network IP (mobile testing)
+      if (origin.startsWith("http://localhost") || origin.includes("192.168.1.")) {
+        return callback(null, true);
+      }
+      
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true, // Crucial: allows session cookies to pass through
   })
 );
 
@@ -102,9 +111,7 @@ app.post("/auth/register", async (req, res) => {
     res.cookie("sessionId", sessionId, {
       httpOnly: true,
       sameSite: "lax",
-      // -------------------------------------------
       // SET THIS TO TRUE WHEN DEPLOYING OVER HTTPS
-      // -------------------------------------------
       secure: false,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -155,9 +162,7 @@ app.post("/auth/login", async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       sameSite: "lax",
-      // -------------------------------------------
       // SET THIS TO TRUE WHEN DEPLOYING OVER HTTPS
-      // -------------------------------------------
       secure: false,
     };
 

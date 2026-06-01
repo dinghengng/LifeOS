@@ -18,12 +18,18 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow non-browser requests (like curl, Postman)
       if (!origin) return callback(null, true);
-      // Allow localhost (web frontend) or your local network IP (mobile testing)
-      if (origin.startsWith("http://localhost") || origin.includes("192.168.1.")) {
+
+      const allowedOrigins = [
+        "http://localhost:3000",        // local Next.js
+        process.env.FRONTEND_URL,       // Vercel URL, e.g. https://lifeos.vercel.app
+      ].filter(Boolean); // remove undefined
+
+      if (allowedOrigins.includes(origin) || origin.includes("192.168.1.")) {
         return callback(null, true);
       }
-      
+
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true, // Crucial: allows session cookies to pass through
@@ -109,12 +115,11 @@ app.post("/auth/register", async (req, res) => {
 
     //creating cookie
     res.cookie("sessionId", sessionId, {
-      httpOnly: true,
-      sameSite: "lax",
-      // SET THIS TO TRUE WHEN DEPLOYING OVER HTTPS
-      secure: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+  httpOnly: true,
+  sameSite: "none",  // needed for cross-origin cookies
+  secure: true,      // required when sameSite is "none"
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
 
     res.status(201).json({ id: newUser.id, email: newUser.email, name: newUser.name });
   } catch (err) {
@@ -160,11 +165,10 @@ app.post("/auth/login", async (req, res) => {
     );
 
     const cookieOptions = {
-      httpOnly: true,
-      sameSite: "lax",
-      // SET THIS TO TRUE WHEN DEPLOYING OVER HTTPS
-      secure: false,
-    };
+  httpOnly: true,
+  sameSite: "none", // needed for cross-origin cookies
+  secure: true,     // required when sameSite is "none"
+};
 
     //remember me function
     if (rememberMe) {
@@ -189,7 +193,11 @@ app.post("/auth/logout", requireAuth, async (req, res) => {
     await pool.query("DELETE FROM sessions WHERE id = $1", [sessionId]);
 
     //remove cookie
-    res.clearCookie("sessionId", { httpOnly: true, sameSite: "lax" });
+    res.clearCookie("sessionId", {
+  httpOnly: true,
+  sameSite: "none",
+  secure: true,
+});
 
     res.json({ message: "Logged out" });
   } catch (err) {

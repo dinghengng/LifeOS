@@ -1,30 +1,31 @@
 import React, { useState, useEffect } from "react";
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  FlatList, 
-  TouchableOpacity, 
-  ActivityIndicator, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
   SafeAreaView,
-  StatusBar
+  StatusBar,
 } from "react-native";
 
-
+import AddTaskModal from "../components/AddTaskModal";
 import { Task, Priority } from "@shared/types";
-import { fetchTasks, toggleTask, deleteTask } from "@shared/api";
+import { fetchTasks, toggleTask, deleteTask, addTask} from "@shared/api";
 
 const priorityColors: Record<Priority, string> = {
   critical: "#ef4444", // Red
-  high: "#f97316",     // Orange
-  low: "#3b82f6",      // Blue
-  none: "#94a3b8",     // Slate Gray
+  high: "#f97316", // Orange
+  low: "#3b82f6", // Blue
+  none: "#94a3b8", // Slate Gray
 };
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalVisible, setModalVisible] = useState(false);
 
   // Load tasks on mount
   useEffect(() => {
@@ -52,9 +53,21 @@ export default function App() {
 
     try {
       await toggleTask(id, nextStatus);
-      setTasks(tasks.map((t) => (t.id === id ? { ...t, isCompleted: nextStatus } : t)));
+      setTasks(
+        tasks.map((t) => (t.id === id ? { ...t, isCompleted: nextStatus } : t)),
+      );
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleAddTask = async (title: string, priority: Priority) => {
+    try {
+      const newTask = await addTask(title, null, priority); //put due date as null for now
+      setTasks((prevTasks) => [...prevTasks, newTask]);
+    } catch (err) {
+      console.error("Failed to add task", err);
+      alert("Could not add task. Check server connection.");
     }
   };
 
@@ -76,7 +89,11 @@ export default function App() {
         {error && <Text style={styles.errorText}>{error}</Text>}
 
         {loading ? (
-          <ActivityIndicator size="large" color="#1e293b" style={styles.loader} />
+          <ActivityIndicator
+            size="large"
+            color="#1e293b"
+            style={styles.loader}
+          />
         ) : (
           <FlatList
             data={tasks}
@@ -85,25 +102,61 @@ export default function App() {
             renderItem={({ item }) => (
               <View style={styles.taskCard}>
                 {/* Priority Dot indicator */}
-                <View style={[styles.priorityDot, { backgroundColor: priorityColors[item.priority] }]} />
-                
-                <TouchableOpacity style={styles.textWrapper} onPress={() => handleToggle(item.id)}>
-                  <Text style={[styles.taskTitle, item.isCompleted && styles.completedText]}>
+                <View
+                  style={[
+                    styles.priorityDot,
+                    { backgroundColor: priorityColors[item.priority] },
+                  ]}
+                />
+
+                <TouchableOpacity
+                  style={styles.textWrapper}
+                  onPress={() => handleToggle(item.id)}
+                >
+                  <Text
+                    style={[
+                      styles.taskTitle,
+                      item.isCompleted && styles.completedText,
+                    ]}
+                  >
                     {item.title}
                   </Text>
-                  {item.dueDate && <Text style={styles.dueDateText}>📅 {new Date(item.dueDate).toLocaleDateString()}</Text>}
+                  {item.dueDate && (
+                    <Text style={styles.dueDateText}>
+                      📅 {new Date(item.dueDate).toLocaleDateString()}
+                    </Text>
+                  )}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item.id)}>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDelete(item.id)}
+                >
                   <Text style={styles.deleteButtonText}>✕</Text>
                 </TouchableOpacity>
               </View>
             )}
             ListEmptyComponent={
-              <Text style={styles.emptyText}>No tasks found. Add some from the web portal!</Text>
+              <Text style={styles.emptyText}>
+                No tasks found. Add some from the web portal!
+              </Text>
             }
           />
         )}
+        {/*Action Button */}
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text style={styles.fabIcon}>+</Text>
+        </TouchableOpacity>
+
+        {/* The Bottom Sheet Modal */}
+        <AddTaskModal
+          visible={isModalVisible}
+          onClose={() => setModalVisible(false)}
+          onAdd={handleAddTask}
+        />
       </View>
     </SafeAreaView>
   );
@@ -189,5 +242,27 @@ const styles = StyleSheet.create({
     color: "#64748b",
     marginTop: 40,
     fontSize: 15,
+  },
+  fab: {
+    position: "absolute",
+    right: 24,
+    bottom: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#4f46e5",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  fabIcon: {
+    color: "#ffffff",
+    fontSize: 32,
+    fontWeight: "300",
+    marginTop: -2,
   },
 });

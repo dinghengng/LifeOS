@@ -361,6 +361,30 @@ app.get('/mood/tags', requireAuth, async (req, res) => {
   }
 });
 
+// Creates a custom "Other" tag
+app.post('/mood/tags/custom', requireAuth, async (req, res) => {
+  const { name } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "Tag name is required" });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO user_tags (user_id, name)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, name) DO UPDATE SET name = EXCLUDED.name
+       RETURNING id, name, 'custom' AS type`,
+      [req.user.id, name.trim().toLowerCase()]
+    ); //return exisiting tag if name already in use
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 // Create mood log
 // create mood entry with stress level and tags
 app.post('/mood/logs', requireAuth, async (req, res) => {

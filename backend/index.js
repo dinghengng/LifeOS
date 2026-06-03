@@ -343,6 +343,109 @@ app.delete('/tasks/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Get mood tags
+// returns tags + user created tags
+app.get('/mood/tags', requireAuth, async (req, res) => {
+  try {
+    const systemTags = await pool.query(
+      "SELECT id, name, 'system' AS type FROM tags ORDER BY name ASC"
+    );
+    const userTags = await pool.query(
+      "SELECT id, name, 'custom' AS type FROM user_tags WHERE user_id = $1 ORDER BY name ASC",
+      [req.user.id]
+    );
+    res.json({ system: systemTags.rows, custom: userTags.rows });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// Create mood log
+// create mood entry with stress level and tags
+app.post('/mood/logs', requireAuth, async (req, res) => {
+  const { mood_level, stress_level, systemTagIds = [], customTagIds = [], loggedAt } = req.body;
+
+  if (!mood_level || !stress_level) {
+    return res.status(400).json({ error: "mood_level and stress_level are required" });
+  }
+
+  try {
+    const logResult = await pool.query(
+      `INSERT INTO mood_logs (user_id, mood_level, stress_level, logged_at)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [req.user.id, mood_level, stress_level, loggedAt || new Date().toISOString()]
+    );
+    const newLog = logResult.rows[0];
+
+    for (const tagId of systemTagIds) {
+      await pool.query(
+        "INSERT INTO mood_log_tags (mood_log_id, tag_id) VALUES ($1, $2)",
+        [newLog.id, tagId]
+      );
+    }
+    for (const userTagId of customTagIds) {
+      await pool.query(
+        "INSERT INTO mood_log_tags (mood_log_id, user_tag_id) VALUES ($1, $2)",
+        [newLog.id, userTagId]
+      );
+    }
+
+    res.status(201).json({ ...newLog, tags: [] });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+app.get('/mood/logs', requireAuth, async (req, res) => {
+  try {
+    const logsResult = await pool.query(
+      `SELECT id, mood_level, stress_level, logged_at, created_at
+       FROM mood_logs
+       WHERE user_id = $1
+       ORDER BY logged_at DESC`,
+      [req.user.id]
+    );
+
+    if (logsResult.rows.length === 0) return res.json([]);
+
+    const logIds = logsResult.rows.map((r) => r.id);
+    const tagsResult = await pool.query(
+      `SELECT
+         mlt.mood_log_id,
+         COALESCE(t.id, ut.id)     AS tag_id,
+         COALESCE(t.name, ut.name) AS tag_name,
+         CASE WHEN t.id IS NOT NULL THEN 'system' ELSE 'custom' END AS tag_type
+       FROM mood_log_tags mlt
+       LEFT JOIN tags t       ON mlt.tag_id = t.id
+       LEFT JOIN user_tags ut ON mlt.user_tag_id = ut.id
+       WHERE mlt.mood_log_id = ANY($1)`,
+      [logIds]
+    );
+
+    const tagsByLog = {};
+    for (const tag of tagsResult.rows) {
+      if (!tagsByLog[tag.mood_log_id]) tagsByLog[tag.mood_log_id] = [];
+      tagsByLog[tag.mood_log_id].push({
+        id: tag.tag_id,
+        name: tag.tag_name,
+        type: tag.tag_type,
+      });
+    }
+
+    const logs = logsResult.rows.map((log) => ({
+      ...log,
+      tags: tagsByLog[log.id] || [],
+    }));
+
+    res.json(logs);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
 
 // Binding our active server application instance to listen directly on our designated system port
 app.listen(PORT, () => {

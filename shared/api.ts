@@ -117,3 +117,49 @@ export const editTask = async (id: number, updates: { title: string; dueDate: st
   const t: DBTask = await response.json();
   return { id: t.id, title: t.title, isCompleted: t.is_completed, dueDate: t.due_date, priority: t.priority ?? "none" };
 };
+
+// MOOD API
+import {
+  Tag, TagsResponse, MoodLog, DBMoodLog, CreateMoodLogPayload
+} from "./types";
+
+//maps sql snake_case to camelCase
+const mapMoodLog = (raw: DBMoodLog): MoodLog => ({
+  id: raw.id,
+  moodLevel: raw.mood_level,
+  stressLevel: raw.stress_level,
+  loggedAt: raw.logged_at,
+  createdAt: raw.created_at,
+  tags: raw.tags,
+});
+
+// GET all tags
+export const fetchTags = async (): Promise<TagsResponse> => {
+  const response = await fetch(`${API_URL}/mood/tags`, { credentials: "include" });
+  if (!response.ok) throw new Error("Failed to fetch tags");
+  return await response.json();
+};
+
+// GET all mood logs
+export const fetchMoodLogs = async (): Promise<MoodLog[]> => {
+  const response = await fetch(`${API_URL}/mood/logs`, { credentials: "include" });
+  if (!response.ok) throw new Error("Failed to fetch mood logs");
+  const data: DBMoodLog[] = await response.json();
+  return data.map(mapMoodLog);
+};
+
+// POST create a new mood log
+export const createMoodLog = async (payload: CreateMoodLogPayload): Promise<MoodLog> => {
+  const response = await fetch(`${API_URL}/mood/logs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to create mood log");
+  }
+  const data: DBMoodLog = await response.json();
+  return mapMoodLog(data);
+};

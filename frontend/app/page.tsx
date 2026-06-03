@@ -6,6 +6,7 @@ import TaskList from "../components/TaskList";
 import EditTaskForm from "../components/EditTaskForm";
 import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
+import { useRouter } from "next/navigation";
 
 // Import types and unified API functions from your shared package
 import { Task, Priority, User } from "../../shared/types";
@@ -33,6 +34,8 @@ const priorityRank: Record<Priority, number> = {
 const hasDueTime = (dueDate: string | null) => !!dueDate;
 
 export default function Page() {
+  const router = useRouter();
+  
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -253,6 +256,13 @@ export default function Page() {
         <span className="text-white/90 text-sm font-medium bg-slate-900/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10 shadow-sm">
           Welcome back! <span className="font-semibold">{currentUser.name || currentUser.email}</span>
         </span>
+        {/*Temporary button*/}
+        <button
+          onClick={() => router.push("/journal")}
+          className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
+        >
+          Journal
+        </button>
         <button
           onClick={handleLogout}
           className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-red-50 hover:text-red-600 shadow-sm transition"

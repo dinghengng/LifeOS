@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MoodLog, MoodLevel, StressLevel, Tag, TagsResponse, UpdateMoodLogPayload } from "../../shared/types";
 import { updateMoodLog } from "../../shared/api";
+import TagSelector from "./TagSelector";
 
 const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string }[] = [
   { level: 1, emoji: "😢", label: "Awful" },
@@ -21,20 +22,22 @@ interface EditMoodLogModalProps {
   tags: TagsResponse;
   onSaved: () => void;
   onClose: () => void;
+  onTagsUpdated: (tag: Tag) => void;
 }
 
-export default function EditMoodLogModal({ log, tags, onSaved, onClose }: EditMoodLogModalProps) {
+export default function EditMoodLogModal({ log, tags, onSaved, onClose, onTagsUpdated }: EditMoodLogModalProps) {
   const [selectedMood, setSelectedMood] = useState<MoodLevel>(log.moodLevel);
   const [stressLevel, setStressLevel] = useState<StressLevel>(log.stressLevel);
-  const [selectedTagIds, setSelectedTagIds] = useState<number[]>(
-    log.tags.map((t) => t.id)
+  const [selectedTagKeys, setSelectedTagKeys] = useState<string[]>(
+    log.tags.map((t) => `${t.type}:${t.id}`)
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const toggleTag = (tag: Tag) => {
-    setSelectedTagIds((prev) =>
-      prev.includes(tag.id) ? prev.filter((id) => id !== tag.id) : [...prev, tag.id]
+    const key = `${tag.type}:${tag.id}`;
+    setSelectedTagKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   };
 
@@ -42,13 +45,13 @@ export default function EditMoodLogModal({ log, tags, onSaved, onClose }: EditMo
     setIsSubmitting(true);
     setError(null);
 
-    const allTags = [...tags.system, ...tags.custom];
-    const systemTagIds = selectedTagIds.filter(
-      (id) => allTags.find((t) => t.id === id)?.type === "system"
-    );
-    const customTagIds = selectedTagIds.filter(
-      (id) => allTags.find((t) => t.id === id)?.type === "custom"
-    );
+    const systemTagIds = selectedTagKeys
+        .filter((k) => k.startsWith("system:"))
+        .map((k) => Number(k.split(":")[1]));
+
+    const customTagIds = selectedTagKeys
+        .filter((k) => k.startsWith("custom:"))
+        .map((k) => Number(k.split(":")[1]));
 
     const payload: UpdateMoodLogPayload = {
       mood_level: selectedMood,
@@ -121,22 +124,16 @@ export default function EditMoodLogModal({ log, tags, onSaved, onClose }: EditMo
 
         {/*Tag selector*/}
         <div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Tags</p>
-          <div className="flex flex-wrap gap-2">
-            {tags.system.map((tag) => (
-              <button
-                key={tag.id}
-                onClick={() => toggleTag(tag)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-all capitalize ${
-                  selectedTagIds.includes(tag.id)
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300"
-                }`}
-              >
-                {tag.name}
-              </button>
-            ))}
-          </div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Tags</p>
+            <TagSelector
+                tags={tags}
+                selectedTagKeys={selectedTagKeys}
+                onToggle={toggleTag}
+                onCustomTagCreated={(newTag) => {
+                    onTagsUpdated(newTag);
+                    setSelectedTagKeys((prev) => [...prev, `custom:${newTag.id}`]);
+                }}
+            />
         </div>
 
         {error && (

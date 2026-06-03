@@ -69,10 +69,20 @@ export default function JournalPage() {
       </div>
 
       {/*Mood form*/}
-      <MoodLogger onSaved={loadLogs} />
+      <MoodLogger 
+        onSaved={loadLogs} 
+        tags={tags}
+        onTagsUpdated={(newTag) => 
+            setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
+        }
+      />
 
       {/*Mood history list*/}
-      <MoodHistory logs={logs} tags={tags} onRefresh={loadLogs}/>
+      <MoodHistory logs={logs} tags={tags} onRefresh={loadLogs}
+        onTagsUpdated={(newTag) =>
+            setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
+        }
+      />
     </main>
   );
 }

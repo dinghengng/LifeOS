@@ -447,6 +447,79 @@ app.get('/mood/logs', requireAuth, async (req, res) => {
   }
 });
 
+// Edit mood log
+// Updates mood level, stress level, tags, backfilled time
+app.patch('/mood/logs/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { mood_level, stress_level, systemTagIds, customTagIds, loggedAt } = req.body;
+
+  try {
+    const existing = await pool.query(
+      "SELECT id FROM mood_logs WHERE id = $1 AND user_id = $2",
+      [id, req.user.id]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: "Mood log not found" });
+    }
+
+    // Only update what was sent
+    const updated = await pool.query(
+      `UPDATE mood_logs
+       SET
+         mood_level   = COALESCE($1, mood_level),
+         stress_level = COALESCE($2, stress_level),
+         logged_at    = COALESCE($3, logged_at)
+       WHERE id = $4 AND user_id = $5
+       RETURNING *`,
+      [mood_level ?? null, stress_level ?? null, loggedAt ?? null, id, req.user.id]
+    );
+
+    // Replace tags only if a new tag list was provided
+    if (systemTagIds !== undefined || customTagIds !== undefined) {
+      await pool.query("DELETE FROM mood_log_tags WHERE mood_log_id = $1", [id]);
+
+      for (const tagId of systemTagIds || []) {
+        await pool.query(
+          "INSERT INTO mood_log_tags (mood_log_id, tag_id) VALUES ($1, $2)",
+          [id, tagId]
+        );
+      }
+      for (const userTagId of customTagIds || []) {
+        await pool.query(
+          "INSERT INTO mood_log_tags (mood_log_id, user_tag_id) VALUES ($1, $2)",
+          [id, userTagId]
+        );
+      }
+    }
+
+    res.json(updated.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// Delete mood log
+// Sets mood log to null
+app.delete('/mood/logs/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      "DELETE FROM mood_logs WHERE id = $1 AND user_id = $2 RETURNING *",
+      [id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Mood log not found" });
+    }
+
+    res.json({ message: "Mood log deleted successfully" });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 // Binding our active server application instance to listen directly on our designated system port
 app.listen(PORT, () => {
   // Print verification text out to our development environment terminal when ignition finishes smoothly

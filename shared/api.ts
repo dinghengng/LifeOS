@@ -120,7 +120,7 @@ export const editTask = async (id: number, updates: { title: string; dueDate: st
 
 // MOOD API
 import {
-  Tag, TagsResponse, MoodLog, DBMoodLog, CreateMoodLogPayload
+  Tag, TagsResponse, MoodLog, DBMoodLog, CreateMoodLogPayload, UpdateMoodLogPayload
 } from "./types";
 
 //maps sql snake_case to camelCase
@@ -162,4 +162,32 @@ export const createMoodLog = async (payload: CreateMoodLogPayload): Promise<Mood
   }
   const data: DBMoodLog = await response.json();
   return mapMoodLog(data);
+};
+
+// PATCH edit mood log
+export const updateMoodLog = async (id: number, payload: UpdateMoodLogPayload): Promise<MoodLog> => {
+  const response = await fetch(`${API_URL}/mood/logs/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to update mood log");
+  }
+  const data: DBMoodLog = await response.json();
+  return mapMoodLog(data);
+};
+
+// DELETE mood log
+export const deleteMoodLog = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_URL}/mood/logs/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to delete mood log");
+  }
 };

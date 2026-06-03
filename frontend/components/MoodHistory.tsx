@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoodLog, MoodLevel, TagsResponse } from "../../shared/types";
+import { MoodLog, MoodLevel, TagsResponse, Tag } from "../../shared/types";
 import { deleteMoodLog } from "../../shared/api";
 import EditMoodLogModal from "./EditMoodLogModal";
 
@@ -29,9 +29,10 @@ interface MoodHistoryProps {
   logs: MoodLog[];
   tags: TagsResponse;  
   onRefresh: () => void;
+  onTagsUpdated: (tag: Tag) => void;
 }
 
-export default function MoodHistory({ logs, tags, onRefresh }: MoodHistoryProps) {
+export default function MoodHistory({ logs, tags, onRefresh, onTagsUpdated }: MoodHistoryProps) {
   const [editingLog, setEditingLog] = useState<MoodLog | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export default function MoodHistory({ logs, tags, onRefresh }: MoodHistoryProps)
           tags={tags}
           onSaved={onRefresh}
           onClose={() => setEditingLog(null)}
+          onTagsUpdated={onTagsUpdated}
         />
       )}
 

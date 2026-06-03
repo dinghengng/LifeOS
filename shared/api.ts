@@ -224,3 +224,18 @@ export const deleteMoodLog = async (id: number): Promise<void> => {
     throw new Error(err.error || "Failed to delete mood log");
   }
 };
+
+// POST create a custom "Other" tag
+export const createCustomTag = async (name: string): Promise<Tag> => {
+  const response = await fetch(`${API_URL}/mood/tags/custom`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to create custom tag");
+  }
+  return await response.json();
+};

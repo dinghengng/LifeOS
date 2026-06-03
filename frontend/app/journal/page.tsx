@@ -6,9 +6,12 @@ import MoodLogger from "../../components/MoodLogger";
 import MoodHistory from "../../components/MoodHistory";
 import { MoodLog, User } from "../../../shared/types";
 import { fetchMoodLogs, checkAuthStatus } from "../../../shared/api";
+import { TagsResponse } from "../../../shared/types";
+import { fetchTags } from "../../../shared/api";
 
 export default function JournalPage() {
   const [logs, setLogs] = useState<MoodLog[]>([]);
+  const [tags, setTags] = useState<TagsResponse>({ system: [], custom: [] });
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -29,12 +32,13 @@ export default function JournalPage() {
 
   const loadLogs = async () => {
     try {
-      const data = await fetchMoodLogs();
-      setLogs(data);
+        const [data, tagData] = await Promise.all([fetchMoodLogs(), fetchTags()]);
+        setLogs(data);
+        setTags(tagData);
     } catch (err) {
-      console.error("Failed to load mood logs:", err);
+        console.error("Failed to load mood logs:", err);
     }
-  };
+};
 
   if (loading) {
     return (
@@ -68,7 +72,7 @@ export default function JournalPage() {
       <MoodLogger onSaved={loadLogs} />
 
       {/*Mood history list*/}
-      <MoodHistory logs={logs} />
+      <MoodHistory logs={logs} tags={tags} onRefresh={loadLogs}/>
     </main>
   );
 }

@@ -62,3 +62,11 @@ export interface CreateMoodLogPayload {
   customTagIds: number[];
   loggedAt?: string; //backfill
 }
+
+export interface UpdateMoodLogPayload {
+  mood_level?: MoodLevel;
+  stress_level?: StressLevel;
+  systemTagIds?: number[];
+  customTagIds?: number[];
+  loggedAt?: string;
+}

@@ -1,4 +1,4 @@
-//Importing all the tools we need for our server 
+// Importing all the tools we need for our server 
 const express = require('express');
 const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
@@ -7,10 +7,9 @@ const crypto = require("crypto");
 const pool = require('./db'); 
 require('dotenv').config();
 
-
 // Instantiating our application instance by calling the express function
 const app = express();
-//Setting our deployment port to check our .env file first, otherwise default to local port 5001
+// Setting our deployment port to check our .env file first, otherwise default to local port 5001
 const PORT = process.env.PORT || 5001;
 app.use(express.json());
 app.use(cookieParser());
@@ -18,7 +17,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow non-browser requests (like curl, Postman)
+      // Allow non-browser requests (like curl, Postman, or native mobile networking engines)
       if (!origin) return callback(null, true);
 
       const allowedOrigins = [
@@ -26,7 +25,8 @@ app.use(
         process.env.FRONTEND_URL,       // Vercel URL, e.g. https://lifeos.vercel.app
       ].filter(Boolean); // remove undefined
 
-      if (allowedOrigins.includes(origin) || origin.includes("192.168.1.")) {
+      // Matches local development domains and any incoming wireless subnet pattern variations
+      if (allowedOrigins.includes(origin) || origin.includes("192.168.1.") || origin.includes("192.168.")) {
         return callback(null, true);
       }
 
@@ -36,9 +36,17 @@ app.use(
   })
 );
 
-//Add this middleware to any route that requires the user to be logged in
+// Hybrid Middleware: Checks browser cookies OR Mobile Authorization headers
 const requireAuth = async (req, res, next) => {
-  const sessionId = req.cookies?.sessionId;
+  let sessionId = req.cookies?.sessionId;
+
+  // Mobile fallback: Extract token from the Authorization header (e.g., "Bearer <token>")
+  if (!sessionId && req.headers.authorization) {
+    const parts = req.headers.authorization.split(" ");
+    if (parts.length === 2 && parts[0] === "Bearer") {
+      sessionId = parts[1];
+    }
+  }
 
   if (!sessionId) {
     return res.status(401).json({ error: "Not authenticated" });
@@ -63,6 +71,7 @@ const requireAuth = async (req, res, next) => {
     }
 
     req.user = result.rows[0];
+    req.currentSessionId = sessionId; // save session fallback reference context
     next();
   } catch (err) {
     console.error("Auth middleware error:", err);
@@ -74,7 +83,6 @@ const requireAuth = async (req, res, next) => {
 app.post("/auth/register", async (req, res) => {
   const { email, password, name } = req.body;
 
-  //validation to avoid empty credentials and minimum password length for brute force attacks
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
   }
@@ -83,7 +91,6 @@ app.post("/auth/register", async (req, res) => {
   }
 
   try {
-    //check if email is already taken
     const existing = await pool.query(
       "SELECT id FROM users WHERE email = $1",
       [email.toLowerCase().trim()]
@@ -92,10 +99,8 @@ app.post("/auth/register", async (req, res) => {
       return res.status(409).json({ error: "Email already in use" });
     }
 
-    //hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    //adding the new user
     const userResult = await pool.query(
       `INSERT INTO users (email, password_hash, name)
        VALUES ($1, $2, $3)
@@ -104,24 +109,24 @@ app.post("/auth/register", async (req, res) => {
     );
     const newUser = userResult.rows[0];
 
-    //auto login set to expire in 7 days
     const sessionId = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); //7 days
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     await pool.query(
       "INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)",
       [sessionId, newUser.id, expiresAt]
     );
 
-    //creating cookie
+    // Set cookie for web browsers
     res.cookie("sessionId", sessionId, {
-  httpOnly: true,
-  sameSite: "none",  // needed for cross-origin cookies
-  secure: true,      // required when sameSite is "none"
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
-    res.status(201).json({ id: newUser.id, email: newUser.email, name: newUser.name });
+    // Mobile apps look inside the JSON response body payload directly for authentication parameters
+    res.status(201).json({ id: newUser.id, email: newUser.email, name: newUser.name, token: sessionId });
   } catch (err) {
     console.error("Register error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -143,21 +148,19 @@ app.post("/auth/login", async (req, res) => {
       [email.toLowerCase().trim()]
     );
 
-    //if email doesnt exist
     if (result.rows.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const user = result.rows[0];
 
-    //check password
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const sessionId = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); //7 days
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     await pool.query(
       "INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)",
@@ -165,19 +168,19 @@ app.post("/auth/login", async (req, res) => {
     );
 
     const cookieOptions = {
-  httpOnly: true,
-  sameSite: "none", // needed for cross-origin cookies
-  secure: true,     // required when sameSite is "none"
-};
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+    };
 
-    //remember me function
     if (rememberMe) {
-      cookieOptions.maxAge = 7 * 24 * 60 * 60 * 1000; //7 days
+      cookieOptions.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
     }
 
     res.cookie("sessionId", sessionId, cookieOptions);
 
-    res.json({ id: user.id, email: user.email, name: user.name });
+    // Hand back token property configuration targets explicitly to authenticate your Expo phone environments
+    res.json({ id: user.id, email: user.email, name: user.name, token: sessionId });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -187,17 +190,16 @@ app.post("/auth/login", async (req, res) => {
 
 // USER LOGOUT
 app.post("/auth/logout", requireAuth, async (req, res) => {
-  const sessionId = req.cookies?.sessionId;
+  const sessionId = req.currentSessionId || req.cookies?.sessionId;
 
   try {
     await pool.query("DELETE FROM sessions WHERE id = $1", [sessionId]);
 
-    //remove cookie
     res.clearCookie("sessionId", {
-  httpOnly: true,
-  sameSite: "none",
-  secure: true,
-});
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+    });
 
     res.json({ message: "Logged out" });
   } catch (err) {
@@ -213,26 +215,21 @@ app.get("/auth/me", requireAuth, async (req, res) => {
 });
 
 // RETRIEVE ALL TASKS (GET REQUEST)
-// Triggers when the client accesses http://localhost:5001/tasks
 app.get('/tasks', requireAuth, async (req, res) => {
   try {
     const allTasks = await pool.query(
       "SELECT * FROM tasks WHERE user_id = $1 ORDER BY id ASC",
       [req.user.id]
     );
-    // Hand back the raw array of table row data to the frontend in standard JSON format
     res.json(allTasks.rows);
   } catch (err) {
-    // Print out any unexpected errors 
     console.error(err.message);
-    // Alert the frontend application that an internal database connection breakdown occurred
     res.status(500).send("Server Error");
   }
 });
 
 
 // CREATE A NEW TASK (POST REQUEST)
-// Triggers when the client pushes new entry details to local host for tasks 
 app.post('/tasks', requireAuth, async (req, res) => {
   try {
     const { title, dueDate, priority } = req.body;
@@ -240,15 +237,12 @@ app.post('/tasks', requireAuth, async (req, res) => {
       ? priority
       : "none";
 
-    // insert the dynamic title variable into our database, linked to this user
     const newTask = await pool.query(
       "INSERT INTO tasks (title, due_date, priority, user_id) VALUES($1, $2, $3, $4) RETURNING *",
-      [title, dueDate || null, safePriority, req.user.id] // allow empty deadlines
+      [title, dueDate || null, safePriority, req.user.id]
     );
-    // Return the newly spawned table row record directly back to our active client interface
     res.status(201).json(newTask.rows[0]);
   } catch (err) {
-    // Handle failures gracefully by outputting error details and returning server error code 500
     console.error(err.message);
     res.status(500).send("Server Error");
   }
@@ -256,16 +250,11 @@ app.post('/tasks', requireAuth, async (req, res) => {
 
 
 // UPDATE TASK STATUS (PUT REQUEST)
-// Triggers when the client toggles completion at http://localhost:5001/tasks/:id
 app.put('/tasks/:id', requireAuth, async (req, res) => {
   try {
-    // Extract the variable route parameter target string (:id) out from the request URL path context
     const { id } = req.params;
-    
-    // Extract the updated boolean completion property sent inside our request payload body
     const { isCompleted } = req.body;
     
-    // Execute a SQL transaction mapping our parameters to safely modify task status based on ID + user matching
     const updateTask = await pool.query(
       "UPDATE tasks SET is_completed = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
       [isCompleted, id, req.user.id]
@@ -275,10 +264,8 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Task not found" });
     }
 
-    // Pass back the freshly modified task row structure data to confirm structural storage changes
     res.json(updateTask.rows[0]);
   } catch (err) {
-    // Handle exceptions by logging terminal details and issuing a standard 500 network response
     console.error(err.message);
     res.status(500).send("Server Error");
   }
@@ -286,7 +273,6 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
 
 
 // EDIT TASK DETAILS (PATCH REQUEST)
-// Allows updating title, due date, and priority for a task
 app.patch('/tasks/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -322,7 +308,6 @@ app.patch('/tasks/:id', requireAuth, async (req, res) => {
 
 
 // PERMANENTLY ERASE A TASK (DELETE REQUEST)
-// Triggers when the client strikes out a line item using http://localhost:5001/tasks/:id
 app.delete('/tasks/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -337,7 +322,6 @@ app.delete('/tasks/:id', requireAuth, async (req, res) => {
 
     res.json({ message: "Task was successfully deleted!" });
   } catch (err) {
-    // Catch database error 
     console.error(err.message);
     res.status(500).send("Server Error");
   }
@@ -520,8 +504,7 @@ app.delete('/mood/logs/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Binding our active server application instance to listen directly on our designated system port
-app.listen(PORT, () => {
-  // Print verification text out to our development environment terminal when ignition finishes smoothly
-  console.log(`Server is running on port ${PORT}`);
+//Explicitly listen on local host '0.0.0.0' to receive outside network connections
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running natively and open to wireless network devices on port ${PORT}`);
 });

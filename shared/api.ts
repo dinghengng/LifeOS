@@ -1,14 +1,39 @@
 import { API_URL } from "./config";
 import { Task, DBTask, Priority, User } from "./types";
 
+// Helper to determine if the execution context is running inside a mobile application environment
+const isMobile = typeof window === "undefined" || !window.document;
+
+// Helper function to build authorization headers dynamically for mobile requests
+const getAuthHeaders = async (headers: Record<string, string> = {}) => {
+  const baseHeaders: Record<string, string> = { ...headers };
+  
+  if (isMobile) {
+    try {
+      // Dynamically require the package only on mobile to hide it from the web compiler
+      const SecureStore = require("expo-secure-store");
+      const token = await SecureStore.getItemAsync("userToken");
+      if (token) {
+        baseHeaders["Authorization"] = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.error("Failed to read secure token from SecureStore", e);
+    }
+  }
+  return baseHeaders;
+};
 
 // AUTHENTICATION FLOWS
 
 
-// Check if user has an active session cookie
+// Check if user has an active session cookie (Web) or active SecureStore Token (Mobile)
 export const checkAuthStatus = async (): Promise<User | null> => {
   try {
-    const response = await fetch(`${API_URL}/auth/me`, { credentials: "include" });
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_URL}/auth/me`, {
+      credentials: "include",
+      headers
+    });
     if (!response.ok) return null;
     return await response.json();
   } catch (err) {
@@ -18,14 +43,14 @@ export const checkAuthStatus = async (): Promise<User | null> => {
 };
 
 // Log a user in
-export const loginUser = async (email: string, password: string, rememberMe: boolean): Promise<User> => {
+export const loginUser = async (email: string, password: string, rememberMe: boolean): Promise<User & { token?: string }> => {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ email, password, rememberMe }),
   });
-  
+
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || "Login failed");
@@ -34,7 +59,7 @@ export const loginUser = async (email: string, password: string, rememberMe: boo
 };
 
 // Register a new user
-export const registerUser = async (email: string, password: string, name: string): Promise<User> => {
+export const registerUser = async (email: string, password: string, name: string): Promise<User & { token?: string }> => {
   const response = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -51,20 +76,23 @@ export const registerUser = async (email: string, password: string, name: string
 
 // Log a user out
 export const logoutUser = async (): Promise<void> => {
-  const response = await fetch(`${API_URL}/auth/logout`, { 
-    method: "POST", 
-    credentials: "include" 
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    headers
   });
   if (!response.ok) throw new Error("Logout failed");
 };
 
 
-
 // TASK FLOWS (With Session Support)
-
-
 export const fetchTasks = async (): Promise<Task[]> => {
-  const response = await fetch(`${API_URL}/tasks`, { credentials: "include" });
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/tasks`, {
+    credentials: "include",
+    headers
+  });
   if (!response.ok) throw new Error("Failed to fetch");
   const data: DBTask[] = await response.json();
   return data.map((t) => ({
@@ -77,9 +105,10 @@ export const fetchTasks = async (): Promise<Task[]> => {
 };
 
 export const addTask = async (title: string, dueDate: string | null, priority: Priority): Promise<Task> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const response = await fetch(`${API_URL}/tasks`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify({ title, dueDate, priority }),
   });
@@ -89,9 +118,10 @@ export const addTask = async (title: string, dueDate: string | null, priority: P
 };
 
 export const toggleTask = async (id: number, isCompleted: boolean): Promise<void> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const response = await fetch(`${API_URL}/tasks/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify({ isCompleted }),
   });
@@ -99,18 +129,21 @@ export const toggleTask = async (id: number, isCompleted: boolean): Promise<void
 };
 
 export const deleteTask = async (id: number): Promise<void> => {
-  const response = await fetch(`${API_URL}/tasks/${id}`, { 
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/tasks/${id}`, {
     method: "DELETE",
-    credentials: "include" 
+    credentials: "include",
+    headers
   });
   if (!response.ok) throw new Error("Failed to delete");
 };
 
 export const editTask = async (id: number, updates: { title: string; dueDate: string | null; priority: Priority }): Promise<Task> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const response = await fetch(`${API_URL}/tasks/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     credentials: "include",
+    headers,
     body: JSON.stringify(updates),
   });
   if (!response.ok) throw new Error("Failed to edit");

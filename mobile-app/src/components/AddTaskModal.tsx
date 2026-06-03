@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,29 +9,64 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Priority } from "@shared/types";
+
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Priority, Task } from "@shared/types";
 
 interface AddTaskModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (title: string, priority: Priority) => Promise<void>;
+  onAdd: (title: string, dueDate: string | null, priority: Priority) => Promise<void>;
+  onEdit?: (id: number, title: string, dueDate: string | null, priority: Priority) => Promise<void>;
+  taskToEdit?: Task | null; // Pass a targeted task element context here to switch into edit mode
 }
 
-export default function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalProps) {
+export default function AddTaskModal({ visible, onClose, onAdd, onEdit, taskToEdit }: AddTaskModalProps) {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("none");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+
+  // Synchronize modal internal hook parameters whenever edit tracking changes toggle
+  useEffect(() => {
+    if (taskToEdit) {
+      setTitle(taskToEdit.title);
+      setPriority(taskToEdit.priority);
+      setDueDate(taskToEdit.dueDate ? new Date(taskToEdit.dueDate) : null);
+    } else {
+      setTitle("");
+      setPriority("none");
+      setDueDate(null);
+    }
+  }, [taskToEdit, visible]);
 
   const handleAdd = async () => {
     if (!title.trim()) return;
     setIsSubmitting(true);
-    await onAdd(title.trim(), priority);
+
+    const dateString = dueDate ? dueDate.toISOString() : null; // Convert Date object to ISO string for the backend, or leave as null
+    
+    if (taskToEdit && onEdit) {
+      await onEdit(taskToEdit.id, title.trim(), dateString, priority);
+    } else {
+      await onAdd(title.trim(), dateString, priority);
+    }
     
     // Reset form after successful submission
     setTitle("");
     setPriority("none");
+    setDueDate(null);
     setIsSubmitting(false);
     onClose();
+  };
+
+  // Added handler function for the date changes
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    setShowPicker(false);
+    if (selectedDate) {
+      setDueDate(selectedDate);
+    }
   };
 
   const priorityOptions: { label: string; value: Priority; color: string }[] = [
@@ -51,7 +86,7 @@ export default function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalPr
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
 
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>New Task</Text>
+          <Text style={styles.sheetTitle}>{taskToEdit ? "Edit Task Details" : "New Task"}</Text>
 
           <TextInput
             style={styles.input}
@@ -62,6 +97,26 @@ export default function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalPr
             maxLength={150}
             autoFocus
           />
+
+          <Text style={styles.label}>Due Date (Optional)</Text>
+          <TouchableOpacity 
+            style={styles.dateButton} 
+            onPress={() => setShowPicker(true)}
+          >
+            <Text style={[styles.dateText, !dueDate && styles.dateTextPlaceholder]}>
+              {dueDate ? dueDate.toLocaleDateString() : "Select a due date..."}
+            </Text>
+          </TouchableOpacity>
+
+          {showPicker && (
+            <DateTimePicker
+              value={dueDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={onDateChange}
+              minimumDate={taskToEdit ? undefined : new Date()} // prevent ppl selecting dates in the past (unless modifying historically overdue dates)
+            />
+          )}
 
           <Text style={styles.label}>Priority</Text>
           <View style={styles.priorityRow}>
@@ -92,7 +147,7 @@ export default function AddTaskModal({ visible, onClose, onAdd }: AddTaskModalPr
             disabled={!title.trim() || isSubmitting}
           >
             <Text style={styles.submitButtonText}>
-              {isSubmitting ? "Adding..." : "Add Task"}
+              {isSubmitting ? "Processing..." : taskToEdit ? "Save Changes" : "Add Task"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -142,6 +197,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#64748b",
     marginBottom: 10,
+  },
+  // Re-added the layout styling structures for your date buttons
+  dateButton: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  dateText: {
+    fontSize: 16,
+    color: "#334155",
+  },
+  dateTextPlaceholder: {
+    color: "#94a3b8",
   },
   priorityRow: {
     flexDirection: "row",

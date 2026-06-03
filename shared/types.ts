@@ -70,3 +70,7 @@ export interface UpdateMoodLogPayload {
   customTagIds?: number[];
   loggedAt?: string;
 }
+
+export interface CreateCustomTagPayload {
+  name: string;
+}

@@ -1,28 +1,24 @@
 import { API_URL } from "./config";
-import { Task, DBTask, Priority, User } from "./types";
-
-// Helper to determine if the execution context is running inside a mobile application environment
-const isMobile = typeof window === "undefined" || !window.document;
+import { Task, DBTask, Priority, User, } from "./types";
 
 // Helper function to build authorization headers dynamically for mobile requests
-const getAuthHeaders = async (headers: Record<string, string> = {}) => {
+const getAuthHeaders = async (headers: Record<string, string> = {}): Promise<Record<string, string>> => {
   const baseHeaders: Record<string, string> = { ...headers };
-  
-  if (isMobile) {
-    try {
-      // Dynamically require the package only on mobile to hide it from the web compiler
-      const SecureStore = require("expo-secure-store");
+
+  try {
+    if (typeof navigator !== "undefined" && navigator.product === "ReactNative") {
+      const dynamicRequire = new Function("module", "return require(module)");
+      const SecureStore = dynamicRequire("expo-secure-store");
       const token = await SecureStore.getItemAsync("userToken");
       if (token) {
         baseHeaders["Authorization"] = `Bearer ${token}`;
       }
-    } catch (e) {
-      console.error("Failed to read secure token from SecureStore", e);
     }
+  } catch {
   }
+
   return baseHeaders;
 };
-
 // AUTHENTICATION FLOWS
 
 
@@ -238,4 +234,44 @@ export const createCustomTag = async (name: string): Promise<Tag> => {
     throw new Error(err.error || "Failed to create custom tag");
   }
   return await response.json();
+};
+
+// Journal api
+import { JournalEntry, DBJournalEntry, CreateJournalEntryPayload } from "./types";
+
+// Helper that maps snake case journal entry to camel case
+const mapJournalEntry = (raw: DBJournalEntry): JournalEntry => ({
+  id: raw.id,
+  moodLogId: raw.mood_log_id,
+  content: raw.content,
+  promptUsed: raw.prompt_used,
+  createdAt: raw.created_at,
+  updatedAt: raw.updated_at,
+  moodLevel: raw.mood_level,
+  stressLevel: raw.stress_level,
+  moodLoggedAt: raw.mood_logged_at,
+});
+
+// GET journal entries
+export const fetchJournalEntries = async (): Promise<JournalEntry[]> => {
+  const response = await fetch(`${API_URL}/journal`, { credentials: "include" });
+  if (!response.ok) throw new Error("Failed to fetch journal entries");
+  const data: DBJournalEntry[] = await response.json();
+  return data.map(mapJournalEntry);
+};
+
+// POST create journal entry
+export const createJournalEntry = async (payload: CreateJournalEntryPayload): Promise<JournalEntry> => {
+  const response = await fetch(`${API_URL}/journal`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to create journal entry");
+  }
+  const data: DBJournalEntry = await response.json();
+  return mapJournalEntry(data);
 };

@@ -74,3 +74,33 @@ export interface UpdateMoodLogPayload {
 export interface CreateCustomTagPayload {
   name: string;
 }
+
+export interface DBJournalEntry {
+  id: number;
+  mood_log_id: number | null;
+  content: string;
+  prompt_used: string | null;
+  created_at: string;
+  updated_at: string;
+  mood_level: MoodLevel | null;
+  stress_level: StressLevel | null;
+  mood_logged_at: string | null;
+}
+
+export interface JournalEntry {
+  id: number;
+  moodLogId: number | null;
+  content: string;
+  promptUsed: string | null;
+  createdAt: string;
+  updatedAt: string;
+  moodLevel: MoodLevel | null;
+  stressLevel: StressLevel | null;
+  moodLoggedAt: string | null;
+}
+
+export interface CreateJournalEntryPayload {
+  content: string;
+  mood_log_id?: number | null;
+  prompt_used?: string | null;
+}

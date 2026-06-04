@@ -1,28 +1,24 @@
 import { API_URL } from "./config";
 import { Task, DBTask, Priority, User, } from "./types";
 
-// Helper to determine if the execution context is running inside a mobile application environment
-const isMobile = typeof window === "undefined" || !window.document;
-
 // Helper function to build authorization headers dynamically for mobile requests
-const getAuthHeaders = async (headers: Record<string, string> = {}) => {
+const getAuthHeaders = async (headers: Record<string, string> = {}): Promise<Record<string, string>> => {
   const baseHeaders: Record<string, string> = { ...headers };
-  
-  if (isMobile) {
-    try {
-      // Dynamically require the package only on mobile to hide it from the web compiler
-      const SecureStore = require("expo-secure-store");
+
+  try {
+    if (typeof navigator !== "undefined" && navigator.product === "ReactNative") {
+      const dynamicRequire = new Function("module", "return require(module)");
+      const SecureStore = dynamicRequire("expo-secure-store");
       const token = await SecureStore.getItemAsync("userToken");
       if (token) {
         baseHeaders["Authorization"] = `Bearer ${token}`;
       }
-    } catch (e) {
-      console.error("Failed to read secure token from SecureStore", e);
     }
+  } catch {
   }
+
   return baseHeaders;
 };
-
 // AUTHENTICATION FLOWS
 
 

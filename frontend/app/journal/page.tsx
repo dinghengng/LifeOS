@@ -4,14 +4,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import MoodLogger from "../../components/MoodLogger";
 import MoodHistory from "../../components/MoodHistory";
-import { MoodLog, User } from "../../../shared/types";
-import { fetchMoodLogs, checkAuthStatus } from "../../../shared/api";
-import { TagsResponse } from "../../../shared/types";
-import { fetchTags } from "../../../shared/api";
+import JournalEditor from "../../components/JournalEditor";
+import JournalEntryList from "../../components/JournalEntryList";
+import { MoodLog, User, TagsResponse, JournalEntry, } from "../../../shared/types";
+import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries, } from "../../../shared/api";
+
 
 export default function JournalPage() {
   const [logs, setLogs] = useState<MoodLog[]>([]);
   const [tags, setTags] = useState<TagsResponse>({ system: [], custom: [] });
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -32,11 +34,12 @@ export default function JournalPage() {
 
   const loadLogs = async () => {
     try {
-        const [data, tagData] = await Promise.all([fetchMoodLogs(), fetchTags()]);
+        const [data, tagData, journalData] = await Promise.all([fetchMoodLogs(), fetchTags(), fetchJournalEntries(),]);
         setLogs(data);
         setTags(tagData);
+        setEntries(journalData);
     } catch (err) {
-        console.error("Failed to load mood logs:", err);
+        console.error("Failed to load:", err);
     }
 };
 
@@ -83,6 +86,15 @@ export default function JournalPage() {
             setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
         }
       />
+
+      {/* Journal entry editor */}
+    <div className="w-full max-w-3xl mt-8">
+        <h2 className="text-xl font-bold text-slate-800 mb-4">Write</h2>
+        <JournalEditor onSaved={loadLogs} />
+    </div>
+
+      {/* Journal entry list */}
+        <JournalEntryList entries={entries} />
     </main>
   );
 }

@@ -41,7 +41,7 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  
+
   // Authentication & session management states
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);

@@ -528,6 +528,66 @@ app.delete('/mood/logs/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Get journal entries
+app.get('/journal', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+         je.id,
+         je.mood_log_id,
+         je.content,
+         je.prompt_used,
+         je.created_at,
+         je.updated_at,
+         ml.mood_level,
+         ml.stress_level,
+         ml.logged_at AS mood_logged_at
+       FROM journal_entries je
+       LEFT JOIN mood_logs ml ON je.mood_log_id = ml.id
+       WHERE je.user_id = $1
+       ORDER BY je.created_at DESC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// Create journal entry
+app.post('/journal', requireAuth, async (req, res) => {
+  const { content, mood_log_id, prompt_used } = req.body;
+
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: "Content is required" });
+  }
+
+  try {
+    if (mood_log_id) {
+      const check = await pool.query(
+        "SELECT id FROM mood_logs WHERE id = $1 AND user_id = $2",
+        [mood_log_id, req.user.id]
+      );
+      if (check.rows.length === 0) {
+        return res.status(403).json({ error: "Invalid mood log reference" });
+      }
+    }
+
+    const result = await pool.query(
+      `INSERT INTO journal_entries (user_id, mood_log_id, content, prompt_used)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [req.user.id, mood_log_id || null, content, prompt_used || null]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running natively and open to wireless network devices on port ${PORT}`);

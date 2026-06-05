@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import StatsSummary from "../../components/dashboard/StatsSummary";
+import HabitTracker from "../../components/dashboard/HabitTracker";
+import GoalTracker from "../../components/dashboard/GoalTracker";
 import { Habit } from "../../components/dashboard/HabitRow";
 import { Goal } from "../../components/dashboard/GoalCard";
 import { User } from "../../../shared/types";
@@ -14,7 +17,6 @@ export default function DashboardPage() {
   const [user, setUser]               = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // New states 
   const [habits, setHabits]           = useState<Habit[]>([]);
   const [goals, setGoals]             = useState<Goal[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -34,7 +36,7 @@ export default function DashboardPage() {
     init();
   }, [router]);
 
-  // Fetch habits n goals
+  // Fetch habits + goals
   const fetchDashboardData = useCallback(async () => {
     setDataLoading(true);
     setError(null);
@@ -63,7 +65,11 @@ export default function DashboardPage() {
     router.push("/");
   };
 
+  //StatsSummary component
   const today = new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" });
+  const completedToday  = habits.filter(h => h.completedDays[6]).length;
+  const totalStreak     = habits.reduce((sum, h) => sum + h.streak, 0);
+  const avgGoalProgress = goals.length ? Math.round(goals.reduce((sum, g) => sum + g.progress, 0) / goals.length) : 0;
 
   if (authLoading) {
     return (
@@ -76,7 +82,7 @@ export default function DashboardPage() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary, #f5f5f2)", fontFamily: "var(--font-sans)", padding: "2rem" }}>
 
-      {/* Header bar layout matching full styling */}
+      {/* Header bar layout */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" }}>
         <div>
           <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{today}</p>
@@ -92,31 +98,27 @@ export default function DashboardPage() {
           <button onClick={handleLogout} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--color-border-secondary)", backgroundColor: "rgba(255, 255, 255, 0.7)", color: "#334155", cursor: "pointer" }}>Logout</button>
         </div>
       </div>
-
-      {/* Render the error UI block if error state catches something */}
       {error && (
-        <div style={{ 
-          padding: "12px", 
-          backgroundColor: "#fee2e2", 
-          color: "#b91c1c", 
-          borderRadius: "8px", 
-          marginBottom: "1.5rem", 
-          textAlign: "center",
-          border: "1px solid #fca5a5",
-          fontSize: "14px"
-        }}>
+        <div style={{ padding: "12px", backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: "8px", marginBottom: "1.5rem", textAlign: "center", border: "1px solid #fca5a5", fontSize: "14px" }}>
           ⚠️ {error}
         </div>
       )}
-
-      {/* Temporary for loading vs fetched text data */}
       {dataLoading ? (
-        <p style={{ textAlign: "center", color: "#64748b" }}>Loading dashboard data...</p>
+        <p style={{ textAlign: "center", color: "#64748b" }}>Loading...</p>
       ) : (
-        <div style={{ textAlign: "center", color: "#334155", padding: "2rem" }}>
-          <p>Data successfully pulled. (Trackers will be integrated next commit!)</p>
-          <p style={{ fontSize: "12px", color: "#64748b" }}>Habits found: {habits.length} | Goals found: {goals.length}</p>
-        </div>
+        <>
+          <StatsSummary completedToday={completedToday} totalHabits={habits.length} totalStreak={totalStreak} avgGoalProgress={avgGoalProgress} />
+
+          <div style={{ display: "flex", gap: "1.5rem", width: "100%", alignItems: "flex-start" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <HabitTracker habits={habits} onToggleToday={(id) => console.log('toggle habit', id)} onAddClick={() => alert("Add habit clicked")} />
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <GoalTracker goals={goals} onAddClick={() => alert("Add goal clicked")} onMilestoneToggle={(id, index) => console.log('toggle milestone', id, index)} />
+            </div>
+          </div>
+        </>
       )}
 
     </div>

@@ -10,16 +10,16 @@ import { useRouter } from "next/navigation";
 
 // Import types and unified API functions from your shared package
 import { Task, Priority, User } from "../../shared/types";
-import { 
-  fetchTasks, 
-  addTask as apiAddTask, 
-  toggleTask as apiToggleTask, 
-  deleteTask as apiDeleteTask, 
+import {
+  fetchTasks,
+  addTask as apiAddTask,
+  toggleTask as apiToggleTask,
+  deleteTask as apiDeleteTask,
   editTask as apiEditTask,
   checkAuthStatus,
   loginUser,
   registerUser,
-  logoutUser
+  logoutUser,
 } from "../../shared/api";
 
 const BACKGROUNDS = ["/bg-1.jpg", "/bg-2.jpg", "/bg-3.webp", "/bg-4.avif"];
@@ -35,7 +35,7 @@ const hasDueTime = (dueDate: string | null) => !!dueDate;
 
 export default function Page() {
   const router = useRouter();
-  
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +94,11 @@ export default function Page() {
   }, [currentUser]);
 
   // Task Handlers using API
-  const handleAddTask = async (titleString: string, dueDate: string | null, priority: Priority = "none") => {
+  const handleAddTask = async (
+    titleString: string,
+    dueDate: string | null,
+    priority: Priority = "none",
+  ) => {
     try {
       setError(null);
       const newTask = await apiAddTask(titleString, dueDate, priority);
@@ -113,7 +117,11 @@ export default function Page() {
     try {
       setError(null);
       await apiToggleTask(taskId, newStatus);
-      setTasks(tasks.map((task) => (task.id === taskId ? { ...task, isCompleted: newStatus } : task)));
+      setTasks(
+        tasks.map((task) =>
+          task.id === taskId ? { ...task, isCompleted: newStatus } : task,
+        ),
+      );
     } catch (err: unknown) {
       console.error(err);
       setError("Could not update task. Please try again.");
@@ -131,11 +139,16 @@ export default function Page() {
     }
   };
 
-  const saveTaskEdits = async (id: number, updates: { title: string; dueDate: string | null; priority: Priority }) => {
+  const saveTaskEdits = async (
+    id: number,
+    updates: { title: string; dueDate: string | null; priority: Priority },
+  ) => {
     try {
       setError(null);
       const updatedTask = await apiEditTask(id, updates);
-      setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? updatedTask : t)));
+      setTasks((prevTasks) =>
+        prevTasks.map((t) => (t.id === id ? updatedTask : t)),
+      );
       setEditingTask(null);
     } catch (err: unknown) {
       console.error(err);
@@ -144,7 +157,11 @@ export default function Page() {
   };
 
   // 4. Authentication Flow Handlers via Shared API Layer
-  const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
+  const handleLogin = async (
+    email: string,
+    password: string,
+    rememberMe: boolean,
+  ) => {
     setAuthError(null);
     try {
       const user = await loginUser(email, password, rememberMe);
@@ -158,7 +175,11 @@ export default function Page() {
     }
   };
 
-  const handleRegister = async (email: string, password: string, name: string) => {
+  const handleRegister = async (
+    email: string,
+    password: string,
+    name: string,
+  ) => {
     setAuthError(null);
     try {
       const user = await registerUser(email, password, name);
@@ -254,28 +275,51 @@ export default function Page() {
       {/* Dynamic Identity & Action Header Line Layout */}
       <div className="w-full max-w-3xl flex justify-between items-center mb-4 px-2">
         <span className="text-white/90 text-sm font-medium bg-slate-900/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10 shadow-sm">
-          Welcome back! <span className="font-semibold">{currentUser.name || currentUser.email}</span>
+          Welcome back!{" "}
+          <span className="font-semibold">
+            {currentUser.name || currentUser.email}
+          </span>
         </span>
-        {/*Temporary button*/}
-        <button
-          onClick={() => router.push("/journal")}
-          className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
-        >
-          Journal
-        </button>
-        <button
-          onClick={handleLogout}
-          className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-red-50 hover:text-red-600 shadow-sm transition"
-        >
-          Logout
-        </button>
+
+        <div className="flex gap-2">
+          {/* Active Tasks button styling */}
+          <button
+            onClick={() => router.push("/")}
+            className="bg-indigo-600 text-white font-semibold px-4 py-1.5 rounded-lg text-sm border border-indigo-600 shadow-sm transition"
+          >
+            Tasks
+          </button>
+          {/* Dashboard button just like journal */}
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
+          >
+            Dashboard
+          </button>
+          {/* Journal button */}
+          <button
+            onClick={() => router.push("/journal")}
+            className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
+          >
+            Journal
+          </button>
+          {/* Logout button */}
+          <button
+            onClick={handleLogout}
+            className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-red-50 hover:text-red-600 shadow-sm transition"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       <div className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 h-fit">
         <h1 className="text-3xl font-bold text-slate-800 mb-4 text-center">
           LifeOS Tasks
         </h1>
-        {error && <p className="mb-4 text-sm text-red-600 text-center">{error}</p>}
+        {error && (
+          <p className="mb-4 text-sm text-red-600 text-center">{error}</p>
+        )}
 
         {loading ? (
           <p className="text-slate-500 text-center mt-4">Loading tasks...</p>
@@ -285,27 +329,36 @@ export default function Page() {
 
             {/* Filter controls */}
             <div className="flex gap-2 mb-6 flex-wrap justify-center">
-              {(["all", "critical", "high", "low", "none"] as const).map((level) => {
-                const count = level === "all" ? tasks.length : tasks.filter((t) => t.priority === level).length;
-                const isActive = priorityFilter === level;
+              {(["all", "critical", "high", "low", "none"] as const).map(
+                (level) => {
+                  const count =
+                    level === "all"
+                      ? tasks.length
+                      : tasks.filter((t) => t.priority === level).length;
+                  const isActive = priorityFilter === level;
 
-                return (
-                  <button
-                    key={level}
-                    onClick={() => setPriorityFilter(level)}
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 ${
-                      isActive
-                        ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-300 ring-offset-1"
-                        : "bg-white/80 backdrop-blur-sm text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                    }`}
-                  >
-                    <span className="uppercase tracking-wider">{level === "all" ? "All" : level}</span>
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={level}
+                      onClick={() => setPriorityFilter(level)}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 ${
+                        isActive
+                          ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-300 ring-offset-1"
+                          : "bg-white/80 backdrop-blur-sm text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
+                    >
+                      <span className="uppercase tracking-wider">
+                        {level === "all" ? "All" : level}
+                      </span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                },
+              )}
             </div>
 
             {editingTask && (

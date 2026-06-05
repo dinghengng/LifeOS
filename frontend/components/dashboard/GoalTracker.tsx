@@ -1,6 +1,14 @@
 import GoalCard, { Goal } from "./GoalCard";
 
-export default function GoalTracker({ goals }: { goals: Goal[] }) {
+export default function GoalTracker({
+  goals,
+  onAddClick,
+  onMilestoneToggle,
+}: {
+  goals: Goal[];
+  onAddClick: () => void;
+  onMilestoneToggle: (goalId: string, milestoneIndex: number) => void;
+}) {
   return (
     <div
       style={{
@@ -10,8 +18,22 @@ export default function GoalTracker({ goals }: { goals: Goal[] }) {
         padding: "1.25rem",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1rem",
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 15,
+            fontWeight: 500,
+            color: "var(--color-text-primary)",
+          }}
+        >
           Goal tracker
         </h2>
         <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
@@ -20,10 +42,15 @@ export default function GoalTracker({ goals }: { goals: Goal[] }) {
       </div>
 
       {goals.map((goal) => (
-        <GoalCard key={goal.id} goal={goal} />
+        <GoalCard
+          key={goal.id}
+          goal={goal}
+          onMilestoneToggle={onMilestoneToggle} // ✅ FIXED: Passing down the state handler to each card item
+        />
       ))}
 
       <button
+        onClick={onAddClick}
         style={{
           marginTop: 2,
           width: "100%",

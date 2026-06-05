@@ -1,26 +1,43 @@
+"use client";
+
 export type Goal = {
   id: string;
   title: string;
   category: string;
   color: string;
-  progress: number; // 0–100
+  progress: number;
   dueDate: string;
   milestones: { label: string; done: boolean }[];
 };
 
-export default function GoalCard({ goal }: { goal: Goal }) {
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
+
+export default function GoalCard({
+  goal,
+  onMilestoneToggle,
+}: {
+  goal: Goal;
+  onMilestoneToggle: (goalId: string, milestoneIndex: number) => void;
+}) {
   const doneMilestones = goal.milestones.filter((m) => m.done).length;
 
+  async function handleToggle(index: number) {
+    // changed to make render appear immediately instead of needing to refresh
+    onMilestoneToggle(goal.id, index);
+
+    try {
+      //Fire the background network sync to update PostgreSQL
+      await fetch(`${API_BASE}/api/goals/${goal.id}/milestones/${index}`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Milestone tracking save failure:", err);
+    }
+  }
+
   return (
-    <div
-      style={{
-        background: "var(--color-background-primary)",
-        border: "0.5px solid var(--color-border-tertiary)",
-        borderRadius: "var(--border-radius-lg)",
-        padding: "1rem 1.25rem",
-        marginBottom: 12,
-      }}
-    >
+    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem", marginBottom: 12 }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
         <div>
@@ -50,7 +67,11 @@ export default function GoalCard({ goal }: { goal: Goal }) {
       {/* Milestones */}
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {goal.milestones.map((ms, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: ms.done ? "var(--color-text-secondary)" : "var(--color-text-primary)" }}>
+          <div
+            key={i}
+            onClick={() => handleToggle(i)}
+            style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: ms.done ? "var(--color-text-secondary)" : "var(--color-text-primary)", cursor: "pointer" }}
+          >
             <div style={{ width: 14, height: 14, borderRadius: "50%", backgroundColor: ms.done ? goal.color : "transparent", border: ms.done ? "none" : "1.5px solid var(--color-border-secondary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {ms.done && <span style={{ fontSize: 8, color: "#fff" }}>✓</span>}
             </div>

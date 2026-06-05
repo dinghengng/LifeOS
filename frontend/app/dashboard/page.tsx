@@ -159,4 +159,36 @@ export default function DashboardPage() {
         <div style={{ display: "flex", gap: "8px" }}>
           <button onClick={() => router.push("/")} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--color-border-secondary)", backgroundColor: "rgba(255, 255, 255, 0.7)", color: "#334155", cursor: "pointer" }}>Tasks</button>
           <button onClick={() => router.push("/dashboard")} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid #4f46e5", backgroundColor: "#4f46e5", color: "#ffffff", cursor: "pointer" }}>Dashboard</button>
-          <button onClick={() => router.push("/journal")} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border:
+          <button onClick={() => router.push("/journal")} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--color-border-secondary)", backgroundColor: "rgba(255, 255, 255, 0.7)", color: "#334155", cursor: "pointer" }}>Journal</button>
+          <button onClick={handleLogout} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--color-border-secondary)", backgroundColor: "rgba(255, 255, 255, 0.7)", color: "#334155", cursor: "pointer" }}>Logout</button>
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ padding: "12px", backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: "8px", marginBottom: "1.5rem", textAlign: "center", border: "1px solid #fca5a5", fontSize: "14px" }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      {dataLoading ? (
+        <p style={{ textAlign: "center", color: "#64748b" }}>Loading...</p>
+      ) : (
+        <>
+          <StatsSummary completedToday={completedToday} totalHabits={habits.length} totalStreak={totalStreak} avgGoalProgress={avgGoalProgress} />
+
+          <div style={{ display: "flex", gap: "1.5rem", width: "100%", alignItems: "flex-start" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+
+              <HabitTracker habits={habits} onToggleToday={toggleToday} onAddClick={() => alert("Add habit clicked")} />
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <GoalTracker goals={goals} onAddClick={() => alert("Add goal clicked")} onMilestoneToggle={toggleMilestone} />
+            </div>
+          </div>
+        </>
+      )}
+
+    </div>
+  );
+}

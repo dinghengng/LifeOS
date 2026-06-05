@@ -8,7 +8,7 @@ import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import { useRouter } from "next/navigation";
 
-// Import types and unified API functions from your shared package
+// Import types and unified API functions from the shared folder
 import { Task, Priority, User } from "../../shared/types";
 import {
   fetchTasks,
@@ -156,7 +156,7 @@ export default function Page() {
     }
   };
 
-  // 4. Authentication Flow Handlers via Shared API Layer
+  // Authentication Flow via Shared API Layer
   const handleLogin = async (
     email: string,
     password: string,

@@ -793,7 +793,7 @@ app.post('/api/goals', requireAuth, async (req, res) => {
   }
 });
 
-// TOGGLE MILESTONE DONE/UNDONE
+// toggle milestone done vs undone
 app.patch('/api/goals/:goalId/milestones/:milestoneIndex', requireAuth, async (req, res) => {
   const { goalId, milestoneIndex } = req.params;
 
@@ -836,7 +836,51 @@ app.patch('/api/goals/:goalId/milestones/:milestoneIndex', requireAuth, async (r
   }
 });
 
+// TOGGLE A GOAL MILESTONE COMPLETED STATUS
+app.patch('/api/goals/milestones/:id/toggle', requireAuth, async (req, res) => {
+  const milestoneId = req.params.id;
 
+  try {
+    // Flip the 'is_done' boolean status for the milestone
+    const milestoneResult = await pool.query(
+      `UPDATE goal_milestones 
+       SET is_done = NOT is_done 
+       WHERE id = $1 
+       RETURNING goal_id, is_done`,
+      [milestoneId]
+    );
+
+    if (milestoneResult.rows.length === 0) {
+      return res.status(404).json({ error: "Milestone not found" });
+    }
+
+    const { goal_id, is_done } = milestoneResult.rows[0];
+
+    // Recalculate total progress percentage for this specific goal
+    const statsResult = await pool.query(
+      `SELECT 
+         COUNT(*) AS total,
+         COUNT(*) FILTER (WHERE is_done = TRUE) AS completed
+       FROM goal_milestones 
+       WHERE goal_id = $1`,
+      [goal_id]
+    );
+
+    const { total, completed } = statsResult.rows[0];
+    const newProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    // Update the goal progress column in the database
+    await pool.query(
+      'UPDATE goals SET progress = $1 WHERE id = $2',
+      [newProgress, goal_id]
+    );
+
+    res.json({ id: milestoneId, goalId: String(goal_id), done: is_done, progress: newProgress });
+  } catch (err) {
+    console.error("Toggle milestone error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
 
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, '0.0.0.0', () => {

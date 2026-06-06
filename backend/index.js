@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
 const cors = require('cors');
 const crypto = require("crypto");
-const pool = require('./db'); 
+const pool = require('./db');
 require('dotenv').config();
 
 // Instantiating our application instance by calling the express function
@@ -120,8 +120,8 @@ app.post("/auth/register", async (req, res) => {
     // Set cookie for web browsers
     res.cookie("sessionId", sessionId, {
       httpOnly: true,
-      sameSite: "none",
-      secure: true,
+      sameSite: "lax",
+      secure: false,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -169,8 +169,8 @@ app.post("/auth/login", async (req, res) => {
 
     const cookieOptions = {
       httpOnly: true,
-      sameSite: "none",
-      secure: true,
+      sameSite: "lax",
+      secure: false,
     };
 
     if (rememberMe) {
@@ -197,8 +197,8 @@ app.post("/auth/logout", requireAuth, async (req, res) => {
 
     res.clearCookie("sessionId", {
       httpOnly: true,
-      sameSite: "none",
-      secure: true,
+      sameSite: "lax",
+      secure: false,
     });
 
     res.json({ message: "Logged out" });
@@ -587,6 +587,256 @@ app.post('/journal', requireAuth, async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
+
+
+// Feature 3 (HABITS & GOALS)
+
+app.get('/api/habits', requireAuth, async (req, res) => {
+  try {
+    const habitsResult = await pool.query(
+      'SELECT id, name, icon, color, streak FROM habits WHERE user_id = $1 ORDER BY id ASC',
+      [req.user.id]
+    );
+    const logsResult = await pool.query(
+      `SELECT habit_id, completed_at::text FROM habit_logs 
+       WHERE habit_id IN (SELECT id FROM habits WHERE user_id = $1)
+       AND completed_at >= CURRENT_DATE - INTERVAL '6 days'`,
+      [req.user.id]
+    );
+
+    const completionMap = {};
+    logsResult.rows.forEach(log => {
+      const dateStr = log.completed_at.split(' ')[0]; 
+      if (!completionMap[log.habit_id]) {
+        completionMap[log.habit_id] = new Set();
+      }
+      completionMap[log.habit_id].add(dateStr);
+    });
+
+    const habits = habitsResult.rows.map(habit => {
+      const completedDays = [];
+      const habitDatesSet = completionMap[habit.id] || new Set();
+
+      for (let i = 6; i >= 0; i--) {
+        // Generate local date strings matching current date
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        completedDays.push(habitDatesSet.has(dateStr));
+      }
+
+      return {
+        id: String(habit.id),
+        name: habit.name,
+        icon: habit.icon,
+        color: habit.color,
+        streak: habit.streak,
+        completedDays
+      };
+    });
+
+    res.json(habits);
+  } catch (err) {
+    console.error("Fetch habits error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// TOGGLE completion status for id
+app.post('/api/habits/:id/toggle', requireAuth, async (req, res) => {
+  const habitId = req.params.id;
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  try {
+    // Verify ownership of requested target habit parameter
+    const verifyOwnership = await pool.query(
+      'SELECT id FROM habits WHERE id = $1 AND user_id = $2',
+      [habitId, req.user.id]
+    );
+    if (verifyOwnership.rows.length === 0) {
+      return res.status(404).json({ error: "Habit configuration not found" });
+    }
+
+    const checkLog = await pool.query(
+      'SELECT id FROM habit_logs WHERE habit_id = $1 AND completed_at = $2',
+      [habitId, todayStr]
+    );
+
+    if (checkLog.rows.length > 0) {
+      // Done then Untoggle (Delete the log entry and decrement streak value)
+      await pool.query('DELETE FROM habit_logs WHERE habit_id = $1 AND completed_at = $2', [habitId, todayStr]);
+      await pool.query('UPDATE habits SET streak = GREATEST(0, streak - 1) WHERE id = $1', [habitId]);
+      res.json({ completed: false });
+    } else {
+      // Not done then Toggle (Insert log entry and increment streak value)
+      await pool.query('INSERT INTO habit_logs (habit_id, completed_at) VALUES ($1, $2)', [habitId, todayStr]);
+      await pool.query('UPDATE habits SET streak = streak + 1 WHERE id = $1', [habitId]);
+      res.json({ completed: true });
+    }
+  } catch (err) {
+    console.error("Toggle habit error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// fetch all goals with the checklists
+app.get('/api/goals', requireAuth, async (req, res) => {
+  try {
+    const goalsResult = await pool.query(
+      'SELECT id, title, category, color, progress, due_date AS "dueDate" FROM goals WHERE user_id = $1 ORDER BY id ASC',
+      [req.user.id]
+    );
+
+    if (goalsResult.rows.length === 0) return res.json([]);
+
+    const goalIds = goalsResult.rows.map(g => g.id);
+    const milestonesResult = await pool.query(
+      'SELECT id, goal_id, label, is_done AS done FROM goal_milestones WHERE goal_id = ANY($1) ORDER BY display_order ASC',
+      [goalIds]
+    );
+
+    const milestonesMap = {};
+    milestonesResult.rows.forEach(ms => {
+      if (!milestonesMap[ms.goal_id]) {
+        milestonesMap[ms.goal_id] = [];
+      }
+      milestonesMap[ms.goal_id].push({
+        label: ms.label,
+        done: ms.done
+      });
+    });
+
+    const goals = goalsResult.rows.map(goal => ({
+      id: String(goal.id),
+      title: goal.title,
+      category: goal.category,
+      color: goal.color,
+      progress: goal.progress,
+      dueDate: goal.dueDate,
+      milestones: milestonesMap[goal.id] || []
+    }));
+
+    res.json(goals);
+  } catch (err) {
+    console.error("Fetch goals error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// CREATE A NEW HABIT
+app.post('/api/habits', requireAuth, async (req, res) => {
+  const { name, icon, color } = req.body;
+  if (!name) return res.status(400).json({ error: "Name is required" });
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO habits (user_id, name, icon, color) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING id, name, icon, color, streak`,
+      [req.user.id, name, icon || '🏃', color || '#1D9E75']
+    );
+
+    // Format to match frontend structure with empty 7 days array
+    const newHabit = {
+      ...result.rows[0],
+      id: String(result.rows[0].id),
+      completedDays: [false, false, false, false, false, false, false]
+    };
+    res.status(201).json(newHabit);
+  } catch (err) {
+    console.error("Create habit error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// CREATE A NEW GOAL
+app.post('/api/goals', requireAuth, async (req, res) => {
+  const { title, category, color, dueDate, milestones = [] } = req.body;
+  if (!title || !dueDate) return res.status(400).json({ error: "Title and Due Date are required" });
+
+  try {
+    // Insert goal
+    const goalResult = await pool.query(
+      `INSERT INTO goals (user_id, title, category, color, progress, due_date) 
+       VALUES ($1, $2, $3, $4, 0, $5) 
+       RETURNING id, title, category, color, progress, due_date AS "dueDate"`,
+      [req.user.id, title, category || 'General', color || '#534AB7', dueDate]
+    );
+    const newGoal = goalResult.rows[0];
+
+    // Insert milestones if provided
+    const savedMilestones = [];
+    for (let i = 0; i < milestones.length; i++) {
+      if (!milestones[i].trim()) continue;
+      const msResult = await pool.query(
+        `INSERT INTO goal_milestones (goal_id, label, is_done, display_order) 
+         VALUES ($1, $2, FALSE, $3) 
+         RETURNING label, is_done AS done`,
+        [newGoal.id, milestones[i].trim(), i]
+      );
+      savedMilestones.push(msResult.rows[0]);
+    }
+
+    res.status(201).json({
+      ...newGoal,
+      id: String(newGoal.id),
+      milestones: savedMilestones
+    });
+  } catch (err) {
+    console.error("Create goal error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// TOGGLE MILESTONE DONE/UNDONE
+app.patch('/api/goals/:goalId/milestones/:milestoneIndex', requireAuth, async (req, res) => {
+  const { goalId, milestoneIndex } = req.params;
+
+  try {
+    // Verify ownership
+    const verify = await pool.query(
+      'SELECT id FROM goals WHERE id = $1 AND user_id = $2',
+      [goalId, req.user.id]
+    );
+    if (verify.rows.length === 0) return res.status(404).json({ error: "Goal not found" });
+
+    // then get the milestone
+    const ms = await pool.query(
+      'SELECT id, is_done FROM goal_milestones WHERE goal_id = $1 AND display_order = $2',
+      [goalId, milestoneIndex]
+    );
+    if (ms.rows.length === 0) return res.status(404).json({ error: "Milestone not found" });
+
+    const newDone = !ms.rows[0].is_done;
+    await pool.query(
+      'UPDATE goal_milestones SET is_done = $1 WHERE id = $2',
+      [newDone, ms.rows[0].id]
+    );
+
+    // Recalculate progress from milestones
+    const allMs = await pool.query(
+      'SELECT is_done FROM goal_milestones WHERE goal_id = $1',
+      [goalId]
+    );
+    const total = allMs.rows.length;
+    const done = allMs.rows.filter(r => r.is_done).length;
+    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    await pool.query('UPDATE goals SET progress = $1 WHERE id = $2', [progress, goalId]);
+
+    res.json({ done: newDone, progress });
+  } catch (err) {
+    console.error("Toggle milestone error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+
 
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, '0.0.0.0', () => {

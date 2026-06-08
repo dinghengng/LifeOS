@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MoodLog, MoodLevel, TagsResponse, Tag, JournalEntry } from "../../shared/types";
-import { deleteMoodLog } from "../../shared/api";
+import { deleteMoodLog, updateJournalEntry, } from "../../shared/api";
 import EditMoodLogModal from "./EditMoodLogModal";
 import JournalEditor from "./JournalEditor";
 
@@ -37,6 +37,64 @@ interface MoodHistoryProps {
   onRefresh: () => void;
   onTagsUpdated: (tag: Tag) => void;
 }
+
+function LinkToMoodButton({ entry, logs, onLinked }: {
+  entry: JournalEntry;
+  logs: MoodLog[];
+  onLinked: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [linking, setLinking] = useState(false);
+
+  const handleLink = async (logId: number) => {
+    setLinking(true);
+    try {
+      await updateJournalEntry(entry.id, { mood_log_id: logId });
+      onLinked();
+    } catch {
+      //silently fail
+    } finally {
+      setLinking(false);
+      setOpen(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="text-xs px-3 py-1 rounded-lg border border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 transition"
+      >
+        Link mood
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1 items-end">
+      <select
+        autoFocus
+        disabled={linking}
+        onChange={(e) => e.target.value && handleLink(Number(e.target.value))}
+        className="text-xs border border-indigo-300 rounded-lg px-2 py-1 bg-white text-slate-600 max-w-[160px]"
+      >
+        <option value="">Select mood...</option>
+        {logs.map((log) => (
+          <option key={log.id} value={log.id}>
+            {MOOD_CONFIG[log.moodLevel].emoji} {formatLogTime(log.loggedAt)}
+          </option>
+        ))}
+      </select>
+      <button
+        onClick={() => setOpen(false)}
+        className="text-xs text-slate-400 hover:text-slate-600 transition"
+      >
+        Cancel
+      </button>
+    </div>
+  );
+}
+
 
 export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpdated }: MoodHistoryProps) {
   const [editingLog, setEditingLog] = useState<MoodLog | null>(null);
@@ -188,6 +246,34 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
               </li>
             );
           })}
+          {/*Unlinked journal entries*/}
+          {(entries ?? [])
+            .filter((e) => e.moodLogId === null)
+            .map((entry) => (
+              <li
+                key={`entry-${entry.id}`}
+                className="bg-white/80 backdrop-blur-md rounded-2xl border border-white/20 shadow overflow-hidden"
+              >
+                <div className="p-4 flex items-start gap-4">
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 min-w-[60px]">
+                    <span className="text-2xl">📝</span>
+                    <span className="text-xs font-semibold mt-0.5 text-slate-500">Note</span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs text-slate-400">{formatLogTime(entry.createdAt)}</span>
+                    <p className="text-sm text-slate-600 mt-1 line-clamp-2">
+                      {stripHtml(entry.content) || <span className="italic text-slate-400">Empty entry</span>}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0">
+                    <LinkToMoodButton entry={entry} logs={logs} onLinked={onRefresh} />
+                  </div>
+                </div>
+              </li>
+            ))
+          }
         </ul>
       </div>
     </>

@@ -237,7 +237,7 @@ export const createCustomTag = async (name: string): Promise<Tag> => {
 };
 
 // Journal api
-import { JournalEntry, DBJournalEntry, CreateJournalEntryPayload } from "./types";
+import { JournalEntry, DBJournalEntry, CreateJournalEntryPayload, UpdateJournalEntryPayload, } from "./types";
 
 // Helper that maps snake case journal entry to camel case
 const mapJournalEntry = (raw: DBJournalEntry): JournalEntry => ({
@@ -271,6 +271,22 @@ export const createJournalEntry = async (payload: CreateJournalEntryPayload): Pr
   if (!response.ok) {
     const err = await response.json();
     throw new Error(err.error || "Failed to create journal entry");
+  }
+  const data: DBJournalEntry = await response.json();
+  return mapJournalEntry(data);
+};
+
+// PATCH update journal entry
+export const updateJournalEntry = async (id: number, payload: UpdateJournalEntryPayload): Promise<JournalEntry> => {
+  const response = await fetch(`${API_URL}/journal/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to update journal entry");
   }
   const data: DBJournalEntry = await response.json();
   return mapJournalEntry(data);

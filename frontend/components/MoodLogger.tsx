@@ -24,7 +24,7 @@ const STRESS_ANCHORS: Record<number, string> = {
 };
 
 interface MoodLoggerProps {
-  onSaved: () => void;
+  onSaved: (newLogId: number) => void;
   tags: TagsResponse;
   onTagsUpdated: (tag: Tag) => void;
 }
@@ -66,12 +66,12 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated }: MoodLoggerP
     };
 
     try {
-      await createMoodLog(payload);
+      const newLog = await createMoodLog(payload);
       setStep(1);
       setSelectedMood(null);
       setStressLevel(5);
       setSelectedTagKeys([]);
-      onSaved();
+      onSaved(newLog.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not save mood log.");
     } finally {

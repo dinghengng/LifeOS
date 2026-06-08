@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import MoodLogger from "../../components/MoodLogger";
 import MoodHistory from "../../components/MoodHistory";
 import JournalEditor from "../../components/JournalEditor";
-import JournalEntryList from "../../components/JournalEntryList";
 import { MoodLog, User, TagsResponse, JournalEntry, } from "../../../shared/types";
 import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries, } from "../../../shared/api";
 
@@ -80,21 +79,22 @@ export default function JournalPage() {
         }
       />
 
-      {/*Mood history list*/}
-      <MoodHistory logs={logs} tags={tags} onRefresh={loadLogs}
+      {/* Journal entry editor */}
+    <div className="w-full max-w-3xl mt-8">
+        <h2 className="text-xl font-bold text-slate-800 mb-4">Write</h2>
+        <JournalEditor 
+          onSaved={loadLogs} 
+          moodLogs={logs}
+        />
+    </div>
+
+    {/*Mood history list*/}
+      <MoodHistory logs={logs} tags={tags} entries={entries} onRefresh={loadLogs}
         onTagsUpdated={(newTag) =>
             setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
         }
       />
 
-      {/* Journal entry editor */}
-    <div className="w-full max-w-3xl mt-8">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">Write</h2>
-        <JournalEditor onSaved={loadLogs} />
-    </div>
-
-      {/* Journal entry list */}
-        <JournalEntryList entries={entries} />
     </main>
   );
 }

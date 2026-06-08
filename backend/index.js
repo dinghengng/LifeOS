@@ -588,6 +588,48 @@ app.post('/journal', requireAuth, async (req, res) => {
   }
 });
 
+// Edit journal entry
+app.patch('/journal/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { content, mood_log_id } = req.body;
+
+  try {
+    const existing = await pool.query(
+      "SELECT id FROM journal_entries WHERE id = $1 AND user_id = $2",
+      [id, req.user.id]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: "Journal entry not found" });
+    }
+
+    if (mood_log_id !== undefined) {
+      const check = await pool.query(
+        "SELECT id FROM mood_logs WHERE id = $1 AND user_id = $2",
+        [mood_log_id, req.user.id]
+      );
+      if (check.rows.length === 0) {
+        return res.status(403).json({ error: "Invalid mood log reference" });
+      }
+    }
+
+    const result = await pool.query(
+      `UPDATE journal_entries
+       SET
+         content     = COALESCE($1, content),
+         mood_log_id = CASE WHEN $2::int IS NOT NULL THEN $2::int ELSE mood_log_id END,
+         updated_at  = NOW()
+       WHERE id = $3 AND user_id = $4
+       RETURNING *`,
+      [content ?? null, mood_log_id ?? null, id, req.user.id]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 
 // Feature 3 (HABITS & GOALS)
 

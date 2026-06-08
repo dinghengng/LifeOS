@@ -104,3 +104,8 @@ export interface CreateJournalEntryPayload {
   mood_log_id?: number | null;
   prompt_used?: string | null;
 }
+
+export interface UpdateJournalEntryPayload {
+  content?: string;
+  mood_log_id?: number | null;
+}

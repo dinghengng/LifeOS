@@ -984,6 +984,41 @@ app.get('/api/nutrition', requireAuth, async (req, res) => {
   }
 });
 
+// 3. GET: FETCH SAVED MEALS (QUICK-ADD)
+app.get('/api/nutrition/saved', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM saved_meals WHERE user_id = $1 ORDER BY meal_name ASC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch saved meals error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// POST: create saved meal for easier access
+app.post('/api/nutrition/saved', requireAuth, async (req, res) => {
+  const { mealName, mealType, calories, protein, carbs, fats } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO saved_meals (user_id, meal_name, meal_type, calories, protein, carbs, fats)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [
+        req.user.id, mealName.trim(), mealType, 
+        parseInt(calories) || 0, parseInt(protein) || 0, 
+        parseInt(carbs) || 0, parseInt(fats) || 0
+      ]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Create saved meal error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running natively and open to wireless network devices on port ${PORT}`);

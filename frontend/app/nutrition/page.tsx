@@ -8,11 +8,15 @@ import { checkAuthStatus, logoutUser } from "../../../shared/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
+// Type for the saved meals mapping
+type SavedMeal = Omit<Meal, 'id'> & { id?: number | string }; 
+
 export default function NutritionPage() {
   const router = useRouter();
   const [user, setUser]               = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [meals, setMeals]             = useState<Meal[]>([]);
+  const [savedMeals, setSavedMeals]   = useState<SavedMeal[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError]             = useState<string | null>(null);
 
@@ -24,8 +28,10 @@ export default function NutritionPage() {
   const [mealProtein, setMealProtein]   = useState("");
   const [mealCarbs, setMealCarbs]     = useState("");
   const [mealFats, setMealFats]       = useState("");
+  
+  // New checkbox state
+  const [saveToFavorites, setSaveToFavorites] = useState(false);
 
-  // Auth check guard on mount
   useEffect(() => {
     const init = async () => {
       const currentUser = await checkAuthStatus();
@@ -39,17 +45,25 @@ export default function NutritionPage() {
     init();
   }, [router]);
 
-  // Isolated Nutrition Data Fetcher
   const fetchNutritionData = useCallback(async () => {
     setDataLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/nutrition`, { credentials: "include" });
-      if (!res.ok) throw new Error(`Nutrition fetch failed (${res.status})`);
-      setMeals(await res.json());
+      // Fetch both today's logs and the user's saved favorite meals
+      const [logsRes, savedRes] = await Promise.all([
+        fetch(`${API_BASE}/api/nutrition`, { credentials: "include" }),
+        fetch(`${API_BASE}/api/nutrition/saved`, { credentials: "include" })
+      ]);
+      
+      if (!logsRes.ok) throw new Error("Nutrition logs fetch failed");
+      
+      setMeals(await logsRes.json());
+      if (savedRes.ok) {
+        setSavedMeals(await savedRes.json());
+      }
     } catch (err) {
       console.error(err);
-      setError("Failed to load today's meal logs.");
+      setError("Failed to load data.");
     } finally {
       setDataLoading(false);
     }
@@ -59,35 +73,63 @@ export default function NutritionPage() {
     if (!authLoading) fetchNutritionData();
   }, [authLoading, fetchNutritionData]);
 
-  // Form Submission Handler
+  // Autofill form when a Quick-Add is clicked
+  const handleQuickAddSelect = (meal: SavedMeal) => {
+    setMealName(meal.mealName || meal.meal_name);
+    setMealType(meal.mealType || meal.meal_type);
+    setMealCalories(meal.calories.toString());
+    setMealProtein(meal.protein.toString());
+    setMealCarbs(meal.carbs.toString());
+    setMealFats(meal.fats.toString());
+    setSaveToFavorites(false); // Already saved
+  };
+
   async function handleCreateMeal(e: React.FormEvent) {
     e.preventDefault();
     if (!mealName.trim()) return;
 
+    const payload = {
+      mealName,
+      mealType,
+      calories: parseInt(mealCalories) || 0,
+      protein: parseInt(mealProtein) || 0,
+      carbs: parseInt(mealCarbs) || 0,
+      fats: parseInt(mealFats) || 0
+    };
+
     try {
+      // Log the meal for today
       const res = await fetch(`${API_BASE}/api/nutrition`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          mealName,
-          mealType,
-          calories: parseInt(mealCalories) || 0,
-          protein: parseInt(mealProtein) || 0,
-          carbs: parseInt(mealCarbs) || 0,
-          fats: parseInt(mealFats) || 0
-        })
+        body: JSON.stringify(payload)
       });
+      
       if (res.ok) {
         const newMeal = await res.json();
         setMeals([...meals, newMeal]);
+
+        // If checkbox is checked, save to quick-add database
+        if (saveToFavorites) {
+          await fetch(`${API_BASE}/api/nutrition/saved`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(payload)
+          });
+          // Refresh the favorites list in the background
+          fetchNutritionData();
+        }
+
+        // Close and reset
         setShowMealModal(false);
-        // Reset states
         setMealName("");
         setMealCalories("");
         setMealProtein("");
         setMealCarbs("");
         setMealFats("");
+        setSaveToFavorites(false);
       }
     } catch (err) {
       console.error(err);
@@ -103,16 +145,25 @@ export default function NutritionPage() {
 
   if (authLoading) {
     return (
-      <main className="min-h-screen flex items-center justify-center var(color-background-tertiary,#f5f5f2)]">
+      <main className="min-h-screen flex items-center justify-center bg-[var(--color-background-tertiary,#f5f5f2)]">
         <p className="text-slate-500">Loading...</p>
       </main>
     );
   }
 
+  // fixing the overflow bug
+  const inputStyle = {
+    width: "100%",
+    boxSizing: "border-box" as const, // Forces padding to stay inside width
+    padding: "8px", 
+    borderRadius: "6px", 
+    border: "1px solid #cbd5e1", 
+    color: "#1e293b"
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary, #f5f5f2)", fontFamily: "var(--font-sans)", padding: "2rem" }}>
       
-      {/* Navigation Header bar matching tasks and dashboard pages */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" }}>
         <div>
           <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{today}</p>
@@ -134,32 +185,57 @@ export default function NutritionPage() {
         <p style={{ textAlign: "center", color: "#64748b" }}>Loading nutrition panel...</p>
       ) : (
         <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-          {/* Render our custom tracker component centrally on this clean workspace page */}
           <NutritionTracker meals={meals} onAddMealClick={() => setShowMealModal(true)} />
         </div>
       )}
 
-      {/*  nutrition log pop up */}
       {showMealModal && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", backgroundColor: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowMealModal(false)}>
-          <form onSubmit={handleCreateMeal} onClick={(e) => e.stopPropagation()} style={{ backgroundColor: "white", padding: "1.5rem", borderRadius: "12px", width: "380px", display: "flex", flexDirection: "column", gap: "12px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}>
+          
+          <form onSubmit={handleCreateMeal} onClick={(e) => e.stopPropagation()} style={{ backgroundColor: "white", padding: "1.5rem", borderRadius: "12px", width: "100%", maxWidth: "420px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "14px", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}>
+            
             <h3 style={{ margin: 0, color: "#1e293b" }}>Log New Meal</h3>
+
+            {/* Quick Add Section */}
+            {savedMeals.length > 0 && (
+              <div style={{ marginBottom: "4px" }}>
+                <p style={{ margin: "0 0 8px 0", fontSize: "12px", fontWeight: 600, color: "#64748b", textTransform: "uppercase" }}>Quick Add</p>
+                <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }}>
+                  {savedMeals.map((sm) => (
+                    <button 
+                      key={sm.id} 
+                      type="button" 
+                      onClick={() => handleQuickAddSelect(sm)}
+                      style={{ flexShrink: 0, padding: "4px 10px", fontSize: "13px", borderRadius: "99px", border: "1px solid #cbd5e1", backgroundColor: "#f8fafc", color: "#334155", cursor: "pointer" }}
+                    >
+                      {sm.meal_name || sm.mealName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             
-            <input type="text" placeholder="Meal Name (e.g., Chicken Rice)" value={mealName} onChange={e => setMealName(e.target.value)} style={{ padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", color: "#1e293b" }} required />
+            <input type="text" placeholder="Meal Name (e.g., Chicken Rice)" value={mealName} onChange={e => setMealName(e.target.value)} style={inputStyle} required />
             
-            <select value={mealType} onChange={e => setMealType(e.target.value)} style={{ padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", color: "#1e293b" }}>
+            <select value={mealType} onChange={e => setMealType(e.target.value)} style={inputStyle}>
               <option value="Breakfast">Breakfast</option>
               <option value="Lunch">Lunch</option>
               <option value="Dinner">Dinner</option>
               <option value="Snack">Snack</option>
             </select>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <input type="number" placeholder="Calories (kcal)" value={mealCalories} onChange={e => setMealCalories(e.target.value)} style={{ padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", color: "#1e293b" }} />
-              <input type="number" placeholder="Protein (g)" value={mealProtein} onChange={e => setMealProtein(e.target.value)} style={{ padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", color: "#1e293b" }} />
-              <input type="number" placeholder="Carbs (g)" value={mealCarbs} onChange={e => setMealCarbs(e.target.value)} style={{ padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", color: "#1e293b" }} />
-              <input type="number" placeholder="Fats (g)" value={mealFats} onChange={e => setMealFats(e.target.value)} style={{ padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", color: "#1e293b" }} />
+            {/* fixes overflow */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", width: "100%" }}>
+              <input type="number" placeholder="Calories (kcal)" value={mealCalories} onChange={e => setMealCalories(e.target.value)} style={inputStyle} />
+              <input type="number" placeholder="Protein (g)" value={mealProtein} onChange={e => setMealProtein(e.target.value)} style={inputStyle} />
+              <input type="number" placeholder="Carbs (g)" value={mealCarbs} onChange={e => setMealCarbs(e.target.value)} style={inputStyle} />
+              <input type="number" placeholder="Fats (g)" value={mealFats} onChange={e => setMealFats(e.target.value)} style={inputStyle} />
             </div>
+
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#475569", cursor: "pointer", marginTop: "4px" }}>
+              <input type="checkbox" checked={saveToFavorites} onChange={(e) => setSaveToFavorites(e.target.checked)} />
+              Save this meal to favorites for quick-add
+            </label>
 
             <div style={{ display: "flex", gap: "8px", marginTop: "8px", justifyContent: "flex-end" }}>
               <button type="button" onClick={() => setShowMealModal(false)} style={{ padding: "6px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", backgroundColor: "white", color: "#1e293b", cursor: "pointer" }}>Cancel</button>

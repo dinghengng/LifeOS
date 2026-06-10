@@ -85,8 +85,8 @@ export default function NutritionPage() {
 
   // Autofill form when a Quick-Add is clicked
   const handleQuickAddSelect = (meal: SavedMeal) => {
-    setMealName(meal.mealName || meal.meal_name);
-    setMealType(meal.mealType || meal.meal_type);
+    setMealName(meal.mealName || meal.meal_name || "");
+    setMealType(meal.mealType || meal.meal_type || "Lunch");
     setMealCalories(meal.calories.toString());
     setMealProtein(meal.protein.toString());
     setMealCarbs(meal.carbs.toString());

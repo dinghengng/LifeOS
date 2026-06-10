@@ -112,30 +112,41 @@ export default function NutritionTracker({ meals, onAddMealClick }: NutritionTra
                 display: "flex", 
                 justifyContent: "space-between", 
                 alignItems: "center", 
-                padding: "8px 10px", 
+                padding: "12px 16px", 
                 background: "var(--color-background-secondary, #f8fafc)", 
                 borderRadius: "8px",
                 border: "0.5px solid var(--color-border-tertiary)"
               }}
             >
               <div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "var(--color-text-primary)" }}>
-                  {meal.mealName}
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>
+                  {meal.mealName || (meal as any).meal_name}
                 </p>
-                <span style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>
-                  {meal.mealType}
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                  {meal.mealType || (meal as any).meal_type}
                 </span>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)", display: "block" }}>
+              {/* Right Side: Horizontal Macros + Calories */}
+              <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                
+                {/* Horizontal Macros */}
+                <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+                  <span><strong style={{ color: "#D85A30", fontWeight: 600 }}>Protein:</strong> {meal.protein}g</span>
+                  <span><strong style={{ color: "#EAB308", fontWeight: 600 }}>Carbs:</strong> {meal.carbs}g</span>
+                  <span><strong style={{ color: "#378ADD", fontWeight: 600 }}>Fats:</strong> {meal.fats}g</span>
+                </div>
+                {/* Vertical Divider */}
+                <div style={{ width: "1px", height: "24px", backgroundColor: "#e2e8f0" }} />
+
+                {/* Calories */}
+                <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--color-text-primary)", textAlign: "right", minWidth: "65px" }}>
                   {meal.calories} kcal
-                </span>
-                <span style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>
-                  P: {meal.protein}g | C: {meal.carbs}g | F: {meal.fats}g
-                </span>
+                </div>
+
               </div>
             </div>
           ))}
+
         </div>
       ) : (
         <div style={{ textAlign: "center", padding: "2rem 0", borderTop: "0.5px solid var(--color-border-tertiary)", color: "var(--color-text-secondary)", fontSize: 13 }}>

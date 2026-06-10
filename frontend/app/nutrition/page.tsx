@@ -9,7 +9,17 @@ import { checkAuthStatus, logoutUser } from "../../../shared/api";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
 // Type for the saved meals mapping
-type SavedMeal = Omit<Meal, 'id'> & { id?: number | string }; 
+type SavedMeal = {
+  id?: number | string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  mealName?: string;
+  meal_name?: string;
+  mealType?: string;
+  meal_type?: string;
+}; // Allow for both camelCase and snake_case from backend
 
 export default function NutritionPage() {
   const router = useRouter();

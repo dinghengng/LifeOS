@@ -129,7 +129,6 @@ export default function NutritionTracker({ meals, onAddMealClick }: NutritionTra
               {/* Right Side: Horizontal Macros + Calories */}
               <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
                 
-                {/* Horizontal Macros */}
                 <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
                   <span><strong style={{ color: "#D85A30", fontWeight: 600 }}>Protein:</strong> {meal.protein}g</span>
                   <span><strong style={{ color: "#EAB308", fontWeight: 600 }}>Carbs:</strong> {meal.carbs}g</span>

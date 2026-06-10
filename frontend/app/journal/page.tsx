@@ -1,17 +1,14 @@
 "use client";
 
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import MoodLogger from "../../components/MoodLogger";
 import MoodHistory from "../../components/MoodHistory";
 import JournalEditor from "../../components/JournalEditor";
 import { MoodLog, User, TagsResponse, JournalEntry } from "../../../shared/types";
-import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries } from "../../../shared/api";
+import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries, logoutUser } from "../../../shared/api";
 
-
-type Tab = "mood" | "write" | "history"; //3 separate tabs
-
+type Tab = "mood" | "write" | "history"; 
 
 export default function JournalPage() {
   const [logs, setLogs] = useState<MoodLog[]>([]);
@@ -22,7 +19,6 @@ export default function JournalPage() {
   const [activeTab, setActiveTab] = useState<Tab>("mood"); 
   const [pendingMoodLogId, setPendingMoodLogId] = useState<number | null>(null);
   const router = useRouter();
-
 
   useEffect(() => {
     const init = async () => {
@@ -36,8 +32,7 @@ export default function JournalPage() {
       setLoading(false);
     };
     init();
-  }, []);
-
+  }, [router]);
 
   const loadData = async () => {
     try {
@@ -63,109 +58,118 @@ export default function JournalPage() {
     await loadData();
   };
 
+  const handleLogout = async () => {
+    try { await logoutUser(); } catch (err) { console.error(err); }
+    router.push("/");
+  };
+
+  const today = new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" });
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-slate-500">Loading...</p>
-      </main>
+      <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary, #f5f5f2)", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "var(--color-text-secondary)" }}>Loading...</p>
+      </div>
     );
   }
 
-
   return (
-    <main className="min-h-screen bg-slate-50 flex flex-col items-center py-10 px-4">
-      <div className="w-full max-w-3xl flex justify-between items-center mb-6 px-2">
-        <button
-          onClick={() => router.push("/")}
-          className="text-sm text-slate-500 hover:text-slate-800 transition"
-        >
-          ← Back to Tasks
-        </button>
-        <span className="text-white/90 text-sm font-medium bg-slate-800 px-3 py-1 rounded-full">
-          {user?.name || user?.email}
-        </span>
-      </div>
+    <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary, #f5f5f2)", fontFamily: "var(--font-sans)", padding: "2rem" }}>
+      
+      {/* changed to be consistent Title on the Left, Navigation on the Right */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{today}</p>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 500, color: "var(--color-text-primary)", letterSpacing: "-0.01em" }}>
+            Life Journal
+          </h1>
+        </div>
 
-
-      {/*Title*/}
-      <div className="w-full max-w-3xl mb-6">
-        <h1 className="text-3xl font-bold text-slate-800">Journal</h1>
-        <p className="text-slate-500 text-sm mt-1">Track your mood and reflect on your day</p>
-      </div>
-
-
-      {/*Tabs*/}
-      <div className="w-full max-w-3xl mb-6">
-        <div className="flex gap-1 bg-white/80 backdrop-blur-md rounded-2xl border border-white/20 shadow p-1.5">
-          {(["mood", "write", "history"] as Tab[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 rounded-xl text-sm font-medium transition capitalize ${
-                activeTab === tab
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              {tab === "mood" && "Mood"}
-              {tab === "write" && "Write"}
-              {tab === "history" && "History"}
-            </button>
-          ))}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={() => router.push("/")} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--color-border-secondary)", backgroundColor: "rgba(255, 255, 255, 0.7)", color: "#334155", cursor: "pointer" }}>Tasks</button>
+          <button onClick={() => router.push("/dashboard")} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--color-border-secondary)", backgroundColor: "rgba(255, 255, 255, 0.7)", color: "#334155", cursor: "pointer" }}>Dashboard</button>
+          <button onClick={() => router.push("/journal")} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid #4f46e5", backgroundColor: "#4f46e5", color: "#ffffff", cursor: "pointer" }}>Journal</button>
+          <button onClick={() => router.push("/nutrition")} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--color-border-secondary)", backgroundColor: "rgba(255, 255, 255, 0.7)", color: "#334155", cursor: "pointer" }}>Nutrition</button>
+          <button onClick={handleLogout} style={{ padding: "6px 16px", fontSize: "14px", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--color-border-secondary)", backgroundColor: "rgba(255, 255, 255, 0.7)", color: "#334155", cursor: "pointer" }}>Logout</button>
         </div>
       </div>
 
-
-      {/*Mood tab*/}
-      {activeTab === "mood" && (
-        <MoodLogger
-          onSaved={handleMoodSaved}
-          tags={tags}
-          onTagsUpdated={(newTag) =>
-            setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
-          }
-        />
-      )}
-
-
-      {/*Write tab*/}
-      {activeTab === "write" && (
-        <div className="w-full max-w-3xl">
-          {pendingMoodLogId && (
-            <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5 mb-4 text-sm text-indigo-700">
-              <span>What's making you feel this way?</span>
+      {/* MAIN CONTENT: Centered in the middle of the screen */}
+      <div style={{ maxWidth: "48rem", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        
+        {/* Tabs */}
+        <div className="w-full mb-6">
+          <div className="flex gap-1 bg-white/80 backdrop-blur-md rounded-2xl border border-white/20 shadow p-1.5">
+            {(["mood", "write", "history"] as Tab[]).map((tab) => (
               <button
-                onClick={() => setPendingMoodLogId(null)}
-                className="text-indigo-400 hover:text-indigo-600 transition text-xs"
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-2 rounded-xl text-sm font-medium transition capitalize ${
+                  activeTab === tab
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                }`}
               >
-                Unlink
+                {tab === "mood" && "Mood"}
+                {tab === "write" && "Write"}
+                {tab === "history" && "History"}
               </button>
-            </div>
-          )}
-          <JournalEditor
-            onSaved={handleJournalSaved}
-            onCancel={() => setPendingMoodLogId(null)}
-            moodLogs={logs}
-            defaultMoodLogId={pendingMoodLogId}
-          />
+            ))}
+          </div>
         </div>
-      )}
 
+        {/* Mood tab */}
+        {activeTab === "mood" && (
+          <div className="w-full">
+            <MoodLogger
+              onSaved={handleMoodSaved}
+              tags={tags}
+              onTagsUpdated={(newTag) =>
+                setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
+              }
+            />
+          </div>
+        )}
 
-      {/*History tab*/}
-      {activeTab === "history" && (
-        <MoodHistory
-          logs={logs}
-          tags={tags}
-          entries={entries}
-          onRefresh={loadData}
-          onTagsUpdated={(newTag) =>
-            setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
-          }
-        />
-      )}
+        {/* Write tab */}
+        {activeTab === "write" && (
+          <div className="w-full">
+            {pendingMoodLogId && (
+              <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5 mb-4 text-sm text-indigo-700">
+                <span>What's making you feel this way?</span>
+                <button
+                  onClick={() => setPendingMoodLogId(null)}
+                  className="text-indigo-400 hover:text-indigo-600 transition text-xs"
+                >
+                  Unlink
+                </button>
+              </div>
+            )}
+            <JournalEditor
+              onSaved={handleJournalSaved}
+              onCancel={() => setPendingMoodLogId(null)}
+              moodLogs={logs}
+              defaultMoodLogId={pendingMoodLogId}
+            />
+          </div>
+        )}
 
-    </main>
+        {/* History tab */}
+        {activeTab === "history" && (
+          <div className="w-full">
+            <MoodHistory
+              logs={logs}
+              tags={tags}
+              entries={entries}
+              onRefresh={loadData}
+              onTagsUpdated={(newTag) =>
+                setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
+              }
+            />
+          </div>
+        )}
+
+      </div>
+    </div>
   );
 }

@@ -76,7 +76,7 @@ function LinkToMoodButton({ entry, logs, onLinked }: {
         autoFocus
         disabled={linking}
         onChange={(e) => e.target.value && handleLink(Number(e.target.value))}
-        className="text-xs border border-indigo-300 rounded-lg px-2 py-1 bg-white text-slate-600 max-w-[160px]"
+        className="text-xs border border-indigo-300 rounded-lg px-2 py-1 bg-white text-slate-600 max-w-40"
       >
         <option value="">Select mood...</option>
         {logs.map((log) => (
@@ -166,7 +166,7 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
                 {/*Mood log row*/}
                 <div className="p-4 flex items-start gap-4">
                   {/*Mood emoji*/}
-                  <div className={`flex flex-col items-center justify-center rounded-xl border px-3 py-2 min-w-[60px] ${mood.color}`}>
+                  <div className={`flex flex-col items-center justify-center rounded-xl border px-3 py-2 min-w-15 ${mood.color}`}>
                     <span className="text-2xl">{mood.emoji}</span>
                     <span className="text-xs font-semibold mt-0.5">{mood.label}</span>
                   </div>

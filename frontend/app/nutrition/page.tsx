@@ -103,7 +103,7 @@ export default function NutritionPage() {
 
   if (authLoading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[var(--color-background-tertiary,#f5f5f2)]">
+      <main className="min-h-screen flex items-center justify-center var(color-background-tertiary,#f5f5f2)]">
         <p className="text-slate-500">Loading...</p>
       </main>
     );

@@ -326,6 +326,22 @@ export default function DashboardPage() {
           >
             Journal
           </button>
+          {/* Nutrition button*/}
+          <button
+            onClick={() => router.push("/nutrition")}
+            style={{
+              padding: "6px 16px",
+              fontSize: "14px",
+              fontWeight: 600,
+              borderRadius: "8px",
+              border: "1px solid var(--color-border-secondary)",
+              backgroundColor: "rgba(255, 255, 255, 0.7)",
+              color: "#334155",
+              cursor: "pointer",
+            }}
+          >
+            Nutrition
+          </button>
           <button
             onClick={handleLogout}
             style={{

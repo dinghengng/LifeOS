@@ -924,6 +924,66 @@ app.patch('/api/goals/milestones/:id/toggle', requireAuth, async (req, res) => {
   }
 });
 
+// For new nutrition section
+
+// POST: LOG A NEW MEAL
+app.post('/api/nutrition', requireAuth, async (req, res) => {
+  const { mealName, mealType, calories, protein, carbs, fats } = req.body;
+  
+  if (!mealName || !mealType) {
+    return res.status(400).json({ error: "Meal name and type are required" });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO meal_logs (user_id, meal_name, meal_type, calories, protein, carbs, fats)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, meal_name AS "mealName", meal_type AS "mealType", calories, protein, carbs, fats, created_at AS "createdAt"`,
+      [
+        req.user.id, 
+        mealName.trim(), 
+        mealType, 
+        parseInt(calories) || 0, 
+        parseInt(protein) || 0, 
+        parseInt(carbs) || 0, 
+        parseInt(fats) || 0
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Create meal log error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// GET: FETCH TODAY'S MEAL LOGS
+app.get('/api/nutrition', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+         id, 
+         meal_name AS "mealName", 
+         meal_type AS "mealType", 
+         calories, 
+         protein, 
+         carbs, 
+         fats, 
+         created_at AS "createdAt"
+       FROM meal_logs
+       WHERE user_id = $1 
+         AND created_at::date = CURRENT_DATE
+       ORDER BY created_at ASC`,
+      [req.user.id]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch nutrition logs error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running natively and open to wireless network devices on port ${PORT}`);

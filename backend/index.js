@@ -476,7 +476,7 @@ app.patch('/mood/logs/:id', requireAuth, async (req, res) => {
          mood_level   = COALESCE($1, mood_level),
          stress_level = COALESCE($2, stress_level),
          logged_at    = COALESCE($3, logged_at),
-         note         = COALESCE($4, note),
+         note         = COALESCE($4, note)
        WHERE id = $5 AND user_id = $6
        RETURNING *`,
       [mood_level ?? null, stress_level ?? null, loggedAt ?? null, note ?? null, id, req.user.id]
@@ -1038,6 +1038,75 @@ app.post('/api/nutrition/saved', requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Create saved meal error:", err.message);
     res.status(500).send("Server Error");
+  }
+});
+
+// GET: mood packs
+app.get('/mood/emoji-packs', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, emojis, is_default FROM emoji_packs ORDER BY is_default DESC, id ASC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// GET: user chosen mood pack
+app.get('/mood/config', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, level, label, emoji, color, display_order
+       FROM mood_levels
+       WHERE user_id = $1
+       ORDER BY display_order ASC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// PUT: all the mood packs to choose from
+app.put('/mood/config', requireAuth, async (req, res) => {
+  const { levels } = req.body;
+
+  if (!Array.isArray(levels) || levels.length !== 5) {
+    return res.status(400).json({ error: 'Exactly 5 mood levels required' });
+  }
+
+  for (const l of levels) {
+    if (![1, 2, 3, 4, 5].includes(l.level) || !l.label || !l.emoji || !l.color) {
+      return res.status(400).json({ error: 'Invalid mood level data' });
+    }
+  }
+
+  try {
+    const saved = [];
+    for (const l of levels) {
+      const result = await pool.query(
+        `INSERT INTO mood_levels (user_id, level, label, emoji, color, display_order)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (user_id, level)
+         DO UPDATE SET
+           label         = EXCLUDED.label,
+           emoji         = EXCLUDED.emoji,
+           color         = EXCLUDED.color,
+           display_order = EXCLUDED.display_order
+         RETURNING id, level, label, emoji, color, display_order`,
+        [req.user.id, l.level, l.label, l.emoji, l.color, l.display_order ?? l.level - 1]
+      );
+      saved.push(result.rows[0]);
+    }
+    saved.sort((a, b) => a.display_order - b.display_order);
+    res.json(saved);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
 });
 

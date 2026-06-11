@@ -293,3 +293,15 @@ export const updateJournalEntry = async (id: number, payload: UpdateJournalEntry
   const data: DBJournalEntry = await response.json();
   return mapJournalEntry(data);
 };
+
+// DELETE journal entry
+export const deleteJournalEntry = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_URL}/journal/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to delete journal entry");
+  }
+};

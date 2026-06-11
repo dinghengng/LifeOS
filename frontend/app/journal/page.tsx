@@ -7,6 +7,8 @@ import MoodHistory from "../../components/MoodHistory";
 import JournalEditor from "../../components/JournalEditor";
 import { MoodLog, User, TagsResponse, JournalEntry } from "../../../shared/types";
 import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries, logoutUser } from "../../../shared/api";
+import PromptSection from "../../components/PromptSection";
+import { Prompt } from "../../../shared/prompts";
 
 type Tab = "mood" | "write" | "history"; 
 
@@ -18,6 +20,7 @@ export default function JournalPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("mood"); 
   const [pendingMoodLogId, setPendingMoodLogId] = useState<number | null>(null);
+  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -62,6 +65,11 @@ export default function JournalPage() {
     router.push("/");
   };
 
+  const handleSelectPrompt = (prompt: Prompt) => {
+    setSelectedPrompt(prompt);
+    setActiveTab("write");
+  };
+
   const today = new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" });
 
   if (loading) {
@@ -75,7 +83,6 @@ export default function JournalPage() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary, #f5f5f2)", fontFamily: "var(--font-sans)", padding: "2rem" }}>
       
-      {/* changed to be consistent Title on the Left, Navigation on the Right */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
         <div>
           <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{today}</p>
@@ -93,10 +100,9 @@ export default function JournalPage() {
         </div>
       </div>
 
-      {/* MAIN CONTENT: Centered in the middle of the screen */}
       <div style={{ maxWidth: "48rem", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
         
-        {/* Tabs */}
+        {/*Tabs*/}
         <div className="w-full mb-6">
           <div className="flex gap-1 bg-white/80 backdrop-blur-md rounded-2xl border border-white/20 shadow p-1.5">
             {(["mood", "write", "history"] as Tab[]).map((tab) => (
@@ -117,7 +123,7 @@ export default function JournalPage() {
           </div>
         </div>
 
-        {/* Mood tab */}
+        {/*Mood*/}
         {activeTab === "mood" && (
           <div className="w-full">
             <MoodLogger
@@ -130,19 +136,27 @@ export default function JournalPage() {
           </div>
         )}
 
-        {/* Write tab */}
+        {/*Write*/}
         {activeTab === "write" && (
-          <div className="w-full">
+          <div className="w-full flex flex-col gap-0">
+            <PromptSection onSelectPrompt={handleSelectPrompt} />
             <JournalEditor
-              onSaved={handleJournalSaved}
-              onCancel={() => setPendingMoodLogId(null)}
+              onSaved={() => {
+                setSelectedPrompt(null);
+                handleJournalSaved();
+              }}
+              onCancel={() => {
+                setSelectedPrompt(null);
+                setPendingMoodLogId(null);
+              }}
               moodLogs={logs}
               defaultMoodLogId={pendingMoodLogId}
+              promptText={selectedPrompt?.text ?? null}
             />
           </div>
         )}
 
-        {/* History tab */}
+        {/*History*/}
         {activeTab === "history" && (
           <div className="w-full">
             <MoodHistory

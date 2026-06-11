@@ -160,6 +160,7 @@ const mapMoodLog = (raw: DBMoodLog): MoodLog => ({
   loggedAt: raw.logged_at,
   createdAt: raw.created_at,
   tags: raw.tags,
+  note: raw.note ?? null,
 });
 
 // GET all tags
@@ -245,6 +246,7 @@ const mapJournalEntry = (raw: DBJournalEntry): JournalEntry => ({
   moodLogId: raw.mood_log_id,
   content: raw.content,
   promptUsed: raw.prompt_used,
+  title: raw.title ?? null,
   createdAt: raw.created_at,
   updatedAt: raw.updated_at,
   moodLevel: raw.mood_level,

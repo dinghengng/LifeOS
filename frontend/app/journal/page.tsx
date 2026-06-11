@@ -49,7 +49,6 @@ export default function JournalPage() {
 
   const handleMoodSaved = async (newLogId: number) => {
     await loadData();
-    setPendingMoodLogId(newLogId);
     setActiveTab("history");
   };
 

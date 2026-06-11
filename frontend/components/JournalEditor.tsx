@@ -221,7 +221,7 @@ export default function JournalEditor({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="What's on your mind today..."
+              placeholder="Title:"
               maxLength={250}
               className="w-full text-sm font-medium text-slate-700 placeholder-slate-400 bg-transparent border-b border-slate-200 pb-2 focus:outline-none focus:border-indigo-400 transition"
             />

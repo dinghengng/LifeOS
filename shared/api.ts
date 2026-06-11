@@ -1,5 +1,5 @@
 import { API_URL } from "./config";
-import { Task, DBTask, Priority, User, } from "./types";
+import { Task, DBTask, Priority, User, MoodLevel, MoodLevelConfig, EmojiPack, SaveMoodConfigPayload} from "./types";
 
 // Helper function to build authorization headers dynamically for mobile requests
 const getAuthHeaders = async (headers: Record<string, string> = {}): Promise<Record<string, string>> => {
@@ -304,4 +304,61 @@ export const deleteJournalEntry = async (id: number): Promise<void> => {
     const err = await response.json();
     throw new Error(err.error || "Failed to delete journal entry");
   }
+};
+
+// Mood config
+const mapMoodLevelConfig = (raw: {
+  id: number;
+  level: number;
+  label: string;
+  emoji: string;
+  color: string;
+  display_order: number;
+}): MoodLevelConfig => ({
+  id: raw.id,
+  level: raw.level as MoodLevel,
+  label: raw.label,
+  emoji: raw.emoji,
+  color: raw.color,
+  displayOrder: raw.display_order,
+});
+
+export const fetchMoodConfig = async (): Promise<MoodLevelConfig[]> => {
+  const response = await fetch(`${API_URL}/mood/config`, { credentials: "include" });
+  if (!response.ok) throw new Error("Failed to fetch mood config");
+  const data = await response.json();
+  return data.map(mapMoodLevelConfig);
+};
+
+export const saveMoodConfig = async (
+  payload: SaveMoodConfigPayload
+): Promise<MoodLevelConfig[]> => {
+  const response = await fetch(`${API_URL}/mood/config`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to save mood config");
+  }
+  const data = await response.json();
+  return data.map(mapMoodLevelConfig);
+};
+
+export const fetchEmojiPacks = async (): Promise<EmojiPack[]> => {
+  const response = await fetch(`${API_URL}/mood/emoji-packs`, {
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Failed to fetch emoji packs");
+  const data = await response.json();
+  return data.map(
+    (p: { id: number; name: string; emojis: string[]; is_default: boolean }) => ({
+      id: p.id,
+      name: p.name,
+      emojis: p.emojis,
+      isDefault: p.is_default,
+    })
+  );
 };

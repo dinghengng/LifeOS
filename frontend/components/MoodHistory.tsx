@@ -19,6 +19,10 @@ const STRESS_ANCHORS: Record<number, string> = {
   6: "Neutral", 7: "Tense", 8: "Tense", 9: "Overwhelmed", 10: "Overwhelmed",
 };
 
+const MOOD_LABEL: Record<MoodLevel, string> = {
+  1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great",
+};
+
 function formatLogTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
     month: "short", day: "numeric",
@@ -28,6 +32,15 @@ function formatLogTime(iso: string): string {
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function deriveTitle(entry: JournalEntry): string {
+  if (entry.title?.trim())        return entry.title.trim();
+  if (entry.promptUsed?.trim())   return entry.promptUsed.trim();
+  if (entry.moodLevel)            return `Felt ${MOOD_LABEL[entry.moodLevel]}`;
+  const text = stripHtml(entry.content ?? "").trim();
+  if (text)                       return text.slice(0, 60) + (text.length > 60 ? "…" : "");
+  return "Untitled Entry";
 }
 
 interface MoodHistoryProps {
@@ -172,6 +185,9 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
                   </div>
 
                   <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-700 mb-0.5">
+                      Felt {mood.label}
+                    </p>
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-xs text-slate-400">{formatLogTime(log.loggedAt)}</span>
                       <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
@@ -218,9 +234,16 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
 
                 {/*Journal*/}
                 <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/60">
-                  {linkedEntry ? (
+                  {log.note ? (
+                    <p className="text-sm text-slate-600">
+                      {log.note}
+                    </p>
+                  ) : linkedEntry ? (
                     <p className="text-sm text-slate-600 line-clamp-2">
-                      📝 {stripHtml(linkedEntry.content) || <span className="italic text-slate-400">Empty entry</span>}
+                      📝 <span className="font-medium">{deriveTitle(linkedEntry)}</span>
+                      {stripHtml(linkedEntry.content ?? "") && (
+                        <span className="text-slate-400"> · {stripHtml(linkedEntry.content ?? "").slice(0, 80)}</span>
+                      )}
                     </p>
                   ) : isAddingNote ? (
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -239,7 +262,7 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
                       onClick={() => setExpandedNoteId(log.id)}
                       className="text-xs text-slate-400 hover:text-indigo-500 transition italic"
                     >
-                      + Add some notes...
+                      + Add a jorunal reflection...
                     </button>
                   )}
                 </div>
@@ -261,10 +284,15 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs text-slate-400">{formatLogTime(entry.createdAt)}</span>
-                    <p className="text-sm text-slate-600 mt-1 line-clamp-2">
-                      {stripHtml(entry.content) || <span className="italic text-slate-400">Empty entry</span>}
+                    <p className="text-sm font-semibold text-slate-700 mb-0.5">
+                      {deriveTitle(entry)}
                     </p>
+                    <span className="text-xs text-slate-400">{formatLogTime(entry.createdAt)}</span>
+                    {stripHtml(entry.content ?? "") && (
+                      <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                        {stripHtml(entry.content ?? "").slice(0, 120)}
+                      </p>
+                    )}
                   </div>
 
                   <div className="shrink-0">

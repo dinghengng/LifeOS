@@ -475,8 +475,8 @@ app.patch('/mood/logs/:id', requireAuth, async (req, res) => {
        SET
          mood_level   = COALESCE($1, mood_level),
          stress_level = COALESCE($2, stress_level),
-         logged_at    = COALESCE($3, logged_at)
-         note         = COALESCE($4, note)
+         logged_at    = COALESCE($3, logged_at),
+         note         = COALESCE($4, note),
        WHERE id = $5 AND user_id = $6
        RETURNING *`,
       [mood_level ?? null, stress_level ?? null, loggedAt ?? null, note ?? null, id, req.user.id]
@@ -618,6 +618,7 @@ app.patch('/journal/:id', requireAuth, async (req, res) => {
        SET
          content     = COALESCE($1, content),
          mood_log_id = CASE WHEN $2::int IS NOT NULL THEN $2::int ELSE mood_log_id END,
+         title       = COALESCE($3, title),
          updated_at  = NOW()
        WHERE id = $4 AND user_id = $5
        RETURNING *`,
@@ -625,6 +626,26 @@ app.patch('/journal/:id', requireAuth, async (req, res) => {
     );
 
     res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// Delete journal entry
+app.delete('/journal/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      "DELETE FROM journal_entries WHERE id = $1 AND user_id = $2 RETURNING *",
+      [id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Journal entry not found" });
+    }
+
+    res.json({ message: "Journal entry deleted successfully" });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { MoodLog, MoodLevel, TagsResponse, Tag, JournalEntry } from "../../shared/types";
-import { deleteMoodLog, updateJournalEntry, } from "../../shared/api";
+import { deleteMoodLog, updateJournalEntry, deleteJournalEntry, } from "../../shared/api";
 import EditMoodLogModal from "./EditMoodLogModal";
+import EditJournalEntryModal from "./EditJournalEntryModal";
 import JournalEditor from "./JournalEditor";
 
 const MOOD_CONFIG: Record<MoodLevel, { emoji: string; label: string; color: string }> = {
@@ -84,7 +85,7 @@ function LinkToMoodButton({ entry, logs, onLinked }: {
   }
 
   return (
-    <div className="flex flex-col gap-1 items-end">
+    <div className="flex items-center gap-2">
       <select
         autoFocus
         disabled={linking}
@@ -100,7 +101,7 @@ function LinkToMoodButton({ entry, logs, onLinked }: {
       </select>
       <button
         onClick={() => setOpen(false)}
-        className="text-xs text-slate-400 hover:text-slate-600 transition"
+        className="text-xs text-slate-400 hover:text-slate-600 transition whitespace-nowrap"
       >
         Cancel
       </button>
@@ -114,6 +115,8 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedNoteId, setExpandedNoteId] = useState<number | null>(null);
+  const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
+const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
 
   const entryByMoodLog = new Map<number, JournalEntry>();
   for (const entry of entries ?? []) {
@@ -136,10 +139,26 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
     }
   };
 
-  if (logs.length === 0) {
+  const handleDeleteEntry = async (id: number) => {
+    if (!confirm("Delete this journal entry? This cannot be undone.")) return;
+    setDeletingEntryId(id);
+    setError(null);
+    try {
+      await deleteJournalEntry(id);
+      onRefresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Could not delete entry.");
+    } finally {
+      setDeletingEntryId(null);
+    }
+  };
+
+  const unlinkedEntries = (entries ?? []).filter((e) => e.moodLogId === null);
+
+  if (logs.length === 0 && unlinkedEntries.length === 0) {
     return (
       <p className="text-slate-500 text-center mt-6 italic">
-        No mood entries yet. Log your first one above!
+        No entries yet. Log your first one above!
       </p>
     );
   }
@@ -154,6 +173,16 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
           onSaved={onRefresh}
           onClose={() => setEditingLog(null)}
           onTagsUpdated={onTagsUpdated}
+        />
+      )}
+
+      {/*journal Edit modal*/}
+      {editingEntry && (
+        <EditJournalEntryModal
+          entry={editingEntry}
+          logs={logs}
+          onSaved={onRefresh}
+          onClose={() => setEditingEntry(null)}
         />
       )}
 
@@ -245,34 +274,24 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
                         <span className="text-slate-400"> · {stripHtml(linkedEntry.content ?? "").slice(0, 80)}</span>
                       )}
                     </p>
-                  ) : isAddingNote ? (
+                  ) : (
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                       <JournalEditor
                         compact
                         defaultMoodLogId={log.id}
                         onSaved={() => {
-                          setExpandedNoteId(null);
                           onRefresh();
                         }}
-                        onCancel={() => setExpandedNoteId(null)}
+                        onCancel={() => {}}
                       />
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => setExpandedNoteId(log.id)}
-                      className="text-xs text-slate-400 hover:text-indigo-500 transition italic"
-                    >
-                      + Add a jorunal reflection...
-                    </button>
                   )}
                 </div>
               </li>
             );
           })}
           {/*Unlinked journal entries*/}
-          {(entries ?? [])
-            .filter((e) => e.moodLogId === null)
-            .map((entry) => (
+          {unlinkedEntries.map((entry) => (
               <li
                 key={`entry-${entry.id}`}
                 className="bg-white/80 backdrop-blur-md rounded-2xl border border-white/20 shadow overflow-hidden"
@@ -295,9 +314,31 @@ export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpda
                     )}
                   </div>
 
-                  <div className="shrink-0">
-                    <LinkToMoodButton entry={entry} logs={logs} onLinked={onRefresh} />
+                  <div className="flex flex-col gap-1.5 shrink-0">
+                    <button
+                      onClick={() => setEditingEntry(entry)}
+                      className="text-xs px-3 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEntry(entry.id)}
+                      disabled={deletingEntryId === entry.id}
+                      className={`text-xs px-3 py-1 rounded-lg border transition ${
+                        deletingEntryId === entry.id
+                          ? "border-slate-200 text-slate-400 cursor-not-allowed"
+                          : "border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                      }`}
+                    >
+                      {deletingEntryId === entry.id ? "..." : "Delete"}
+                    </button>
                   </div>
+                </div>
+
+                <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/60 flex justify-between items-center">
+                  {entry.moodLogId === null && (
+                    <LinkToMoodButton entry={entry} logs={logs} onLinked={onRefresh} />
+                  )}
                 </div>
               </li>
             ))

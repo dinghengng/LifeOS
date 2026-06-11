@@ -72,6 +72,7 @@ export interface UpdateMoodLogPayload {
   systemTagIds?: number[];
   customTagIds?: number[];
   loggedAt?: string;
+  note?: string | null;
 }
 
 export interface CreateCustomTagPayload {
@@ -114,4 +115,5 @@ export interface CreateJournalEntryPayload {
 export interface UpdateJournalEntryPayload {
   content?: string;
   mood_log_id?: number | null;
+  title?: string | null;
 }

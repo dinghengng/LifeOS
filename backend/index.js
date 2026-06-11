@@ -372,7 +372,7 @@ app.post('/mood/tags/custom', requireAuth, async (req, res) => {
 // Create mood log
 // create mood entry with stress level and tags
 app.post('/mood/logs', requireAuth, async (req, res) => {
-  const { mood_level, stress_level, systemTagIds = [], customTagIds = [], loggedAt } = req.body;
+  const { mood_level, stress_level, systemTagIds = [], customTagIds = [], loggedAt, note } = req.body;
 
   if (!mood_level || !stress_level) {
     return res.status(400).json({ error: "mood_level and stress_level are required" });
@@ -380,10 +380,10 @@ app.post('/mood/logs', requireAuth, async (req, res) => {
 
   try {
     const logResult = await pool.query(
-      `INSERT INTO mood_logs (user_id, mood_level, stress_level, logged_at)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO mood_logs (user_id, mood_level, stress_level, logged_at, note)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [req.user.id, mood_level, stress_level, loggedAt || new Date().toISOString()]
+      [req.user.id, mood_level, stress_level, loggedAt || new Date().toISOString(), note || null]
     );
     const newLog = logResult.rows[0];
 
@@ -410,7 +410,7 @@ app.post('/mood/logs', requireAuth, async (req, res) => {
 app.get('/mood/logs', requireAuth, async (req, res) => {
   try {
     const logsResult = await pool.query(
-      `SELECT id, mood_level, stress_level, logged_at, created_at
+      `SELECT id, mood_level, stress_level, logged_at, created_at, note
        FROM mood_logs
        WHERE user_id = $1
        ORDER BY logged_at DESC`,
@@ -447,7 +447,6 @@ app.get('/mood/logs', requireAuth, async (req, res) => {
       ...log,
       tags: tagsByLog[log.id] || [],
     }));
-
     res.json(logs);
   } catch (err) {
     console.error(err.message);
@@ -459,7 +458,7 @@ app.get('/mood/logs', requireAuth, async (req, res) => {
 // Updates mood level, stress level, tags, backfilled time
 app.patch('/mood/logs/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { mood_level, stress_level, systemTagIds, customTagIds, loggedAt } = req.body;
+  const { mood_level, stress_level, systemTagIds, customTagIds, loggedAt, note } = req.body;
 
   try {
     const existing = await pool.query(
@@ -477,9 +476,10 @@ app.patch('/mood/logs/:id', requireAuth, async (req, res) => {
          mood_level   = COALESCE($1, mood_level),
          stress_level = COALESCE($2, stress_level),
          logged_at    = COALESCE($3, logged_at)
-       WHERE id = $4 AND user_id = $5
+         note         = COALESCE($4, note)
+       WHERE id = $5 AND user_id = $6
        RETURNING *`,
-      [mood_level ?? null, stress_level ?? null, loggedAt ?? null, id, req.user.id]
+      [mood_level ?? null, stress_level ?? null, loggedAt ?? null, note ?? null, id, req.user.id]
     );
 
     // Replace tags only if a new tag list was provided
@@ -537,6 +537,7 @@ app.get('/journal', requireAuth, async (req, res) => {
          je.mood_log_id,
          je.content,
          je.prompt_used,
+         je.title,
          je.created_at,
          je.updated_at,
          ml.mood_level,
@@ -557,7 +558,7 @@ app.get('/journal', requireAuth, async (req, res) => {
 
 // Create journal entry
 app.post('/journal', requireAuth, async (req, res) => {
-  const { content, mood_log_id, prompt_used } = req.body;
+  const { content, mood_log_id, prompt_used, title } = req.body;
 
   if (!content || !content.trim()) {
     return res.status(400).json({ error: "Content is required" });
@@ -575,10 +576,10 @@ app.post('/journal', requireAuth, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO journal_entries (user_id, mood_log_id, content, prompt_used)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO journal_entries (user_id, mood_log_id, content, prompt_used, title)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [req.user.id, mood_log_id || null, content, prompt_used || null]
+      [req.user.id, mood_log_id || null, content, prompt_used || null, title || null]
     );
 
     res.status(201).json(result.rows[0]);
@@ -591,7 +592,7 @@ app.post('/journal', requireAuth, async (req, res) => {
 // Edit journal entry
 app.patch('/journal/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { content, mood_log_id } = req.body;
+  const { content, mood_log_id, title } = req.body;
 
   try {
     const existing = await pool.query(
@@ -618,9 +619,9 @@ app.patch('/journal/:id', requireAuth, async (req, res) => {
          content     = COALESCE($1, content),
          mood_log_id = CASE WHEN $2::int IS NOT NULL THEN $2::int ELSE mood_log_id END,
          updated_at  = NOW()
-       WHERE id = $3 AND user_id = $4
+       WHERE id = $4 AND user_id = $5
        RETURNING *`,
-      [content ?? null, mood_log_id ?? null, id, req.user.id]
+      [content ?? null, mood_log_id ?? null, title ?? null, id, req.user.id]
     );
 
     res.json(result.rows[0]);

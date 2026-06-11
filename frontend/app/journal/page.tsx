@@ -49,8 +49,7 @@ export default function JournalPage() {
 
   const handleMoodSaved = async (newLogId: number) => {
     await loadData();
-    setPendingMoodLogId(newLogId);
-    setActiveTab("write");
+    setActiveTab("history");
   };
 
   const handleJournalSaved = async () => {
@@ -134,17 +133,6 @@ export default function JournalPage() {
         {/* Write tab */}
         {activeTab === "write" && (
           <div className="w-full">
-            {pendingMoodLogId && (
-              <div className="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5 mb-4 text-sm text-indigo-700">
-                <span>What's making you feel this way?</span>
-                <button
-                  onClick={() => setPendingMoodLogId(null)}
-                  className="text-indigo-400 hover:text-indigo-600 transition text-xs"
-                >
-                  Unlink
-                </button>
-              </div>
-            )}
             <JournalEditor
               onSaved={handleJournalSaved}
               onCancel={() => setPendingMoodLogId(null)}

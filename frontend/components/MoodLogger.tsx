@@ -30,10 +30,11 @@ interface MoodLoggerProps {
 }
 
 export default function MoodLogger({ onSaved, tags, onTagsUpdated }: MoodLoggerProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1); //1=mood, 2=stress, 3=tags
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1); //1=mood, 2=stress, 3=tags
   const [selectedMood, setSelectedMood] = useState<MoodLevel | null>(null);
   const [stressLevel, setStressLevel] = useState<StressLevel>(5);
   const [selectedTagKeys, setSelectedTagKeys] = useState<string[]>([]);
+  const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +64,7 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated }: MoodLoggerP
       stress_level: stressLevel,
       systemTagIds,
       customTagIds,
+      note: note.trim() || undefined,
     };
 
     try {
@@ -71,6 +73,7 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated }: MoodLoggerP
       setSelectedMood(null);
       setStressLevel(5);
       setSelectedTagKeys([]);
+      setNote("");
       onSaved(newLog.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not save mood log.");
@@ -85,7 +88,7 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated }: MoodLoggerP
 
       {/* Step indicator */}
       <div className="flex justify-center gap-2 mb-6">
-        {[1, 2, 3].map((s) => (
+        {[1, 2, 3, 4].map((s) => (
           <div
             key={s}
             className={`h-1.5 w-10 rounded-full transition-all ${
@@ -185,19 +188,65 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated }: MoodLoggerP
                     Back
                 </button>
                 <button
-                    onClick={handleSave}
-                    disabled={isSubmitting}
-                    className={`px-5 py-2 rounded-xl text-white text-sm font-semibold transition ${
-                        isSubmitting
-                            ? "bg-indigo-300 cursor-not-allowed"
-                            : "bg-indigo-600 hover:bg-indigo-700"
-                    }`}
+                    onClick={() => setStep(4)} 
+                    className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
                 >
-                    {isSubmitting ? "Saving..." : "Save"}
+                    Continue
                 </button>
             </div>
+          </div>
+        )}
+
+      {/*STEP 4: OPTIONAL NOTE*/}
+      {step === 4 && (
+        <div className="flex flex-col items-center gap-4 w-full">
+          <p className="text-sm text-slate-500">Add a quick note (optional)</p>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="How are you feeling right now?"
+            maxLength={500}
+            rows={4}
+            className="w-full max-w-sm rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 transition"
+          />
+          <p className="text-xs text-slate-400 self-end max-w-sm -mt-2">
+            {note.length}/500
+          </p>
+
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep(3)}
+              className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition"
+            >
+              Back
+            </button>
+            <button
+              onClick={() => { setNote(""); handleSave(); }}
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition"
+            >
+              Skip
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSubmitting}
+              className={`px-5 py-2 rounded-xl text-white text-sm font-semibold transition ${
+                isSubmitting
+                  ? "bg-indigo-300 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
+            >
+              {isSubmitting ? "Saving..." : "Save"}
+            </button>
+          </div>
         </div>
-    )}  
+      )}
     </div>
   );
 }

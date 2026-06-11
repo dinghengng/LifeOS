@@ -29,7 +29,7 @@ export default function PromptSection({ onSelectPrompt }: PromptSectionProps) {
             onClick={() => onSelectPrompt(dailyPrompt)}
             className="shrink-0 px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition"
           >
-            Write
+            Use
           </button>
         </div>
         <div className="px-4 pb-3">

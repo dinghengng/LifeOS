@@ -30,7 +30,7 @@ export default function JournalEditor({
 }: JournalEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(compact);
+  const [isExpanded, setIsExpanded] = useState(!compact);
   const [hasContent, setHasContent] = useState(false);
   const [linkedMoodLogId, setLinkedMoodLogId] = useState<number | null>(defaultMoodLogId);
   const [, forceUpdate] = useState(0);
@@ -57,7 +57,6 @@ export default function JournalEditor({
           "prose prose-sm max-w-none focus:outline-none min-h-[120px] px-4 py-3 text-slate-800",
       },
     },
-    onFocus: () => setIsExpanded(true),
     onUpdate: ({ editor }) => {
       setHasContent(!editor.isEmpty);
     },
@@ -230,7 +229,16 @@ export default function JournalEditor({
       )}  
 
       {/*Editor*/}
-      <EditorContent editor={editor} />
+      {!isExpanded && compact ? (
+        <button
+          onClick={() => { setIsExpanded(true); setTimeout(() => editor?.commands.focus(), 0); }}
+          className="w-full text-left px-4 py-3 text-sm text-slate-400 italic hover:text-slate-500 transition"
+        >
+          + Add a journal reflection...
+        </button>
+      ) : (
+        <EditorContent editor={editor} />
+      )}
 
       {/*Footer*/}
       {isExpanded && (

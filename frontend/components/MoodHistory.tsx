@@ -85,7 +85,7 @@ function LinkToMoodButton({ entry, logs, onLinked }: {
   }
 
   return (
-    <div className="flex flex-col gap-1 items-end">
+    <div className="flex items-center gap-2">
       <select
         autoFocus
         disabled={linking}
@@ -101,7 +101,7 @@ function LinkToMoodButton({ entry, logs, onLinked }: {
       </select>
       <button
         onClick={() => setOpen(false)}
-        className="text-xs text-slate-400 hover:text-slate-600 transition"
+        className="text-xs text-slate-400 hover:text-slate-600 transition whitespace-nowrap"
       >
         Cancel
       </button>
@@ -153,10 +153,12 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
     }
   };
 
-  if (logs.length === 0) {
+  const unlinkedEntries = (entries ?? []).filter((e) => e.moodLogId === null);
+
+  if (logs.length === 0 && unlinkedEntries.length === 0) {
     return (
       <p className="text-slate-500 text-center mt-6 italic">
-        No mood entries yet. Log your first one above!
+        No entries yet. Log your first one above!
       </p>
     );
   }
@@ -272,34 +274,24 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                         <span className="text-slate-400"> · {stripHtml(linkedEntry.content ?? "").slice(0, 80)}</span>
                       )}
                     </p>
-                  ) : isAddingNote ? (
+                  ) : (
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                       <JournalEditor
                         compact
                         defaultMoodLogId={log.id}
                         onSaved={() => {
-                          setExpandedNoteId(null);
                           onRefresh();
                         }}
-                        onCancel={() => setExpandedNoteId(null)}
+                        onCancel={() => {}}
                       />
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => setExpandedNoteId(log.id)}
-                      className="text-xs text-slate-400 hover:text-indigo-500 transition italic"
-                    >
-                      + Add a jorunal reflection...
-                    </button>
                   )}
                 </div>
               </li>
             );
           })}
           {/*Unlinked journal entries*/}
-          {(entries ?? [])
-            .filter((e) => e.moodLogId === null)
-            .map((entry) => (
+          {unlinkedEntries.map((entry) => (
               <li
                 key={`entry-${entry.id}`}
                 className="bg-white/80 backdrop-blur-md rounded-2xl border border-white/20 shadow overflow-hidden"

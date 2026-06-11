@@ -380,8 +380,8 @@ app.post('/mood/logs', requireAuth, async (req, res) => {
 
   try {
     const logResult = await pool.query(
-      `INSERT INTO mood_logs (user_id, mood_level, stress_level, logged_at)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO mood_logs (user_id, mood_level, stress_level, logged_at, note)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [req.user.id, mood_level, stress_level, loggedAt || new Date().toISOString(), note || null]
     );
@@ -447,7 +447,6 @@ app.get('/mood/logs', requireAuth, async (req, res) => {
       ...log,
       tags: tagsByLog[log.id] || [],
     }));
-
     res.json(logs);
   } catch (err) {
     console.error(err.message);
@@ -477,7 +476,8 @@ app.patch('/mood/logs/:id', requireAuth, async (req, res) => {
          mood_level   = COALESCE($1, mood_level),
          stress_level = COALESCE($2, stress_level),
          logged_at    = COALESCE($3, logged_at)
-       WHERE id = $4 AND user_id = $5
+         note         = COALESCE($4, note)
+       WHERE id = $5 AND user_id = $6
        RETURNING *`,
       [mood_level ?? null, stress_level ?? null, loggedAt ?? null, note ?? null, id, req.user.id]
     );
@@ -537,6 +537,7 @@ app.get('/journal', requireAuth, async (req, res) => {
          je.mood_log_id,
          je.content,
          je.prompt_used,
+         je.title,
          je.created_at,
          je.updated_at,
          ml.mood_level,
@@ -575,8 +576,8 @@ app.post('/journal', requireAuth, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO journal_entries (user_id, mood_log_id, content, prompt_used)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO journal_entries (user_id, mood_log_id, content, prompt_used, title)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [req.user.id, mood_log_id || null, content, prompt_used || null, title || null]
     );
@@ -618,7 +619,7 @@ app.patch('/journal/:id', requireAuth, async (req, res) => {
          content     = COALESCE($1, content),
          mood_log_id = CASE WHEN $2::int IS NOT NULL THEN $2::int ELSE mood_log_id END,
          updated_at  = NOW()
-       WHERE id = $3 AND user_id = $4
+       WHERE id = $4 AND user_id = $5
        RETURNING *`,
       [content ?? null, mood_log_id ?? null, title ?? null, id, req.user.id]
     );

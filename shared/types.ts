@@ -44,6 +44,7 @@ export interface DBMoodLog {
   logged_at: string;
   created_at: string;
   tags: Tag[];
+  note?: string | null;
 }
 
 export interface MoodLog {
@@ -82,6 +83,7 @@ export interface DBJournalEntry {
   mood_log_id: number | null;
   content: string;
   prompt_used: string | null;
+  title?: string | null;
   created_at: string;
   updated_at: string;
   mood_level: MoodLevel | null;

@@ -3,19 +3,20 @@
 import { useState, useEffect } from "react";
 import { Tag, TagsResponse, MoodLevel, StressLevel, CreateMoodLogPayload, } from "../../shared/types";
 import { createMoodLog } from "../../shared/api";
+import { MoodLevelConfig } from "../../shared/types";
 import TagSelector from "./TagSelector";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 
 // Default mood config
-const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string; color: string }[] = [
-  { level: 1, emoji: "😢", label: "Awful",   color: "#ef4444" },
-  { level: 2, emoji: "😕", label: "Bad",     color: "#f97316" },
-  { level: 3, emoji: "😐", label: "Okay",    color: "#eab308" },
-  { level: 4, emoji: "🙂", label: "Good",    color: "#22c55e" },
-  { level: 5, emoji: "😄", label: "Great",   color: "#6366f1" },
-];
+// const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string; color: string }[] = [
+//   { level: 1, emoji: "😢", label: "Awful",   color: "#ef4444" },
+//   { level: 2, emoji: "😕", label: "Bad",     color: "#f97316" },
+//   { level: 3, emoji: "😐", label: "Okay",    color: "#eab308" },
+//   { level: 4, emoji: "🙂", label: "Good",    color: "#22c55e" },
+//   { level: 5, emoji: "😄", label: "Great",   color: "#6366f1" },
+// ];
 
 // Stress slider labels at positions 1, 3, 5, 7, 10
 const STRESS_ANCHORS: Record<number, string> = {
@@ -30,9 +31,10 @@ interface MoodLoggerProps {
   onSaved: (newLogId: number) => void;
   tags: TagsResponse;
   onTagsUpdated: (tag: Tag) => void;
+  moodConfig: MoodLevelConfig[];
 }
 
-export default function MoodLogger({ onSaved, tags, onTagsUpdated }: MoodLoggerProps) {
+export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }: MoodLoggerProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); //1=mood, 2=stress, 3=tags
   const [selectedMood, setSelectedMood] = useState<MoodLevel | null>(null);
   const [stressLevel, setStressLevel] = useState<StressLevel>(5);
@@ -127,20 +129,20 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated }: MoodLoggerP
         <div className="flex flex-col items-center gap-4">
           <p className="text-sm text-slate-500">Select your mood</p>
           <div className="flex gap-3 justify-center flex-wrap">
-            {DEFAULT_MOODS.map((mood) => (
-              <button
-                key={mood.level}
-                onClick={() => { setSelectedMood(mood.level); setStep(2); }}
-                className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all hover:scale-105 ${
-                  selectedMood === mood.level
-                    ? "border-indigo-500 bg-indigo-50 scale-105"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                }`}
-              >
-                <span className="text-3xl">{mood.emoji}</span>
-                <span className="text-xs font-medium text-slate-600">{mood.label}</span>
-              </button>
-            ))}
+            {moodConfig.map((mood) => (
+          <button
+            key={mood.level}
+            onClick={() => { setSelectedMood(mood.level as MoodLevel); setStep(2); }}
+            className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all hover:scale-105 ${
+              selectedMood === mood.level
+                ? "border-indigo-500 bg-indigo-50 scale-105"
+                : "border-slate-200 bg-white hover:border-slate-300"
+            }`}
+          >
+            <span className="text-3xl">{mood.emoji}</span>
+            <span className="text-xs font-medium text-slate-600">{mood.label}</span>
+          </button>
+        ))}
           </div>
         </div>
       )}

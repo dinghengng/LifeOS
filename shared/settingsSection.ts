@@ -7,7 +7,6 @@ export interface SettingsSection {
   id: string;
   title: string;
   description: string;
-  icon: string;
   includeInWizard: boolean;
 }
 
@@ -16,7 +15,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     id: "mood",
     title: "Mood Setup",
     description: "Choose your emoji pack and customise each mood level label and colour",
-    icon: "😊",
     includeInWizard: true,
   },
 ];

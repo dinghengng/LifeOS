@@ -68,3 +68,5 @@ body {
   height: 0;
   pointer-events: none;
 }
+
+@source inline("{bg,border,text}-{amber,indigo,green,teal,pink}-{50,200,700}");

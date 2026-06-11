@@ -73,13 +73,12 @@ export default function JournalEditor({
     };
   }, [editor]);
 
-  // Future code change
-  // useEffect(() => {
-  //   if (promptText) {
-  //     setTitle(promptText);
-  //     setIsPromptLocked(true);
-  //   }
-  // }, [promptText]);
+  useEffect(() => {
+    if (promptText) {
+      setTitle(promptText);
+      setIsPromptLocked(true);
+    }
+  }, [promptText]);
 
   const handleSave = async () => {
     if (!editor || !hasContent) return;
@@ -96,7 +95,7 @@ export default function JournalEditor({
       await createJournalEntry(payload);
       editor.commands.clearContent();
       setHasContent(false);
-      setIsExpanded(compact);
+      setIsExpanded(!compact);
       setLinkedMoodLogId(defaultMoodLogId);
       onSaved();
     } catch (err: unknown) {
@@ -108,7 +107,7 @@ export default function JournalEditor({
 
   const handleDiscard = () => {
     editor?.commands.clearContent();
-    setIsExpanded(compact);
+    setIsExpanded(!compact);
     setLinkedMoodLogId(defaultMoodLogId);
     setTitle("");
     setIsPromptLocked(false);

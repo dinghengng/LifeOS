@@ -117,3 +117,29 @@ export interface UpdateJournalEntryPayload {
   mood_log_id?: number | null;
   title?: string | null;
 }
+
+export interface MoodLevelConfig {
+  id: number;
+  level: MoodLevel;
+  label: string;
+  emoji: string;
+  color: string;
+  displayOrder: number;
+}
+
+export interface EmojiPack {
+  id: number;
+  name: string;
+  emojis: string[];
+  isDefault: boolean;
+}
+
+export interface SaveMoodConfigPayload {
+  levels: {
+    level: MoodLevel;
+    label: string;
+    emoji: string;
+    color: string;
+    display_order: number;
+  }[];
+}

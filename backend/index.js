@@ -925,7 +925,6 @@ app.patch('/api/goals/milestones/:id/toggle', requireAuth, async (req, res) => {
 });
 
 // For new nutrition section
-
 // POST: LOG A NEW MEAL
 app.post('/api/nutrition', requireAuth, async (req, res) => {
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
@@ -957,7 +956,7 @@ app.post('/api/nutrition', requireAuth, async (req, res) => {
   }
 });
 
-// GET: FETCH TODAY'S MEAL LOGS
+// GET: fetch todays meal logs
 app.get('/api/nutrition', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -984,7 +983,7 @@ app.get('/api/nutrition', requireAuth, async (req, res) => {
   }
 });
 
-// 3. GET: FETCH SAVED MEALS (QUICK-ADD)
+// GET: FETCH SAVED MEALS (QUICK-ADD)
 app.get('/api/nutrition/saved', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1017,6 +1016,82 @@ app.post('/api/nutrition/saved', requireAuth, async (req, res) => {
     console.error("Create saved meal error:", err.message);
     res.status(500).send("Server Error");
   }
+});
+
+// GET: fetch user body metrics (for personalized recommendations and progress tracking)
+app.get('/api/user/metrics', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT weight_kg, height_cm, fitness_goal FROM users WHERE id = $1`,
+      [req.user.id]
+    );
+    res.json(result.rows[0] || {});
+  } catch (err) {
+    console.error("Fetch metrics error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+//post: update the user body metrics 
+app.post('/api/user/metrics', requireAuth, async (req, res) => {
+  const { weight_kg, height_cm, fitness_goal } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE users 
+       SET weight_kg = $1, height_cm = $2, fitness_goal = $3 
+       WHERE id = $4 
+       RETURNING weight_kg, height_cm, fitness_goal`,
+      [weight_kg, height_cm, fitness_goal, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Update metrics error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// edit under the quick add 
+app.patch('/api/nutrition/saved/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { mealName, mealType, calories, protein, carbs, fats } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE saved_meals SET meal_name=$1, meal_type=$2, calories=$3, protein=$4, carbs=$5, fats=$6 
+       WHERE id=$7 AND user_id=$8 RETURNING *`,
+      [mealName, mealType, calories, protein, carbs, fats, id, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) { res.status(500).send("Server Error"); }
+});
+
+// delete under the quick add 
+app.delete('/api/nutrition/saved/:id', requireAuth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM saved_meals WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    res.json({ message: "Deleted successfully" });
+  } catch (err) { res.status(500).send("Server Error"); }
+});
+
+// edit the meal logs
+app.patch('/api/nutrition/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { mealName, mealType, calories, protein, carbs, fats } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE nutrition_logs SET meal_name=$1, meal_type=$2, calories=$3, protein=$4, carbs=$5, fats=$6 
+       WHERE id=$7 AND user_id=$8 RETURNING *`,
+      [mealName, mealType, calories, protein, carbs, fats, id, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) { res.status(500).send("Server Error"); }
+});
+
+// delete meal log entries
+app.delete('/api/nutrition/:id', requireAuth, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM meal_logs WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    res.json({ message: "Deleted successfully" });
+  } catch (err) { res.status(500).send("Server Error"); }
 });
 
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections

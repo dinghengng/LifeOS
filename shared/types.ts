@@ -44,6 +44,7 @@ export interface DBMoodLog {
   logged_at: string;
   created_at: string;
   tags: Tag[];
+  note?: string | null;
 }
 
 export interface MoodLog {
@@ -53,6 +54,7 @@ export interface MoodLog {
   loggedAt: string;
   createdAt: string;
   tags: Tag[];
+  note?: string | null;
 }
 
 export interface CreateMoodLogPayload {
@@ -61,6 +63,7 @@ export interface CreateMoodLogPayload {
   systemTagIds: number[];
   customTagIds: number[];
   loggedAt?: string; //backfill
+  note?: string;
 }
 
 export interface UpdateMoodLogPayload {
@@ -69,6 +72,7 @@ export interface UpdateMoodLogPayload {
   systemTagIds?: number[];
   customTagIds?: number[];
   loggedAt?: string;
+  note?: string | null;
 }
 
 export interface CreateCustomTagPayload {
@@ -80,6 +84,7 @@ export interface DBJournalEntry {
   mood_log_id: number | null;
   content: string;
   prompt_used: string | null;
+  title?: string | null;
   created_at: string;
   updated_at: string;
   mood_level: MoodLevel | null;
@@ -97,15 +102,44 @@ export interface JournalEntry {
   moodLevel: MoodLevel | null;
   stressLevel: StressLevel | null;
   moodLoggedAt: string | null;
+  title?: string | null;
 }
 
 export interface CreateJournalEntryPayload {
   content: string;
   mood_log_id?: number | null;
   prompt_used?: string | null;
+  title?: string;
 }
 
 export interface UpdateJournalEntryPayload {
   content?: string;
   mood_log_id?: number | null;
+  title?: string | null;
+}
+
+export interface MoodLevelConfig {
+  id: number;
+  level: MoodLevel;
+  label: string;
+  emoji: string;
+  color: string;
+  displayOrder: number;
+}
+
+export interface EmojiPack {
+  id: number;
+  name: string;
+  emojis: string[];
+  isDefault: boolean;
+}
+
+export interface SaveMoodConfigPayload {
+  levels: {
+    level: MoodLevel;
+    label: string;
+    emoji: string;
+    color: string;
+    display_order: number;
+  }[];
 }

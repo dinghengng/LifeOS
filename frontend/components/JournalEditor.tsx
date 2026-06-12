@@ -17,6 +17,7 @@ interface JournalEditorProps {
   defaultMoodLogId?: number | null;
   onCancel?: () => void;
   compact?: boolean;
+  promptText?: string | null;
 }
 
 export default function JournalEditor({
@@ -25,13 +26,16 @@ export default function JournalEditor({
   defaultMoodLogId = null,
   onCancel,
   compact = false,
+  promptText = null,
 }: JournalEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(compact);
+  const [isExpanded, setIsExpanded] = useState(!compact);
   const [hasContent, setHasContent] = useState(false);
   const [linkedMoodLogId, setLinkedMoodLogId] = useState<number | null>(defaultMoodLogId);
   const [, forceUpdate] = useState(0);
+  const [title, setTitle] = useState("");
+  const [isPromptLocked, setIsPromptLocked] = useState(false);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -53,7 +57,6 @@ export default function JournalEditor({
           "prose prose-sm max-w-none focus:outline-none min-h-[120px] px-4 py-3 text-slate-800",
       },
     },
-    onFocus: () => setIsExpanded(true),
     onUpdate: ({ editor }) => {
       setHasContent(!editor.isEmpty);
     },
@@ -70,6 +73,13 @@ export default function JournalEditor({
     };
   }, [editor]);
 
+  useEffect(() => {
+    if (promptText) {
+      setTitle(promptText);
+      setIsPromptLocked(true);
+    }
+  }, [promptText]);
+
   const handleSave = async () => {
     if (!editor || !hasContent) return;
     setIsSubmitting(true);
@@ -78,13 +88,14 @@ export default function JournalEditor({
     const payload: CreateJournalEntryPayload = {
       content: editor.getHTML(), //convert to html string
       mood_log_id: linkedMoodLogId ?? undefined,
+      title: title.trim() || undefined,
     };
 
     try {
       await createJournalEntry(payload);
       editor.commands.clearContent();
       setHasContent(false);
-      setIsExpanded(compact);
+      setIsExpanded(!compact);
       setLinkedMoodLogId(defaultMoodLogId);
       onSaved();
     } catch (err: unknown) {
@@ -96,8 +107,10 @@ export default function JournalEditor({
 
   const handleDiscard = () => {
     editor?.commands.clearContent();
-    setIsExpanded(compact);
+    setIsExpanded(!compact);
     setLinkedMoodLogId(defaultMoodLogId);
+    setTitle("");
+    setIsPromptLocked(false);
     setError(null);
     onCancel?.();
   };
@@ -188,8 +201,43 @@ export default function JournalEditor({
         </div>
       )}
 
+      {/*Title*/}
+      {isExpanded && (
+        <div className="px-4 pt-3 pb-1">
+          {isPromptLocked ? (
+            <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2">
+              <span className="text-sm text-indigo-700 flex-1">{title}</span>
+              <button
+                onClick={() => { setTitle(""); setIsPromptLocked(false); }}
+                className="text-indigo-400 hover:text-indigo-600 text-xs transition shrink-0"
+              >
+                ✕ Remove prompt
+              </button>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Title:"
+              maxLength={250}
+              className="w-full text-sm font-medium text-slate-700 placeholder-slate-400 bg-transparent border-b border-slate-200 pb-2 focus:outline-none focus:border-indigo-400 transition"
+            />
+          )}
+        </div>
+      )}  
+
       {/*Editor*/}
-      <EditorContent editor={editor} />
+      {!isExpanded && compact ? (
+        <button
+          onClick={() => { setIsExpanded(true); setTimeout(() => editor?.commands.focus(), 0); }}
+          className="w-full text-left px-4 py-3 text-sm text-slate-400 italic hover:text-slate-500 transition"
+        >
+          + Add a journal reflection...
+        </button>
+      ) : (
+        <EditorContent editor={editor} />
+      )}
 
       {/*Footer*/}
       {isExpanded && (

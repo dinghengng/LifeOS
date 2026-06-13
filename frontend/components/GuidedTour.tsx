@@ -1,19 +1,32 @@
-"use client";
-import { useState } from "react";
-import dynamic from "next/dynamic";
-import { X, Rocket, CheckSquare, Trophy, BookOpen, Salad } from "lucide-react";
-import { Step, CallBackProps, STATUS, TooltipRenderProps } from "react-joyride";
+'use client';
 
-// Dynamically import Joyride to prevent Next.js Turbopack errors
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
+import { X, Rocket, CheckSquare, Trophy, BookOpen, Salad } from 'lucide-react';
+
+interface JoyrideTooltipProps {
+  index: number;
+  step: { title?: React.ReactNode; content?: React.ReactNode };
+  backProps: React.ButtonHTMLAttributes<HTMLButtonElement>;
+  primaryProps: React.ButtonHTMLAttributes<HTMLButtonElement>;
+  skipProps: React.ButtonHTMLAttributes<HTMLButtonElement>;
+  tooltipProps: React.HTMLAttributes<HTMLDivElement>;
+  isLastStep: boolean;
+  size: number;
+}
+
+interface JoyrideData {
+  status: string;
+  action: string;
+  type: string;
+}
+
 const Joyride = dynamic(
-  async () => {
-    const mod = await import("react-joyride");
-    return mod.default || (mod as any).Joyride || mod;
-  },
-  { ssr: false },
-);
+  () => import('react-joyride').then((mod) => ({ default: mod.Joyride ?? mod })),
+  { ssr: false }
+) as React.ElementType;
 
-// Custom dark tooltip matching LifeOS dark theme
+// Changing to dark theme but might check against preferences
 const CustomTooltip = ({
   index,
   step,
@@ -23,7 +36,7 @@ const CustomTooltip = ({
   tooltipProps,
   isLastStep,
   size,
-}: TooltipRenderProps) => (
+}: JoyrideTooltipProps) => (
   <div
     {...tooltipProps}
     className="bg-slate-900 rounded-xl p-5 w-80 shadow-2xl border border-slate-700 font-sans"
@@ -40,12 +53,8 @@ const CustomTooltip = ({
         {index + 1} / {size}
       </span>
     </div>
-    <h3 className="text-emerald-400 font-bold text-lg mb-2">
-      {step.title as string}
-    </h3>
-    <p className="text-slate-200 text-sm mb-6 leading-relaxed">
-      {step.content as string}
-    </p>
+    <h3 className="text-emerald-400 font-bold text-lg mb-2">{step.title}</h3>
+    <p className="text-slate-200 text-sm mb-6 leading-relaxed">{step.content}</p>
     <div className="flex justify-end gap-3">
       {index > 0 && (
         <button
@@ -59,65 +68,60 @@ const CustomTooltip = ({
         {...primaryProps}
         className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition"
       >
-        {isLastStep ? "Finish" : "Next"}
+        {isLastStep ? 'Finish' : 'Next'}
       </button>
     </div>
   </div>
 );
 
-const tourSteps: Step[] = [
+const tourSteps = [
   {
-    target: "body",
-    content:
-      "LifeOS helps you track tasks, goals, journaling, and nutrition — all in one place.",
-    title: "Welcome to LifeOS",
-    placement: "center",
+    target: 'body',
+    content: 'LifeOS helps you track tasks, goals, journaling, and nutrition! All in one place.',
+    title: 'Welcome to LifeOS',
+    placement: 'center',
     disableBeacon: true,
   },
   {
-    target: "#tour-tasks",
-    content:
-      "Stay on top of your daily to-dos and priorities. Check off tasks as you complete them to build momentum!",
-    title: "Task Management",
+    target: '#tour-tasks',
+    content: 'Stay on top of your daily to-dos and priorities. Check off tasks as you complete them to build momentum!',
+    title: 'Task Management',
     disableBeacon: true,
   },
   {
-    target: "#tour-dashboard",
-    content:
-      "Get a bird's-eye view of your progress. Track your long-term goals and celebrate your major milestones here.",
-    title: "Goals & Milestones",
+    target: '#tour-dashboard',
+    content: "Get a view of your progress. Track your long-term goals and celebrate your major milestones here.",
+    title: 'Goals & Milestones',
     disableBeacon: true,
   },
   {
-    target: "#tour-journal",
-    content:
-      "Reflect on your day. Log your mood levels and answer custom prompts to track your mental well-being.",
-    title: "Lifestyle Journaling",
+    target: '#tour-journal',
+    content: 'Reflect on your day. Log your mood levels and answer custom prompts to track your mental well-being.',
+    title: 'Lifestyle Journaling',
     disableBeacon: true,
   },
   {
-    target: "#tour-nutrition",
-    content:
-      "Log your meals, track your macros, and stay under your calorie ceiling to hit your physical targets.",
-    title: "Nutrition Tracker",
+    target: '#tour-nutrition',
+    content: 'Log your meals, track your macros, and manage your health!',
+    title: 'Nutrition Tracker',
     disableBeacon: true,
   },
 ];
 
 const helpSections = [
   {
-    section: "How to use",
+    section: 'How to use',
     items: [
-      { icon: Rocket, label: "Getting started", tour: true },
-      { icon: CheckSquare, label: "Tasks & goals", tour: false },
-      { icon: Trophy, label: "Milestones", tour: false },
+      { icon: Rocket, label: 'Getting started', tour: true },
+      { icon: CheckSquare, label: 'Tasks & goals', tour: false },
+      { icon: Trophy, label: 'Milestones', tour: false },
     ],
   },
   {
-    section: "Reference",
+    section: 'Reference',
     items: [
-      { icon: BookOpen, label: "FAQ", tour: false },
-      { icon: Salad, label: "Nutrition guide", tour: false },
+      { icon: BookOpen, label: 'FAQ', tour: false },
+      { icon: Salad, label: 'Nutrition guide', tour: false },
     ],
   },
 ];
@@ -126,16 +130,15 @@ export default function HelpCentre() {
   const [open, setOpen] = useState(false);
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
-
-  const handleJoyrideCallback = (data: CallBackProps) => {
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(data.status as any)) {
+  const handleJoyrideCallback = (data: JoyrideData) => {
+    if (['finished', 'skipped'].includes(data.status)) {
       setRun(false);
     }
   };
 
   const startTour = () => {
     setOpen(false);
-    setTourKey((prev) => prev + 1); // Reset so it always replays from step 1
+    setTourKey(prev => prev + 1);
     setRun(true);
   };
 
@@ -150,19 +153,16 @@ export default function HelpCentre() {
         tooltipComponent={CustomTooltip}
         styles={{
           options: {
-            overlayColor: "rgba(0, 0, 0, 0.75)",
+            overlayColor: 'rgba(0, 0, 0, 0.75)',
             zIndex: 999,
           },
         }}
       />
-
-      {/* Help button — drop this inside your top navbar, aligned to the right */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed top-5 right-5 z-50 flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 shadow-md transition-all"
+        className="fixed top-5 right-5 z-40 flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 shadow-md transition-all"
         aria-label="Help centre"
       >
-        {/* Custom ? icon, larger and bolder */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -181,18 +181,15 @@ export default function HelpCentre() {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 pt-14 pr-4"
+          className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 pt-16 pr-5"
           onClick={() => setOpen(false)}
         >
           <div
-            className="bg-white rounded-2xl w-full max-w-xs shadow-xl"
-            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl w-full max-w-xs shadow-2xl animate-in fade-in slide-in-from-top-4"
+            onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-base text-slate-800">
-                Help centre
-              </h2>
+              <h2 className="font-semibold text-base text-slate-800">Help centre</h2>
               <button
                 onClick={() => setOpen(false)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
@@ -201,7 +198,6 @@ export default function HelpCentre() {
               </button>
             </div>
 
-            {/* Sections */}
             <div className="py-2">
               {helpSections.map(({ section, items }) => (
                 <div key={section}>
@@ -228,9 +224,7 @@ export default function HelpCentre() {
             </div>
 
             <div className="px-5 py-4 border-t border-slate-100">
-              <p className="text-xs text-slate-400 text-center">
-                LifeOS · Orbital 2026
-              </p>
+              <p className="text-xs text-slate-400 text-center">LifeOS · Orbital 2026</p>
             </div>
           </div>
         </div>

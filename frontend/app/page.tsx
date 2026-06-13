@@ -267,140 +267,144 @@ export default function Page() {
     );
   }
 // Display Core App Dashboard Interface
-  return (
-    <main
-      className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col items-center py-10 px-4 transition-all duration-1000 ease-in-out"
-      style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
-    >
+ return (
+    <> 
+      {/* Move help centre outside */}
       <GuidedTour />
-      {/* Dynamic Identity & Action Header Line Layout */}
-      <div className="w-full max-w-3xl flex justify-between items-center mb-4 px-2">
-        <span className="text-white/90 text-sm font-medium bg-slate-900/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10 shadow-sm">
-          Welcome back!{" "}
-          <span className="font-semibold">
-            {currentUser.name || currentUser.email}
+      <main
+        className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col items-center py-10 px-4 transition-all duration-1000 ease-in-out"
+        style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
+      >
+        {/* Dynamic Identity & Action Header Line Layout */}
+        <div className="w-full max-w-3xl flex justify-between items-center mb-4 px-2">
+          <span className="text-white/90 text-sm font-medium bg-slate-900/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10 shadow-sm">
+            Welcome back!{" "}
+            <span className="font-semibold">
+              {currentUser.name || currentUser.email}
+            </span>
           </span>
-        </span>
 
-        <div className="flex gap-2">
-          {/* Active Tasks button styling */}
-          <button
-            onClick={() => router.push("/")}
-            className="bg-indigo-600 text-white font-semibold px-4 py-1.5 rounded-lg text-sm border border-indigo-600 shadow-sm transition"
-          >
-            Tasks
-          </button>
-          
-          {/* Dashboard button just like journal */}
-          <button
-            id="tour-dashboard"
-            onClick={() => router.push("/dashboard")}
-            className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
-          >
-            Dashboard
-          </button>
-          
-          {/* Journal button */}
-          <button
-            id="tour-journal"
-            onClick={() => router.push("/journal")}
-            className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
-          >
-            Journal
-          </button>
-          
-          {/* Nutrition button */}
-          <button
-            id="tour-nutrition"
-            onClick={() => router.push("/nutrition")}
-            style={{
-              padding: "6px 16px",
-              fontSize: "14px",
-              fontWeight: 600,
-              borderRadius: "8px",
-              border: "1px solid var(--color-border-secondary)",
-              backgroundColor: "rgba(255, 255, 255, 0.7)",
-              color: "#334155",
-              cursor: "pointer",
-            }}
-          >
-            Nutrition
-          </button>
-          
-          {/* Logout button */}
-          <button
-            onClick={handleLogout}
-            className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-red-50 hover:text-red-600 shadow-sm transition"
-          >
-            Logout
-          </button>
+          <div className="flex gap-2">
+            {/* Active Tasks button styling */}
+            <button
+              onClick={() => router.push("/")}
+              className="bg-indigo-600 text-white font-semibold px-4 py-1.5 rounded-lg text-sm border border-indigo-600 shadow-sm transition"
+            >
+              Tasks
+            </button>
+            
+            {/* Dashboard button just like journal */}
+            <button
+              id="tour-dashboard"
+              onClick={() => router.push("/dashboard")}
+              className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
+            >
+              Dashboard
+            </button>
+            
+            {/* Journal button */}
+            <button
+              id="tour-journal"
+              onClick={() => router.push("/journal")}
+              className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
+            >
+              Journal
+            </button>
+            
+            {/* Nutrition button */}
+            <button
+              id="tour-nutrition"
+              onClick={() => router.push("/nutrition")}
+              style={{
+                padding: "6px 16px",
+                fontSize: "14px",
+                fontWeight: 600,
+                borderRadius: "8px",
+                border: "1px solid var(--color-border-secondary)",
+                backgroundColor: "rgba(255, 255, 255, 0.7)",
+                color: "#334155",
+                cursor: "pointer",
+              }}
+            >
+              Nutrition
+            </button>
+            
+            {/* Logout button */}
+            <button
+              onClick={handleLogout}
+              className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-red-50 hover:text-red-600 shadow-sm transition"
+            >
+              Logout
+            </button>
+          </div>
         </div>
-      </div>
-      <div id="tour-tasks" className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 h-fit">
-        <h1 className="text-3xl font-bold text-slate-800 mb-4 text-center">
-          LifeOS Tasks
-        </h1>
-        {error && (
-          <p className="mb-4 text-sm text-red-600 text-center">{error}</p>
-        )}
+        
+        <div id="tour-tasks" className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 h-fit">
+          <h1 className="text-3xl font-bold text-slate-800 mb-4 text-center">
+            LifeOS Tasks
+          </h1>
+          {error && (
+            <p className="mb-4 text-sm text-red-600 text-center">{error}</p>
+          )}
 
-        {loading ? (
-          <p className="text-slate-500 text-center mt-4">Loading tasks...</p>
-        ) : (
-          <>
-            <NewTaskForm onAddTask={handleAddTask} />
+          {loading ? (
+            <p className="text-slate-500 text-center mt-4">Loading tasks...</p>
+          ) : (
+            <>
+              <NewTaskForm onAddTask={handleAddTask} />
 
-            {/* Filter controls */}
-            <div className="flex gap-2 mb-6 flex-wrap justify-center">
-              {(["all", "critical", "high", "low", "none"] as const).map(
-                (level) => {
-                  const count =
-                    level === "all"
-                      ? tasks.length
-                      : tasks.filter((t) => t.priority === level).length;
-                  const isActive = priorityFilter === level;
+              {/* Filter controls */}
+              <div className="flex gap-2 mb-6 flex-wrap justify-center">
+                {(["all", "critical", "high", "low", "none"] as const).map(
+                  (level) => {
+                    const count =
+                      level === "all"
+                        ? tasks.length
+                        : tasks.filter((t) => t.priority === level).length;
+                    const isActive = priorityFilter === level;
 
-                  return (
-                    <button
-                      key={level}
-                      onClick={() => setPriorityFilter(level)}
-                      className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 ${
-                        isActive
-                          ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-300 ring-offset-1"
-                          : "bg-white/80 backdrop-blur-sm text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                      }`}
-                    >
-                      <span className="uppercase tracking-wider">
-                        {level === "all" ? "All" : level}
-                      </span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}
+                    return (
+                      <button
+                        key={level}
+                        onClick={() => setPriorityFilter(level)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 ${
+                          isActive
+                            ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-300 ring-offset-1"
+                            : "bg-white/80 backdrop-blur-sm text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                        }`}
                       >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                },
+                        <span className="uppercase tracking-wider">
+                          {level === "all" ? "All" : level}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+
+              {editingTask && (
+                <EditTaskForm
+                  task={editingTask}
+                  onSave={(updates) => saveTaskEdits(editingTask.id, updates)}
+                  onCancel={() => setEditingTask(null)}
+                />
               )}
-            </div>
 
-            {editingTask && (
-              <EditTaskForm
-                task={editingTask}
-                onSave={(updates) => saveTaskEdits(editingTask.id, updates)}
-                onCancel={() => setEditingTask(null)}
+              <TaskList
+                tasks={visibleTasks}
+                onToggleTask={handleToggleTask}
+                onDeleteTask={handleDeleteTask}
+                onEditTask={setEditingTask}
               />
-            )}
-
-            <TaskList
-              tasks={visibleTasks}
-              onToggleTask={handleToggleTask}
-              onDeleteTask={handleDeleteTask}
-              onEditTask={setEditingTask}
-            />
-          </>
-        )}
-      </div>
-    </main>
+            </>
+          )}
+        </div>
+      </main>
+    </> 
   );
 }

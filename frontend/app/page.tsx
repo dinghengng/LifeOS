@@ -7,6 +7,7 @@ import EditTaskForm from "../components/EditTaskForm";
 import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import { useRouter } from "next/navigation";
+import GuidedTour from "../components/GuidedTour";
 
 // Import types and unified API functions from the shared folder
 import { Task, Priority, User } from "../../shared/types";
@@ -265,13 +266,13 @@ export default function Page() {
       </main>
     );
   }
-
-  // Display Core App Dashboard Interface
+// Display Core App Dashboard Interface
   return (
     <main
       className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col items-center py-10 px-4 transition-all duration-1000 ease-in-out"
       style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
     >
+      <GuidedTour />
       {/* Dynamic Identity & Action Header Line Layout */}
       <div className="w-full max-w-3xl flex justify-between items-center mb-4 px-2">
         <span className="text-white/90 text-sm font-medium bg-slate-900/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10 shadow-sm">
@@ -289,22 +290,28 @@ export default function Page() {
           >
             Tasks
           </button>
+          
           {/* Dashboard button just like journal */}
           <button
+            id="tour-dashboard"
             onClick={() => router.push("/dashboard")}
             className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
           >
             Dashboard
           </button>
+          
           {/* Journal button */}
           <button
+            id="tour-journal"
             onClick={() => router.push("/journal")}
             className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
           >
             Journal
           </button>
+          
           {/* Nutrition button */}
           <button
+            id="tour-nutrition"
             onClick={() => router.push("/nutrition")}
             style={{
               padding: "6px 16px",
@@ -319,6 +326,7 @@ export default function Page() {
           >
             Nutrition
           </button>
+          
           {/* Logout button */}
           <button
             onClick={handleLogout}
@@ -328,8 +336,7 @@ export default function Page() {
           </button>
         </div>
       </div>
-
-      <div className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 h-fit">
+      <div id="tour-tasks" className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 h-fit">
         <h1 className="text-3xl font-bold text-slate-800 mb-4 text-center">
           LifeOS Tasks
         </h1>

@@ -9,6 +9,8 @@ import SupplementTracker, { Supplement } from "../../components/nutrition/Supple
 import { User } from "../../../shared/types";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
 import { UtensilsCrossed, Dumbbell, Target, Sunrise } from "lucide-react";
+import NutritionChart, { DayData } from "../../components/nutrition/NutritionChart";
+import { Lightbulb } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -68,6 +70,59 @@ function buildQuests(
     },
   ];
 }
+  //manual craft insights but may change depending on scale of the free ai that can be used
+  function generateInsight(
+    remainingCalories: number,
+    remainingProtein: number,
+    remainingCarbs: number,
+    remainingFats: number,
+    fitnessGoal: string,
+    mealsLoggedToday: number,
+    totalCalories: number,
+  ): string {
+    const goalLabel = fitnessGoal.replace("_", " ");
+
+    // Hard over on calories
+    if (remainingCalories < -300)
+      return `You're ${Math.abs(remainingCalories)} kcal over today. Skip further snacks and close the day with a light, protein-rich dinner to limit the damage.`;
+    // Slightly over for calories
+    if (remainingCalories < 0 && remainingCalories >= -300)
+      return `You're ${Math.abs(remainingCalories)} kcal over but not critical. A 20-minute walk burns roughly 100 kcal and helps with digestion too.`;
+    // High protein gap but almost no calories left
+    if (remainingProtein > 30 && remainingCalories < 300)
+      return `${remainingProtein}g protein still needed but only ${remainingCalories} kcal left. A whey isolate shake (~120 kcal, 25g protein) or egg whites are your best options here.`;
+    // Protein hit but more than 300 calories remaining 
+    if (remainingProtein <= 0 && remainingCalories > 300)
+      return `Protein target nailed. You have ${remainingCalories} kcal left! use it on complex carbs like oats, sweet potato, or brown rice to fuel tomorrow's session.`;
+    // Protein hit, calories nearly done too
+    if (
+      remainingProtein <= 0 &&
+      remainingCalories <= 300 &&
+      remainingCalories > 0
+    )
+      return `Almost perfect day! Protein done, ${remainingCalories} kcal to spare. A piece of fruit or a handful of nuts closes it out cleanly.`;
+    // Fat is very high
+    if (remainingFats < -15)
+      return `Fat intake is running high today (${Math.abs(remainingFats)}g over). Keep your remaining meals lean. Grilled protein, vegetables, and skip any added oils or dressings.`;
+    // Nothing logged yet
+    if (mealsLoggedToday === 0)
+      return `Nothing logged yet today. Start with a high-protein breakfast — eggs, Greek yoghurt, or a shake to front-load your ${goalLabel} targets and reduce evening cravings.`;
+    // Under half calories by afternoon / evening 
+    if (totalCalories < remainingCalories * 0.4 && mealsLoggedToday >= 1)
+      return `You've used less than half your calorie budget so far. Make sure you're eating enough — under-fuelling on a ${goalLabel} plan stalls progress just as much as overeating.`;
+    // Carbs low for muscle gain
+    if (fitnessGoal === "muscle_gain" && remainingCarbs > 100)
+      return `You're ${remainingCarbs}g short on carbs. For muscle gain, carbs drive your training performance. Eat rice, pasta, or a banana before your next session would help.`;
+    // Fat loss and on track
+    if (
+      fitnessGoal === "fat_loss" &&
+      remainingCalories > 100 &&
+      remainingProtein < 20
+    )
+      return `Great deficit day. Protein is nearly there, a small lean protein source at dinner keeps muscle preserved while you're in the cut.`;
+    // All good
+    return `You're on track for your ${goalLabel} goal. Keep your next meal balanced and you'll close today cleanly.`;
+  }
 
 export default function NutritionPage() {
   const router = useRouter();
@@ -109,7 +164,30 @@ export default function NutritionPage() {
   const [awardedQuestIds, setAwardedQuestIds] = useState<Set<string>>(new Set());
   const totalCalories = meals.reduce((s, m) => s + m.calories, 0);
   const totalProtein = meals.reduce((s, m) => s + m.protein, 0);
-  const quests = buildQuests(meals, totalCalories, totalProtein, targets.calories, targets.protein);
+  const totalCarbs = meals.reduce((s, m) => s + m.carbs, 0);
+  const totalFats = meals.reduce((s, m) => s + m.fats, 0); // these 4 for total used for insights
+  const carbTarget = Math.round((targets.calories * 0.45) / 4);
+  const fatTarget = Math.round((targets.calories * 0.25) / 9);
+
+  const insight = generateInsight(
+    targets.calories - totalCalories,
+    targets.protein - totalProtein,
+    carbTarget - totalCarbs,
+    fatTarget - totalFats,
+    metricsForm.goal,
+    meals.length,
+    totalCalories,
+  ); // insights section
+
+  const quests = buildQuests(
+    meals,
+    totalCalories,
+    totalProtein,
+    targets.calories,
+    targets.protein,
+  );
+
+  const [history, setHistory] = useState<DayData[]>([]);
 
   // Award XP when a quest first flips to completed; persist to backend
   useEffect(() => {
@@ -132,7 +210,10 @@ export default function NutritionPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ total_xp: newXP, awarded_quest_ids: [...newIds] }),
+        body: JSON.stringify({
+          total_xp: newXP,
+          awarded_quest_ids: [...newIds],
+        }),
       }).catch(console.error);
     }
   }, [quests]);
@@ -167,14 +248,17 @@ export default function NutritionPage() {
     setDataLoading(true);
     setError(null);
     try {
-      const [logsRes, savedRes, metricsRes, suppsRes, xpRes] = await Promise.all([
-        fetch(`${API_BASE}/api/nutrition`, { credentials: "include" }),
-        fetch(`${API_BASE}/api/nutrition/saved`, { credentials: "include" }),
-        fetch(`${API_BASE}/api/user/metrics`, { credentials: "include" }),
-        fetch(`${API_BASE}/api/supplements`, { credentials: "include" }),
-        fetch(`${API_BASE}/api/user/xp`, { credentials: "include" }),
-      ]);
+      const [logsRes, savedRes, metricsRes, suppsRes, xpRes, historyRes] =
+        await Promise.all([
+          fetch(`${API_BASE}/api/nutrition`, { credentials: "include" }),
+          fetch(`${API_BASE}/api/nutrition/saved`, { credentials: "include" }),
+          fetch(`${API_BASE}/api/user/metrics`, { credentials: "include" }),
+          fetch(`${API_BASE}/api/supplements`, { credentials: "include" }),
+          fetch(`${API_BASE}/api/user/xp`, { credentials: "include" }),
+          fetch(`${API_BASE}/api/nutrition/history?days=7`, { credentials: "include"}),
+        ]);
 
+      if (historyRes.ok) setHistory(await historyRes.json());
       if (!logsRes.ok) throw new Error("Nutrition logs fetch failed");
 
       setMeals(await logsRes.json());
@@ -341,19 +425,30 @@ export default function NutritionPage() {
   const handleDeleteLog = async (id: string) => {
     if (!confirm("Are you sure you want to delete this meal log?")) return;
     try {
-      const res = await fetch(`${API_BASE}/api/nutrition/${id}`, { method: "DELETE", credentials: "include" });
-      if (res.ok) setMeals(meals.filter(m => m.id !== id));
-    } catch (err) { console.error(err); }
+      const res = await fetch(`${API_BASE}/api/nutrition/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) setMeals(meals.filter((m) => m.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Delete Quick Add Meal
   const handleDeleteSaved = async (id: string | number | undefined) => {
     if (!id) return;
-    if (!confirm("Are you sure you want to remove this from quick add?")) return;
+    if (!confirm("Are you sure you want to remove this from quick add?"))
+      return;
     try {
-      const res = await fetch(`${API_BASE}/api/nutrition/saved/${id}`, { method: "DELETE", credentials: "include" });
-      if (res.ok) setSavedMeals(savedMeals.filter(sm => sm.id !== id));
-    } catch (err) { console.error(err); }
+      const res = await fetch(`${API_BASE}/api/nutrition/saved/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) setSavedMeals(savedMeals.filter((sm) => sm.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Master Form Submit handling Create AND Editing
@@ -584,6 +679,40 @@ export default function NutritionPage() {
       ) : (
         <div style={{ maxWidth: "600px", margin: "0 auto" }}>
           <QuestPanel quests={quests} totalXP={totalXP} />
+          <NutritionChart
+            history={history}
+            calorieTarget={targets.calories}
+            proteinTarget={targets.protein}
+          />
+
+          {/* Insight section thats newly added, might change see how */}
+          <div
+            style={{
+              background: "var(--color-background-primary)",
+              border: "0.5px solid var(--color-border-tertiary)",
+              borderRadius: "var(--border-radius-lg)",
+              padding: "1rem 1.25rem",
+              marginBottom: "1.5rem",
+              display: "flex",
+              gap: 12,
+              alignItems: "flex-start",
+            }}
+          >
+            <Lightbulb
+              size={18}
+              style={{ color: "#f59e0b", flexShrink: 0, marginTop: 1 }}
+            />
+            <p
+              style={{
+                margin: 0,
+                fontSize: 13,
+                color: "var(--color-text-primary)",
+                lineHeight: 1.6,
+              }}
+            >
+              {insight}
+            </p>
+          </div>
           <NutritionTracker
             meals={meals}
             onAddMealClick={openCreateModal}
@@ -873,7 +1002,18 @@ export default function NutritionPage() {
                       >
                         <SquarePen size={14} strokeWidth={2} />
                       </button>
-                      <button type="button" onClick={() => handleDeleteSaved(sm.id)} style={{ padding: "4px 8px 4px 2px", fontSize: "11px", border: "none", background: "transparent", color: "#ef4444", cursor: "pointer" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSaved(sm.id)}
+                        style={{
+                          padding: "4px 8px 4px 2px",
+                          fontSize: "11px",
+                          border: "none",
+                          background: "transparent",
+                          color: "#ef4444",
+                          cursor: "pointer",
+                        }}
+                      >
                         <Trash2 size={14} strokeWidth={2} />
                       </button>
                     </div>

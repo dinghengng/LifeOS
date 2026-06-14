@@ -1270,6 +1270,58 @@ app.post('/api/user/xp', requireAuth, async (req, res) => {
   }
 });
 
+// for insights page 
+app.get('/api/nutrition/history', requireAuth, async (req, res) => {
+  const days = Math.min(parseInt(req.query.days) || 7, 30);
+  try {
+    const result = await pool.query(
+      `SELECT
+         (created_at AT TIME ZONE 'Asia/Singapore')::date AS date,
+         SUM(calories)  AS calories,
+         SUM(protein)   AS protein,
+         SUM(carbs)     AS carbs,
+         SUM(fats)      AS fats,
+         COUNT(*)       AS meal_count
+       FROM meal_logs
+       WHERE user_id = $1
+         AND (created_at AT TIME ZONE 'Asia/Singapore')::date 
+             >= (NOW() AT TIME ZONE 'Asia/Singapore')::date - ($2 - 1) * INTERVAL '1 day'
+       GROUP BY (created_at AT TIME ZONE 'Asia/Singapore')::date
+       ORDER BY date ASC`,
+      [req.user.id, days]
+    );
+
+    const filled = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      const sgtOffset = 8 * 60 * 60 * 1000;
+      const sgtDate = new Date(d.getTime() + sgtOffset);
+      sgtDate.setUTCDate(sgtDate.getUTCDate() - i);
+      const dateStr = sgtDate.toISOString().split('T')[0];
+
+      const row = result.rows.find(r => {
+        const rowDate = r.date instanceof Date
+          ? r.date.toISOString().split('T')[0]
+          : String(r.date);
+        return rowDate === dateStr;
+      });
+
+      filled.push({
+        date: dateStr,
+        calories:   parseInt(row?.calories)   || 0,
+        protein:    parseInt(row?.protein)    || 0,
+        carbs:      parseInt(row?.carbs)      || 0,
+        fats:       parseInt(row?.fats)       || 0,
+        meal_count: parseInt(row?.meal_count) || 0,
+      });
+    }
+    res.json(filled);
+  } catch (err) {
+    console.error("History fetch error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running natively and open to wireless network devices on port ${PORT}`);

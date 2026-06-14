@@ -4,8 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { SquarePen, Trash2 } from "lucide-react";
 import NutritionTracker, { Meal } from "../../components/nutrition/NutritionTracker";
+import QuestPanel, { Quest } from "../../components/nutrition/QuestPanel";
+import SupplementTracker, { Supplement } from "../../components/nutrition/SupplementTracker";
 import { User } from "../../../shared/types";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
+import { UtensilsCrossed, Dumbbell, Target, Sunrise } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -18,8 +21,53 @@ type SavedMeal = {
   mealName?: string;
   meal_name?: string;
   mealType?: string;
-  meal_type?: string; //db and frontend naming inconsistencies 
+  meal_type?: string; //db and frontend naming inconsistencies
 };
+// 4 Quests for now , pending changes
+function buildQuests(
+  meals: Meal[],
+  totalCalories: number,
+  totalProtein: number,
+  calorieTarget: number,
+  proteinTarget: number,
+): Quest[] {
+  return [
+    {
+      id: "log_meals",
+      label: "Fuel Up",
+      description: "Log 3 or more meals today",
+      xp: 20,
+      icon: <UtensilsCrossed size={18} />,
+      completed: meals.length >= 3,
+    },
+    {
+      id: "hit_protein",
+      label: "Protein Quest",
+      description: `Hit your ${proteinTarget}g protein target`,
+      xp: 30,
+      icon: <Dumbbell size={18} />,
+      completed: totalProtein >= proteinTarget,
+    },
+    {
+      id: "calorie_ceiling",
+      label: "Calorie Control",
+      description: `Stay within your ${calorieTarget} kcal ceiling`,
+      xp: 25,
+      icon: <Target size={18} />,
+      completed: totalCalories > 0 && totalCalories <= calorieTarget,
+    },
+    {
+      id: "log_breakfast",
+      label: "Early Bird",
+      description: "Log a breakfast meal",
+      xp: 15,
+      icon: <Sunrise size={18} />,
+      completed: meals.some(
+        (m) => (m.mealType || m.meal_type || "").toLowerCase() === "breakfast",
+      ),
+    },
+  ];
+}
 
 export default function NutritionPage() {
   const router = useRouter();
@@ -42,7 +90,7 @@ export default function NutritionPage() {
   // Modal configuration states
   const [showMealModal, setShowMealModal] = useState(false);
   const [mealName, setMealName] = useState("");
-  const [modalMode, setModalMode] = useState< "create" | "edit_log" | "edit_saved">("create");
+  const [modalMode, setModalMode] = useState<"create" | "edit_log" | "edit_saved">("create");
   const [editingId, setEditingId] = useState<string | number | null>(null);
 
   const [mealType, setMealType] = useState("Lunch");
@@ -52,10 +100,47 @@ export default function NutritionPage() {
   const [mealFats, setMealFats] = useState("");
   const [saveToFavorites, setSaveToFavorites] = useState(false);
 
+  // Supplements
+  const [supplements, setSupplements] = useState<Supplement[]>([]);
+  const [checkedSupps, setCheckedSupps] = useState<Set<string>>(new Set());
+
+  //Quests n Xp
+  const [totalXP, setTotalXP] = useState(0);
+  const [awardedQuestIds, setAwardedQuestIds] = useState<Set<string>>(new Set());
+  const totalCalories = meals.reduce((s, m) => s + m.calories, 0);
+  const totalProtein = meals.reduce((s, m) => s + m.protein, 0);
+  const quests = buildQuests(meals, totalCalories, totalProtein, targets.calories, targets.protein);
+
+  // Award XP when a quest first flips to completed; persist to backend
+  useEffect(() => {
+    let newXP = totalXP;
+    const newIds = new Set(awardedQuestIds);
+    let changed = false;
+
+    quests.forEach((q) => {
+      if (q.completed && !awardedQuestIds.has(q.id)) {
+        newXP += q.xp;
+        newIds.add(q.id);
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      setTotalXP(newXP);
+      setAwardedQuestIds(newIds);
+      fetch(`${API_BASE}/api/user/xp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ total_xp: newXP, awarded_quest_ids: [...newIds] }),
+      }).catch(console.error);
+    }
+  }, [quests]);
+
   // Target calculation
   const calculateTargets = (weight: number, goal: string) => {
     if (!weight) return;
-    // Base Metabolic 
+    // Base Metabolic
     let calcCalories = Math.round(weight * 24 * 1.2);
     // Protein Calculation abt 1.5g per kg of bodyweight for optimal muscle gain
     let calcProtein = Math.round(weight * 1.5);
@@ -82,10 +167,12 @@ export default function NutritionPage() {
     setDataLoading(true);
     setError(null);
     try {
-      const [logsRes, savedRes, metricsRes] = await Promise.all([
+      const [logsRes, savedRes, metricsRes, suppsRes, xpRes] = await Promise.all([
         fetch(`${API_BASE}/api/nutrition`, { credentials: "include" }),
         fetch(`${API_BASE}/api/nutrition/saved`, { credentials: "include" }),
         fetch(`${API_BASE}/api/user/metrics`, { credentials: "include" }),
+        fetch(`${API_BASE}/api/supplements`, { credentials: "include" }),
+        fetch(`${API_BASE}/api/user/xp`, { credentials: "include" }),
       ]);
 
       if (!logsRes.ok) throw new Error("Nutrition logs fetch failed");
@@ -113,6 +200,13 @@ export default function NutritionPage() {
           setShowMetricsModal(false);
         }
       }
+      // Supplements are optional so we won't throw if it fails, just log the error and continue
+      if (suppsRes.ok) setSupplements(await suppsRes.json());
+      if (xpRes.ok) {
+        const xpData = await xpRes.json();
+        setTotalXP(xpData.total_xp ?? 0);
+        setAwardedQuestIds(new Set(xpData.awarded_quest_ids ?? []));
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to load data.");
@@ -124,6 +218,51 @@ export default function NutritionPage() {
   useEffect(() => {
     if (!authLoading) fetchNutritionData();
   }, [authLoading, fetchNutritionData]);
+
+  const handleToggleSupp = (key: string) => {
+    setCheckedSupps((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
+  const handleAddSupp = async (s: Omit<Supplement, "id">) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/supplements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(s),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setSupplements((prev) => [...prev, created]);
+      } else {
+        setSupplements((prev) => [...prev, { ...s, id: `temp-${Date.now()}` }]);
+      }
+    } catch {
+      setSupplements((prev) => [...prev, { ...s, id: `temp-${Date.now()}` }]);
+    }
+  };
+
+  const handleDeleteSupp = async (id: string | number) => {
+    setSupplements((prev) => prev.filter((s) => s.id !== id));
+    setCheckedSupps((prev) => {
+      const next = new Set(prev);
+      next.delete(`AM-${id}`);
+      next.delete(`PM-${id}`);
+      return next;
+    });
+    try {
+      await fetch(`${API_BASE}/api/supplements/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleSaveMetrics = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -444,6 +583,7 @@ export default function NutritionPage() {
         </p>
       ) : (
         <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+          <QuestPanel quests={quests} totalXP={totalXP} />
           <NutritionTracker
             meals={meals}
             onAddMealClick={openCreateModal}
@@ -452,6 +592,13 @@ export default function NutritionPage() {
             calorieTarget={targets.calories}
             proteinTarget={targets.protein}
             fitnessGoal={metricsForm.goal}
+          />
+          <SupplementTracker
+            supplements={supplements}
+            checkedIds={checkedSupps}
+            onToggle={handleToggleSupp}
+            onAdd={handleAddSupp}
+            onDelete={handleDeleteSupp}
           />
         </div>
       )}
@@ -522,7 +669,6 @@ export default function NutritionPage() {
                 >
                   Weight (kg)
                 </label>
-                {/* Removed required tag to make it optional */}
                 <input
                   type="number"
                   step="0.1"

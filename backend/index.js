@@ -1185,6 +1185,91 @@ app.delete('/api/nutrition/:id', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).send("Server Error"); }
 });
 
+// GET: fetch user supplements
+app.get('/api/supplements', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM supplements WHERE user_id = $1 ORDER BY timing, name',
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch supplements error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+//  POST: add a new supplement
+app.post('/api/supplements', requireAuth, async (req, res) => {
+  const { name, dose, timing } = req.body;
+  if (!name || !dose || !timing) {
+    return res.status(400).json({ error: "Name, dose, and timing are required" });
+  }
+  try {
+    const result = await pool.query(
+      'INSERT INTO supplements (user_id, name, dose, timing) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.user.id, name, dose, timing]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Create supplement error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// DELETE /api/supplements/:id
+app.delete('/api/supplements/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM supplements WHERE id = $1 AND user_id = $2 RETURNING *',
+      [req.params.id, req.user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Supplement not found" });
+    }
+    res.sendStatus(204);
+  } catch (err) {
+    console.error("Delete supplement error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// GET: fetch user XP
+app.get('/api/user/xp', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT total_xp, awarded_quest_ids FROM user_xp WHERE user_id = $1',
+      [req.user.id]
+    );
+    res.json(result.rows[0] ?? { total_xp: 0, awarded_quest_ids: [] });
+  } catch (err) {
+    console.error("Fetch XP error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+//  POST: update user XP
+app.post('/api/user/xp', requireAuth, async (req, res) => {
+  const { total_xp, awarded_quest_ids } = req.body;
+  if (total_xp === undefined || !awarded_quest_ids) {
+    return res.status(400).json({ error: "total_xp and awarded_quest_ids are required" });
+  }
+  try {
+    const result = await pool.query(
+      `INSERT INTO user_xp (user_id, total_xp, awarded_quest_ids)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE
+       SET total_xp = $2, awarded_quest_ids = $3
+       RETURNING *`,
+      [req.user.id, total_xp, awarded_quest_ids]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Update XP error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running natively and open to wireless network devices on port ${PORT}`);

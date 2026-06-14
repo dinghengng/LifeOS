@@ -22,7 +22,7 @@ app.use(
 
       const allowedOrigins = [
         "http://localhost:3000",        // local Next.js
-        process.env.FRONTEND_URL,       // Vercel URL, e.g. https://lifeos.vercel.app
+        process.env.FRONTEND_URL,       // Vercel URL
       ].filter(Boolean); // remove undefined
 
       // Matches local development domains and any incoming wireless subnet pattern variations
@@ -120,8 +120,8 @@ app.post("/auth/register", async (req, res) => {
     // Set cookie for web browsers
     res.cookie("sessionId", sessionId, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: false,
+      sameSite: "none",
+      secure: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -169,8 +169,8 @@ app.post("/auth/login", async (req, res) => {
 
     const cookieOptions = {
       httpOnly: true,
-      sameSite: "lax",
-      secure: false,
+      sameSite: "none",
+      secure: true,
     };
 
     if (rememberMe) {
@@ -197,8 +197,8 @@ app.post("/auth/logout", requireAuth, async (req, res) => {
 
     res.clearCookie("sessionId", {
       httpOnly: true,
-      sameSite: "lax",
-      secure: false,
+      sameSite: "none",
+      secure: true,
     });
 
     res.json({ message: "Logged out" });
@@ -1169,7 +1169,7 @@ app.patch('/api/nutrition/:id', requireAuth, async (req, res) => {
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
   try {
     const result = await pool.query(
-      `UPDATE nutrition_logs SET meal_name=$1, meal_type=$2, calories=$3, protein=$4, carbs=$5, fats=$6 
+      `UPDATE meal_logs SET meal_name=$1, meal_type=$2, calories=$3, protein=$4, carbs=$5, fats=$6 
        WHERE id=$7 AND user_id=$8 RETURNING *`,
       [mealName, mealType, calories, protein, carbs, fats, id, req.user.id]
     );

@@ -16,6 +16,7 @@ frontend/*.tsbuildinfo
 # Backend (Express/Node)
 backend/node_modules/
 backend/npm-debug.log*
+backend/config/serviceAccount.json
 
 # Mobile App (Expo) 
 mobile-app/node_modules/

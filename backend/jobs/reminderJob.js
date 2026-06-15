@@ -53,8 +53,6 @@ function startReminderJobs() {
       console.error('Habit checkin job error:', err.message);
     }
   });
-
-  console.log('Reminder jobs test');
 }
 
 module.exports = { startReminderJobs };

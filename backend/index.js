@@ -6,6 +6,8 @@ const cors = require('cors');
 const crypto = require("crypto");
 const pool = require('./db');
 require('dotenv').config();
+const { createNotificationRouter } = require('./routes/notifications');
+const { startReminderJobs } = require('./jobs/reminderJob');
 
 // Instantiating our application instance by calling the express function
 const app = express();
@@ -78,6 +80,8 @@ const requireAuth = async (req, res, next) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+app.use('/api/notifications', createNotificationRouter(requireAuth));
 
 // REGISTER A NEW USER ACCOUNT
 app.post("/auth/register", async (req, res) => {
@@ -1325,4 +1329,5 @@ app.get('/api/nutrition/history', requireAuth, async (req, res) => {
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running natively and open to wireless network devices on port ${PORT}`);
+  startReminderJobs();
 });

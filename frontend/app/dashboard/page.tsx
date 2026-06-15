@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import StatsSummary from "../../components/dashboard/StatsSummary";
 import HabitTracker from "../../components/dashboard/HabitTracker";
 import GoalTracker from "../../components/dashboard/GoalTracker";
-import { Habit } from "../../components/dashboard/HabitRow";
+import { Habit, getTodayIndexSGT } from "../../components/dashboard/HabitRow";
 import { Goal } from "../../components/dashboard/GoalCard";
 import { User } from "../../../shared/types";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
@@ -36,6 +36,11 @@ export default function DashboardPage() {
   const [goalColor, setGoalColor] = useState("#534AB7");
   const [goalDueDate, setGoalDueDate] = useState("");
   const [goalMilestones, setGoalMilestones] = useState("");
+
+  // Track which habit/goal (if any) is currently being edited
+  const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+
 
   // Auth check on mount
   useEffect(() => {
@@ -77,22 +82,23 @@ export default function DashboardPage() {
 
   // habit toggle
   async function toggleToday(id: string) {
-    let fallbackHabits: Habit[] = [];
+  const todayIndex = getTodayIndexSGT();
+  let fallbackHabits: Habit[] = [];
 
-    setHabits((prev) => {
-      fallbackHabits = prev;
-      return prev.map((h) => {
-        if (h.id !== id) return h;
-        const days = [...h.completedDays];
-        const wasOn = days[6];
-        days[6] = !days[6];
-        return {
-          ...h,
-          completedDays: days,
-          streak: wasOn ? Math.max(0, h.streak - 1) : h.streak + 1,
-        };
-      });
+  setHabits((prev) => {
+    fallbackHabits = prev;
+    return prev.map((h) => {
+      if (h.id !== id) return h;
+      const days = [...h.completedDays];
+      const wasOn = days[todayIndex];
+      days[todayIndex] = !days[todayIndex];
+      return {
+        ...h,
+        completedDays: days,
+        streak: wasOn ? Math.max(0, h.streak - 1) : h.streak + 1,
+      };
     });
+  });
 
     try {
       const res = await fetch(`${API_BASE}/api/habits/${id}/toggle`, {
@@ -149,12 +155,111 @@ export default function DashboardPage() {
       setGoals(fallbackGoals);
     }
   }
+
+  // habit delete
+  async function deleteHabit(id: string) {
+    let fallbackHabits: Habit[] = [];
+
+    setHabits((prev) => {
+      fallbackHabits = prev;
+      return prev.filter((h) => h.id !== id);
+    });
+
+    try {
+      const res = await fetch(`${API_BASE}/api/habits/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Delete failed");
+    } catch (err) {
+      console.error("Habit delete failure:", err);
+      setHabits(fallbackHabits); // Roll back if network breaks
+    }
+  }
+
+  // goal delete
+  async function deleteGoal(id: string) {
+    let fallbackGoals: Goal[] = [];
+
+    setGoals((prev) => {
+      fallbackGoals = prev;
+      return prev.filter((g) => g.id !== id);
+    });
+
+    try {
+      const res = await fetch(`${API_BASE}/api/goals/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Delete failed");
+    } catch (err) {
+      console.error("Goal delete failure:", err);
+      setGoals(fallbackGoals); // Roll back if network breaks
+    }
+  }
+
+  // Open habit modal for editing
+  function handleEditHabitClick(habit: Habit) {
+    setEditingHabitId(habit.id);
+    setHabitName(habit.name);
+    setHabitIcon(habit.icon);
+    setHabitColor(habit.color);
+    setShowHabitModal(true);
+  }
+
+  // Open goal for editing
+  function handleEditGoalClick(goal: Goal) {
+    setEditingGoalId(goal.id);
+    setGoalTitle(goal.title);
+    setGoalCategory(goal.category);
+    setGoalColor(goal.color);
+    setGoalDueDate(goal.dueDate);
+    setGoalMilestones(goal.milestones.map((m) => m.label).join("\n"));
+    setShowGoalModal(true);
+  }
+
+  function resetGoalForm() {
+  setEditingGoalId(null);
+  setGoalTitle("");
+  setGoalCategory("Fitness");
+  setGoalColor("#534AB7");
+  setGoalDueDate("");
+  setGoalMilestones("");
+}
+
   // Handle Form for Habit
   async function handleCreateHabit(e: React.FormEvent) {
     e.preventDefault();
     if (!habitName.trim()) return;
 
     try {
+      // If editing an existing habit, update it instead of creating a new one
+      if (editingHabitId) {
+        const res = await fetch(`${API_BASE}/api/habits/${editingHabitId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            name: habitName,
+            icon: habitIcon,
+            color: habitColor,
+          }),
+        });
+        if (res.ok) {
+          setHabits((prev) =>
+            prev.map((h) =>
+              h.id === editingHabitId
+                ? { ...h, name: habitName, icon: habitIcon, color: habitColor }
+                : h,
+            ),
+          );
+          setShowHabitModal(false);
+          setHabitName("");
+          setEditingHabitId(null);
+        }
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/api/habits`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -186,6 +291,52 @@ export default function DashboardPage() {
       .filter((m) => m.trim().length > 0);
 
     try {
+      // If editing an existing goal, update it instead of creating a new one
+      if (editingGoalId) {
+        const res = await fetch(`${API_BASE}/api/goals/${editingGoalId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            title: goalTitle,
+            category: goalCategory,
+            color: goalColor,
+            dueDate: goalDueDate,
+            milestones: milestonesArray,
+          }),
+        });
+        if (res.ok) {
+          setGoals((prev) =>
+            prev.map((g) => {
+              if (g.id !== editingGoalId) return g;
+              const updatedMilestones = milestonesArray.map((label) => {
+                const existing = g.milestones.find((m) => m.label === label);
+                return { label, done: existing ? existing.done : false };
+              });
+
+              const completedCount = updatedMilestones.filter((m) => m.done).length;
+              const calculatedProgress =
+                updatedMilestones.length > 0
+                  ? Math.round((completedCount / updatedMilestones.length) * 100)
+                  : 0;
+
+              return {
+                ...g,
+                title: goalTitle,
+                category: goalCategory,
+                color: goalColor,
+                dueDate: goalDueDate,
+                milestones: updatedMilestones,
+                progress: calculatedProgress,
+              };
+            }),
+          );
+          setShowGoalModal(false);
+          resetGoalForm();
+        }
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/api/goals`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -400,15 +551,28 @@ export default function DashboardPage() {
               <HabitTracker
                 habits={habits}
                 onToggleToday={toggleToday}
-                onAddClick={() => setShowHabitModal(true)}
+                onAddClick={() => {
+                  setEditingHabitId(null);
+                  setHabitName("");
+                  setHabitIcon("🏃");
+                  setHabitColor("#1D9E75");
+                  setShowHabitModal(true);
+                }}
+                onEditHabit={handleEditHabitClick}
+                onDeleteHabit={deleteHabit}
               />
             </div>
 
             <div style={{ flex: 1, minWidth: 0 }}>
               <GoalTracker
                 goals={goals}
-                onAddClick={() => setShowGoalModal(true)}
+                onAddClick={() => {
+                  resetGoalForm();
+                  setShowGoalModal(true);
+                }}
                 onMilestoneToggle={toggleMilestone}
+                onEditGoal={handleEditGoalClick}
+                onDeleteGoal={deleteGoal}
               />
             </div>
           </div>
@@ -444,7 +608,7 @@ export default function DashboardPage() {
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
             }}
           >
-            <h3 style={{ margin: 0, color: "#1e293b" }}>Add New Habit</h3>
+            <h3 style={{ margin: 0, color: "#1e293b" }}>{editingHabitId ? "Edit Habit" : "Add New Habit"}</h3>
             <input
               type="text"
               placeholder="Habit description (e.g. Morning stretch)"
@@ -523,7 +687,11 @@ export default function DashboardPage() {
             >
               <button
                 type="button"
-                onClick={() => setShowHabitModal(false)}
+                onClick={() => {
+                  setShowHabitModal(false);
+                  setEditingHabitId(null);
+                  setHabitName("");
+                }}
                 style={{
                   padding: "6px 12px",
                   borderRadius: "6px",
@@ -575,14 +743,17 @@ export default function DashboardPage() {
               backgroundColor: "white",
               padding: "1.5rem",
               borderRadius: "12px",
-              width: "400px",
+              width: "500px", // Increased from 400px so the target date text actually fits!
+              maxWidth: "100%", 
+              boxSizing: "border-box", 
               display: "flex",
               flexDirection: "column",
               gap: "12px",
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
             }}
           >
-            <h3 style={{ margin: 0, color: "#1e293b" }}>Add Long-term Goal</h3>
+            <h3 style={{ margin: 0, color: "#1e293b" }}>{editingGoalId ? "Edit Goal" : "Add Long-term Goal"}</h3>
+            
             <input
               type="text"
               placeholder="Goal Objective (e.g. Read 24 books)"
@@ -593,10 +764,13 @@ export default function DashboardPage() {
                 borderRadius: "6px",
                 border: "1px solid #cbd5e1",
                 color: "#1e293b",
+                width: "100%",
+                boxSizing: "border-box",
               }}
               required
             />
-            <div style={{ display: "flex", gap: "12px" }}>
+            
+            <div style={{ display: "flex", gap: "12px", width: "100%" }}>
               <input
                 type="text"
                 placeholder="Category (e.g. Health)"
@@ -604,10 +778,12 @@ export default function DashboardPage() {
                 onChange={(e) => setGoalCategory(e.target.value)}
                 style={{
                   flex: 1,
+                  minWidth: 0, 
                   padding: "8px",
                   borderRadius: "6px",
                   border: "1px solid #cbd5e1",
                   color: "#1e293b",
+                  boxSizing: "border-box",
                 }}
               />
               <input
@@ -617,17 +793,18 @@ export default function DashboardPage() {
                 onChange={(e) => setGoalDueDate(e.target.value)}
                 style={{
                   flex: 1,
+                  minWidth: 0, 
                   padding: "8px",
                   borderRadius: "6px",
                   border: "1px solid #cbd5e1",
                   color: "#1e293b",
+                  boxSizing: "border-box",
                 }}
                 required
               />
             </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>
                 Theme Color
               </span>
@@ -639,6 +816,8 @@ export default function DashboardPage() {
                   borderRadius: "6px",
                   border: "1px solid #cbd5e1",
                   color: "#1e293b",
+                  width: "100%",
+                  boxSizing: "border-box",
                 }}
               >
                 <option value="#534AB7">Indigo</option>
@@ -646,14 +825,14 @@ export default function DashboardPage() {
                 <option value="#D85A30">Orange</option>
               </select>
             </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-            >
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>
                 Checklist Milestones (One per line)
               </span>
               <textarea
-                placeholder="Subtask milestone 1&#10;Subtask milestone 2"
+                // React requires curly braces and standard \n for line breaks in placeholders
+                placeholder={"Subtask milestone 1\nSubtask milestone 2\nSubtask milestone 3"} 
                 value={goalMilestones}
                 onChange={(e) => setGoalMilestones(e.target.value)}
                 rows={3}
@@ -663,26 +842,25 @@ export default function DashboardPage() {
                   border: "1px solid #cbd5e1",
                   fontFamily: "inherit",
                   color: "#1e293b",
+                  width: "100%",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
-            <div
-              style={{
-                display: "flex",
-                gap: "8px",
-                marginTop: "8px",
-                justifyContent: "flex-end",
-              }}
-            >
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "4px" }}>
               <button
                 type="button"
-                onClick={() => setShowGoalModal(false)}
+                onClick={() => {
+                  setShowGoalModal(false);
+                  resetGoalForm();
+                }}
                 style={{
-                  padding: "6px 12px",
+                  padding: "8px 16px",
                   borderRadius: "6px",
                   border: "1px solid #cbd5e1",
                   backgroundColor: "white",
-                  color: "#1e293b",
+                  color: "#475569",
                   cursor: "pointer",
                 }}
               >
@@ -691,11 +869,12 @@ export default function DashboardPage() {
               <button
                 type="submit"
                 style={{
-                  padding: "6px 12px",
+                  padding: "8px 16px",
                   borderRadius: "6px",
                   border: "none",
                   backgroundColor: "#4f46e5",
                   color: "white",
+                  fontWeight: "bold",
                   cursor: "pointer",
                 }}
               >

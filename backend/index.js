@@ -6,6 +6,8 @@ const cors = require('cors');
 const crypto = require("crypto");
 const pool = require('./db');
 require('dotenv').config();
+const { createNotificationRouter } = require('./routes/notifications');
+const { startReminderJobs } = require('./jobs/reminderJob');
 
 // Instantiating our application instance by calling the express function
 const app = express();
@@ -78,6 +80,8 @@ const requireAuth = async (req, res, next) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+app.use('/api/notifications', createNotificationRouter(requireAuth));
 
 // REGISTER A NEW USER ACCOUNT
 app.post("/auth/register", async (req, res) => {
@@ -722,7 +726,7 @@ app.put('/mood/config', requireAuth, async (req, res) => {
 });
 
 
-// Feature 3 (HABITS & GOALS)
+// Feature 3: dashboard(HABITS & GOALS)
 
 app.get('/api/habits', requireAuth, async (req, res) => {
   try {
@@ -925,10 +929,168 @@ app.post('/api/goals', requireAuth, async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
-
-// toggle milestone done vs undone
+// Optimized & Secure: Toggle Goal Milestone by Index
 app.patch('/api/goals/:goalId/milestones/:milestoneIndex', requireAuth, async (req, res) => {
   const { goalId, milestoneIndex } = req.params;
+
+  try {
+    const milestoneResult = await pool.query(
+      `UPDATE goal_milestones 
+       SET is_done = NOT is_done 
+       FROM goals
+       WHERE goal_milestones.goal_id = $1 
+         AND goal_milestones.display_order = $2
+         AND goal_milestones.goal_id = goals.id 
+         AND goals.user_id = $3
+       RETURNING goal_milestones.goal_id, goal_milestones.is_done`,
+      [goalId, milestoneIndex, req.user.id]
+    );
+
+    if (milestoneResult.rows.length === 0) {
+      return res.status(404).json({ error: "Milestone not found or unauthorized" });
+    }
+
+    const { goal_id, is_done } = milestoneResult.rows[0];
+    const statsResult = await pool.query(
+      `SELECT 
+         COUNT(*) AS total,
+         COUNT(*) FILTER (WHERE is_done = TRUE) AS completed
+       FROM goal_milestones 
+       WHERE goal_id = $1`,
+      [goal_id]
+    );
+    const { total, completed } = statsResult.rows[0];
+    const newProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
+    await pool.query(
+      'UPDATE goals SET progress = $1 WHERE id = $2',
+      [newProgress, goal_id]
+    );
+
+    res.json({ goalId: String(goal_id), index: milestoneIndex, done: is_done, progress: newProgress });
+    
+  } catch (err) {
+    console.error("Toggle milestone error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// Edit habit
+app.patch('/api/habits/:id', requireAuth, async (req, res) => {
+  const habitId = req.params.id;
+  const { name, icon, color } = req.body;
+
+  if (!name) return res.status(400).json({ error: "Name is required" });
+
+  try {
+    const result = await pool.query(
+      `UPDATE habits 
+       SET name = $1, icon = $2, color = $3 
+       WHERE id = $4 AND user_id = $5
+       RETURNING id, name, icon, color, streak`,
+      [name, icon || '🏃', color || '#1D9E75', habitId, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Habit not found" });
+    }
+
+    res.json({
+      ...result.rows[0],
+      id: String(result.rows[0].id),
+    });
+  } catch (err) {
+    console.error("Update habit error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// delete habit
+app.delete('/api/habits/:id', requireAuth, async (req, res) => {
+  const habitId = req.params.id;
+  try {
+    const verifyOwnership = await pool.query(
+      'SELECT id FROM habits WHERE id = $1 AND user_id = $2',
+      [habitId, req.user.id]
+    );
+    if (verifyOwnership.rows.length === 0) {
+      return res.status(404).json({ error: "Habit configuration not found" });
+    }
+    // Remove associated logs first to satisfy foreign key constraints
+    await pool.query('DELETE FROM habit_logs WHERE habit_id = $1', [habitId]);
+    await pool.query('DELETE FROM habits WHERE id = $1', [habitId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete habit error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// Edit goal
+app.patch('/api/goals/:id', requireAuth, async (req, res) => {
+  const goalId = req.params.id;
+  const { title, category, color, dueDate, milestones = [] } = req.body;
+  if (!title || !dueDate) return res.status(400).json({ error: "Title and Due Date are required" });
+  try {
+    // Verify ownership
+    const verify = await pool.query(
+      'SELECT id FROM goals WHERE id = $1 AND user_id = $2',
+      [goalId, req.user.id]
+    );
+    if (verify.rows.length === 0) return res.status(404).json({ error: "Goal not found" });
+    // Update goal core fields
+    const goalResult = await pool.query(
+      `UPDATE goals 
+       SET title = $1, category = $2, color = $3, due_date = $4 
+       WHERE id = $5 
+       RETURNING id, title, category, color, progress, due_date AS "dueDate"`,
+      [title, category || 'General', color || '#534AB7', dueDate, goalId]
+    );
+    const updatedGoal = goalResult.rows[0];
+    // Fetch existing milestones so completed checkboxes survive an edit
+    const existingMs = await pool.query(
+      'SELECT label, is_done FROM goal_milestones WHERE goal_id = $1',
+      [goalId]
+    );
+    const existingDoneMap = {};
+    existingMs.rows.forEach(ms => {
+      existingDoneMap[ms.label] = ms.is_done;
+    });
+    await pool.query('DELETE FROM goal_milestones WHERE goal_id = $1', [goalId]);
+    const savedMilestones = [];
+    for (let i = 0; i < milestones.length; i++) {
+      const label = milestones[i].trim();
+      if (!label) continue;
+      const isDone = existingDoneMap[label] || false;
+      const msResult = await pool.query(
+        `INSERT INTO goal_milestones (goal_id, label, is_done, display_order) 
+         VALUES ($1, $2, $3, $4) 
+         RETURNING label, is_done AS done`,
+        [goalId, label, isDone, i]
+      );
+      savedMilestones.push(msResult.rows[0]);
+    }
+
+    // Recalculate progress from the new checklist
+    const total = savedMilestones.length;
+    const done = savedMilestones.filter(m => m.done).length;
+    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
+    await pool.query('UPDATE goals SET progress = $1 WHERE id = $2', [progress, goalId]);
+
+    res.json({
+      ...updatedGoal,
+      id: String(updatedGoal.id),
+      progress,
+      milestones: savedMilestones
+    });
+  } catch (err) {
+    console.error("Update goal error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// DELETE A GOAL
+app.delete('/api/goals/:id', requireAuth, async (req, res) => {
+  const goalId = req.params.id;
 
   try {
     // Verify ownership
@@ -938,84 +1100,18 @@ app.patch('/api/goals/:goalId/milestones/:milestoneIndex', requireAuth, async (r
     );
     if (verify.rows.length === 0) return res.status(404).json({ error: "Goal not found" });
 
-    // then get the milestone
-    const ms = await pool.query(
-      'SELECT id, is_done FROM goal_milestones WHERE goal_id = $1 AND display_order = $2',
-      [goalId, milestoneIndex]
-    );
-    if (ms.rows.length === 0) return res.status(404).json({ error: "Milestone not found" });
+    // Remove associated milestones first to satisfy foreign key constraints
+    await pool.query('DELETE FROM goal_milestones WHERE goal_id = $1', [goalId]);
+    await pool.query('DELETE FROM goals WHERE id = $1', [goalId]);
 
-    const newDone = !ms.rows[0].is_done;
-    await pool.query(
-      'UPDATE goal_milestones SET is_done = $1 WHERE id = $2',
-      [newDone, ms.rows[0].id]
-    );
-
-    // Recalculate progress from milestones
-    const allMs = await pool.query(
-      'SELECT is_done FROM goal_milestones WHERE goal_id = $1',
-      [goalId]
-    );
-    const total = allMs.rows.length;
-    const done = allMs.rows.filter(r => r.is_done).length;
-    const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-
-    await pool.query('UPDATE goals SET progress = $1 WHERE id = $2', [progress, goalId]);
-
-    res.json({ done: newDone, progress });
+    res.json({ success: true });
   } catch (err) {
-    console.error("Toggle milestone error:", err.message);
+    console.error("Delete goal error:", err.message);
     res.status(500).send("Server Error");
   }
 });
 
-// TOGGLE A GOAL MILESTONE COMPLETED STATUS
-app.patch('/api/goals/milestones/:id/toggle', requireAuth, async (req, res) => {
-  const milestoneId = req.params.id;
-
-  try {
-    // Flip the 'is_done' boolean status for the milestone
-    const milestoneResult = await pool.query(
-      `UPDATE goal_milestones 
-       SET is_done = NOT is_done 
-       WHERE id = $1 
-       RETURNING goal_id, is_done`,
-      [milestoneId]
-    );
-
-    if (milestoneResult.rows.length === 0) {
-      return res.status(404).json({ error: "Milestone not found" });
-    }
-
-    const { goal_id, is_done } = milestoneResult.rows[0];
-
-    // Recalculate total progress percentage for this specific goal
-    const statsResult = await pool.query(
-      `SELECT 
-         COUNT(*) AS total,
-         COUNT(*) FILTER (WHERE is_done = TRUE) AS completed
-       FROM goal_milestones 
-       WHERE goal_id = $1`,
-      [goal_id]
-    );
-
-    const { total, completed } = statsResult.rows[0];
-    const newProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    // Update the goal progress column in the database
-    await pool.query(
-      'UPDATE goals SET progress = $1 WHERE id = $2',
-      [newProgress, goal_id]
-    );
-
-    res.json({ id: milestoneId, goalId: String(goal_id), done: is_done, progress: newProgress });
-  } catch (err) {
-    console.error("Toggle milestone error:", err.message);
-    res.status(500).send("Server Error");
-  }
-});
-
-// For new nutrition section
+// For new nutrition section(Feature 4: Nutrition)
 // POST: LOG A NEW MEAL
 app.post('/api/nutrition', requireAuth, async (req, res) => {
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
@@ -1325,4 +1421,5 @@ app.get('/api/nutrition/history', requireAuth, async (req, res) => {
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running natively and open to wireless network devices on port ${PORT}`);
+  startReminderJobs();
 });

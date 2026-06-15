@@ -23,3 +23,7 @@ mobile-app/node_modules/
 mobile-app/.expo/
 mobile-app/dist/
 mobile-app/web-build/
+
+#Firebase mobile config
+mobile-app/google-services.json
+mobile-app/GoogleService-Info.plist

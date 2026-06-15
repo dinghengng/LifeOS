@@ -1,4 +1,5 @@
 "use client";
+import { Pencil, Trash2 } from "lucide-react";
 
 export type Goal = {
   id: string;
@@ -15,25 +16,19 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 export default function GoalCard({
   goal,
   onMilestoneToggle,
+  onEdit,
+  onDelete,
 }: {
   goal: Goal;
   onMilestoneToggle: (goalId: string, milestoneIndex: number) => void;
+  onEdit: (goal: Goal) => void;
+  onDelete: (goalId: string) => void;
 }) {
   const doneMilestones = goal.milestones.filter((m) => m.done).length;
 
   async function handleToggle(index: number) {
     // changed to make render appear immediately instead of needing to refresh
     onMilestoneToggle(goal.id, index);
-
-    try {
-      //Fire the background network sync to update PostgreSQL
-      await fetch(`${API_BASE}/api/goals/${goal.id}/milestones/${index}`, {
-        method: "PATCH",
-        credentials: "include",
-      });
-    } catch (err) {
-      console.error("Milestone tracking save failure:", err);
-    }
   }
 
   return (
@@ -48,9 +43,47 @@ export default function GoalCard({
             {goal.title}
           </p>
         </div>
-        <span style={{ fontSize: 11, color: "var(--color-text-secondary)", whiteSpace: "nowrap", marginLeft: 8 }}>
-          Due {goal.dueDate}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: 8, flexShrink: 0 }}>
+          <span style={{ fontSize: 11, color: "var(--color-text-secondary)", whiteSpace: "nowrap" }}>
+            Due {goal.dueDate}
+          </span>
+          <button
+            onClick={() => onEdit(goal)}
+            aria-label="Edit goal"
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            onClick={() => onDelete(goal.id)}
+            aria-label="Delete goal"
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -79,7 +112,6 @@ export default function GoalCard({
           </div>
         ))}
       </div>
-
       <p style={{ margin: "10px 0 0", fontSize: 11, color: "var(--color-text-secondary)" }}>
         {doneMilestones}/{goal.milestones.length} milestones complete
       </p>

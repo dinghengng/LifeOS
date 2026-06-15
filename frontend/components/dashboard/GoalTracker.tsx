@@ -4,10 +4,14 @@ export default function GoalTracker({
   goals,
   onAddClick,
   onMilestoneToggle,
+  onEditGoal,
+  onDeleteGoal,
 }: {
   goals: Goal[];
   onAddClick: () => void;
   onMilestoneToggle: (goalId: string, milestoneIndex: number) => void;
+  onEditGoal: (goal: Goal) => void;
+  onDeleteGoal: (goalId: string) => void;
 }) {
   return (
     <div
@@ -45,7 +49,9 @@ export default function GoalTracker({
         <GoalCard
           key={goal.id}
           goal={goal}
-          onMilestoneToggle={onMilestoneToggle} // ✅ FIXED: Passing down the state handler to each card item
+          onMilestoneToggle={onMilestoneToggle} 
+          onEdit={onEditGoal}
+          onDelete={onDeleteGoal}
         />
       ))}
 

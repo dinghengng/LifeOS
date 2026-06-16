@@ -1,21 +1,16 @@
 import { API_URL } from "./config";
 import { Task, DBTask, Priority, User, MoodLevel, MoodLevelConfig, EmojiPack, SaveMoodConfigPayload} from "./types";
-//@ts-ignore
-import { Platform } from "react-native";
 
+// Create variable to hold the mobile token in memory
+let activeMobileToken: string | null = null;
+// Export a function for the mobile app to securely inject the token
+export const setMobileToken = (token: string | null) => {
+  activeMobileToken = token;
+};
 const getAuthHeaders = async (headers: Record<string, string> = {}): Promise<Record<string, string>> => {
   const baseHeaders: Record<string, string> = { ...headers };
-
-  try {
-    if (Platform.OS === "ios" || Platform.OS === "android") {
-      const SecureStore = require("expo-secure-store");
-      const token = await SecureStore.getItemAsync("userToken");
-      if (token) {
-        baseHeaders["Authorization"] = `Bearer ${token}`;
-      }
-    }
-  } catch (err) {
-    console.error("Failed to attach auth headers:", err);
+  if (activeMobileToken) {
+    baseHeaders["Authorization"] = `Bearer ${activeMobileToken}`;
   }
 
   return baseHeaders;

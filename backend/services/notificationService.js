@@ -1,12 +1,8 @@
 const admin = require('../config/firebase');
-const webpush = require('web-push');
+const { Expo } = require('expo-server-sdk');
 const db = require('../db');
 
-webpush.setVapidDetails(
-  'mailto:your@email.com',
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+const expo = new Expo();
 
 function isQuietHours(quietStart, quietEnd) {
   const now = new Date();
@@ -15,7 +11,7 @@ function isQuietHours(quietStart, quietEnd) {
   const [endH, endM] = quietEnd.split(':').map(Number);
   const start = startH * 60 + startM;
   const end = endH * 60 + endM;
-  if (start > end) return current >= start || current < end; // overnight
+  if (start > end) return current >= start || current < end;
   return current >= start && current < end;
 }
 
@@ -34,20 +30,36 @@ async function sendToUser(userId, { title, body, type, url = '/' }) {
     let status = 'sent';
     try {
       if (device.platform === 'web') {
-        await webpush.sendNotification(
-          JSON.parse(device.token),
-          JSON.stringify({ title, body, url })
-        );
-      } else {
         await admin.messaging().send({
-          notification: { title, body },
           token: device.token,
-          android: { priority: 'high' },
-          apns: { payload: { aps: { sound: 'default' } } }
+          notification: { title, body },
+          webpush: {
+            notification: { title, body, icon: '/icon-192x192.png' },
+            fcmOptions: { link: url }
+          }
         });
+      } else {
+        if (!Expo.isExpoPushToken(device.token)) {
+          console.warn(`Invalid Expo token for device ${device.id}`);
+          continue;
+        }
+        const [ticket] = await expo.sendPushNotificationsAsync([{
+          to: device.token,
+          title,
+          body,
+          sound: 'default',
+          data: { url },
+          priority: 'high',
+        }]);
+        if (ticket.status === 'error') {
+          throw new Error(ticket.message);
+        }
       }
+
+      console.log(`Notification sent to user ${userId} on device ${device.id}`);
     } catch (err) {
       status = 'failed';
+      console.error(`Notification failed for device ${device.id}:`, err.message);
       if (
         err.code === 'messaging/invalid-registration-token' ||
         err.code === 'messaging/registration-token-not-registered'

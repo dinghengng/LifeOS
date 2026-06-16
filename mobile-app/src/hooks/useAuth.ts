@@ -58,11 +58,11 @@ export function useAuth() {
 
   const handleLogout = async () => {
     try {
-      await logoutUser();
-      await SecureStore.deleteItemAsync("userToken");
+      await logoutUser(); // Tells the server to destroy the session
     } catch (err) {
-      console.error("Logout error:", err);
+      console.error("Logout error (server might be unreachable):", err);
     } finally {
+      await SecureStore.deleteItemAsync("userToken"); // Guarantees local wipe
       setCurrentUser(null);
     }
   };

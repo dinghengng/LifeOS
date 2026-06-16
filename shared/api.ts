@@ -1,20 +1,21 @@
 import { API_URL } from "./config";
 import { Task, DBTask, Priority, User, MoodLevel, MoodLevelConfig, EmojiPack, SaveMoodConfigPayload} from "./types";
+//@ts-ignore
+import { Platform } from "react-native";
 
-// Helper function to build authorization headers dynamically for mobile requests
 const getAuthHeaders = async (headers: Record<string, string> = {}): Promise<Record<string, string>> => {
   const baseHeaders: Record<string, string> = { ...headers };
 
   try {
-    if (typeof navigator !== "undefined" && navigator.product === "ReactNative") {
-      const dynamicRequire = new Function("module", "return require(module)");
-      const SecureStore = dynamicRequire("expo-secure-store");
+    if (Platform.OS === "ios" || Platform.OS === "android") {
+      const SecureStore = require("expo-secure-store");
       const token = await SecureStore.getItemAsync("userToken");
       if (token) {
         baseHeaders["Authorization"] = `Bearer ${token}`;
       }
     }
-  } catch {
+  } catch (err) {
+    console.error("Failed to attach auth headers:", err);
   }
 
   return baseHeaders;

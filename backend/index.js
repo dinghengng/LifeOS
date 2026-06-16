@@ -34,7 +34,9 @@ app.use(
 
       return callback(new Error("Not allowed by CORS"));
     },
-    credentials: true, // Crucial: allows session cookies to pass through
+    credentials: true, 
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Explicitly allow preflight
+    allowedHeaders: ['Content-Type', 'Authorization']// Crucial: allows session cookies to pass through
   })
 );
 

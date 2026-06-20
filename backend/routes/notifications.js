@@ -62,6 +62,56 @@ function createNotificationRouter(requireAuth) {
     }
   });
 
+  // GET the last 30 notis
+  router.get('/inbox', requireAuth, async (req, res) => {
+    try {
+      const { rows } = await pool.query(
+        `SELECT id, type, title, body, sent_at, read_at, status
+        FROM notification_log
+        WHERE user_id = $1
+        ORDER BY sent_at DESC
+        LIMIT 30`,
+        [req.user.id]
+      );
+      res.json(rows);
+    } catch (err) {
+      console.error('Inbox fetch error:', err.message);
+      res.status(500).json({ error: 'Failed to fetch inbox' });
+    }
+  });
+
+  // PUT all notis as read
+  router.put('/inbox/read-all', requireAuth, async (req, res) => {
+    try {
+      await pool.query(
+        `UPDATE notification_log
+        SET read_at = NOW()
+        WHERE user_id = $1 AND read_at IS NULL`,
+        [req.user.id]
+      );
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Mark all read error:', err.message);
+      res.status(500).json({ error: 'Failed to mark all as read' });
+    }
+  });
+
+  // PUT one noti as read
+  router.put('/inbox/:id/read', requireAuth, async (req, res) => {
+    try {
+      await pool.query(
+        `UPDATE notification_log
+        SET read_at = NOW()
+        WHERE id = $1 AND user_id = $2 AND read_at IS NULL`,
+        [req.params.id, req.user.id]
+      );
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Mark read error:', err.message);
+      res.status(500).json({ error: 'Failed to mark as read' });
+    }
+  });
+
   return router;
 }
 

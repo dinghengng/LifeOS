@@ -1,6 +1,11 @@
 const cron = require('node-cron');
 const pool = require('../db');
 const { sendToUser } = require('../services/notificationService');
+const { runOverdueTaskAlerts }     = require('./overdueTaskAlerts');
+const { runGoalDeadlineAlerts }    = require('./goalDeadlineAlerts');
+const { runHabitStreakRiskAlerts } = require('./habitStreakRiskAlerts');
+const { runStreakMilestones }      = require('./streakMilestones');
+const { runJournalNudge }          = require('./journalNudge');
 
 function startReminderJobs() {
   cron.schedule('* * * * *', async () => {
@@ -53,6 +58,12 @@ function startReminderJobs() {
       console.error('Habit checkin job error:', err.message);
     }
   });
+
+  cron.schedule('0 * * * *',  runOverdueTaskAlerts); 
+  cron.schedule('0 8 * * *',  runGoalDeadlineAlerts);    //8am
+  cron.schedule('0 20 * * *', runHabitStreakRiskAlerts); //8pm
+  cron.schedule('0 21 * * *', runStreakMilestones);      //9pm
+  cron.schedule('0 22 * * *', runJournalNudge);          //10pm
 }
 
 module.exports = { startReminderJobs };

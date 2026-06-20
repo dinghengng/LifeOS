@@ -13,9 +13,21 @@ export interface SettingsSection {
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: "mood",
-    title: "Mood Setup",
+    title: "Mood",
     description: "Choose your emoji pack and customise each mood level label and colour",
     includeInWizard: true,
+  },
+  {
+    id: "notifications",
+    title: "Notifications",
+    description: "Manage how and when LifeOS notifies you about tasks, habits, and goals",
+    includeInWizard: false,
+  },
+  {
+    id: "nutrition_goals",
+    title: "Nutrition",
+    description: "Set your body metrics to personalise your goals",
+    includeInWizard: false,
   },
 ];
 

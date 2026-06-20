@@ -6,12 +6,17 @@ import { checkAuthStatus, fetchMoodConfig, logoutUser } from "../../../shared/ap
 import { User, MoodLevelConfig } from "../../../shared/types";
 import { SETTINGS_SECTIONS } from "../../../shared/settingsSection";
 import MoodSettingsSection from "../../components/settings/MoodSettingsSection";
+import NotificationSettingsSection from "../../components/settings/NotificationSettingsSection";
+import NutritionGoalsSection from "../../components/settings/NutritionGoalsSection";
+import Navbar from "../../components/Navbar";
 
 const SECTION_COMPONENTS: Record<
   string,
   React.ComponentType<{ initialConfig?: MoodLevelConfig[] }>
 > = {
   mood: MoodSettingsSection,
+  notifications: NotificationSettingsSection,
+  nutrition_goals: NutritionGoalsSection,
 };
 
 export default function SettingsPage() {
@@ -54,57 +59,66 @@ export default function SettingsPage() {
   const ActiveComponent = SECTION_COMPONENTS[activeSectionId] ?? null;
 
   return (
-    <div className="min-h-screen bg-[#f5f5f2]" style={{ fontFamily: "var(--font-sans)" }}>
-      <div className="flex justify-between items-center px-8 py-5 border-b border-slate-200 bg-white/70 backdrop-blur-md">
-        <h1 className="text-lg font-semibold text-slate-800">Settings</h1>
-        <div className="flex gap-2">
-          {[
-            { label: "Tasks",     path: "/" },
-            { label: "Dashboard", path: "/dashboard" },
-            { label: "Journal",   path: "/journal" },
-            { label: "Nutrition", path: "/nutrition" },
-          ].map(({ label, path }) => (
-            <button
-              key={label}
-              onClick={() => router.push(path)}
-              className="px-4 py-1.5 text-sm font-medium rounded-lg border border-slate-200 bg-white/70 text-slate-600 hover:bg-white transition"
-            >
-              {label}
-            </button>
-          ))}
-          <button
-            onClick={handleLogout}
-            className="px-4 py-1.5 text-sm font-medium rounded-lg border border-slate-200 bg-white/70 text-slate-600 hover:bg-white transition"
-          >
-            Logout
-          </button>
+    <div style={{ minHeight: "100vh", backgroundColor: "#f8fafc", fontFamily: "inherit" }}>
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "16px 32px 12px",
+        borderBottom: "1px solid #e2e8f0",
+        backgroundColor: "white",
+      }}>
+        <div>
+          <div style={{ fontSize: 13, color: "#94a3b8" }}>
+            {new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" })}
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#1e293b" }}>Settings</div>
         </div>
+        <Navbar onLogout={handleLogout} />
       </div>
 
-      <div className="flex max-w-4xl mx-auto mt-8 gap-6 px-6 pb-16">
-        <aside className="w-52 flex-shrink-0">
-          <nav className="space-y-1">
-            {SETTINGS_SECTIONS.map((section) => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSectionId(section.id)}
-                className={`w-full flex items-center px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all ${
-                  activeSectionId === section.id
-                    ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                    : "text-slate-600 hover:bg-white hover:text-slate-800"
-                }`}
-              >
-                {section.title}
-              </button>
-            ))}
-          </nav>
-        </aside>
+      <div style={{ display: "flex", maxWidth: 900, margin: "0 auto", padding: "32px 24px", gap: 32 }}>
+        <div style={{ width: 200, flexShrink: 0 }}>
+          {SETTINGS_SECTIONS.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => setActiveSectionId(section.id)}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "10px 14px",
+                borderRadius: 8,
+                border: "none",
+                backgroundColor: activeSectionId === section.id ? "#ede9fe" : "transparent",
+                color: activeSectionId === section.id ? "#4f46e5" : "#475569",
+                fontWeight: activeSectionId === section.id ? 700 : 500,
+                fontSize: 14,
+                cursor: "pointer",
+                marginBottom: 4,
+                transition: "all 0.15s ease",
+              }}
+            >
+              {section.title}
+            </button>
+          ))}
+        </div>
 
-        <main className="flex-1 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div style={{
+          flex: 1,
+          backgroundColor: "white",
+          borderRadius: 12,
+          padding: "28px 32px",
+          border: "1px solid #e2e8f0",
+        }}>
           {activeSection && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-slate-800">{activeSection.title}</h2>
-              <p className="text-sm text-slate-500 mt-0.5">{activeSection.description}</p>
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
+                {activeSection.title}
+              </h2>
+              <p style={{ fontSize: 13, color: "#64748b", marginTop: 4, marginBottom: 0 }}>
+                {activeSection.description}
+              </p>
             </div>
           )}
           {ActiveComponent ? (
@@ -112,9 +126,9 @@ export default function SettingsPage() {
               initialConfig={activeSectionId === "mood" ? moodConfig : undefined}
             />
           ) : (
-            <p className="text-sm text-slate-400">Section not found.</p>
+            <p style={{ color: "#94a3b8", fontSize: 14 }}>Section not found.</p>
           )}
-        </main>
+        </div>
       </div>
     </div>
   );

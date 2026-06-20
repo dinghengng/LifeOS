@@ -85,7 +85,7 @@ function createNotificationRouter(requireAuth) {
     try {
       await pool.query(
         `UPDATE notification_log
-        SET read_at = NOW()
+        SET read_at = NOW(), status = 'read'
         WHERE user_id = $1 AND read_at IS NULL`,
         [req.user.id]
       );
@@ -101,7 +101,7 @@ function createNotificationRouter(requireAuth) {
     try {
       await pool.query(
         `UPDATE notification_log
-        SET read_at = NOW()
+        SET read_at = NOW(), status = 'read'
         WHERE id = $1 AND user_id = $2 AND read_at IS NULL`,
         [req.params.id, req.user.id]
       );

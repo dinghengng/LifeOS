@@ -27,11 +27,12 @@ function timeAgo(dateStr: string): string {
 }
 
 function typeIcon(type: string): string {
-  if (type === "task_reminder") return "📋";
-  if (type === "habit_checkin") return "✅";
-  if (type === "goal_reminder") return "🎯";
-  if (type === "streak_alert") return "🔥";
-  return "🔔";
+  if (type === "task_reminder" || type === "task_due") return "!";
+  if (type === "habit_checkin" || type === "habit_miss") return "·";
+  if (type === "goal_reminder" || type === "goal_nudge") return "→";
+  if (type === "habit_milestone") return "★";
+  if (type === "journal_nudge") return "✎";
+  return "·";
 }
 
 export default function NotificationBell() {
@@ -268,7 +269,7 @@ export default function NotificationBell() {
                     />
                   </div>
 
-                  <span style={{ fontSize: "20px", flexShrink: 0, lineHeight: 1.2 }}>
+                  <span style={{fontSize: "13px", fontWeight: 700, color: "#64748b", flexShrink: 0, width: 16, textAlign: "center", lineHeight: 1.4,}}>
                     {typeIcon(n.type)}
                   </span>
 

@@ -6,11 +6,13 @@ async function runOverdueTaskAlerts() {
     const today = new Date().toISOString().split('T')[0];
 
     const { rows: tasks } = await pool.query(`
-      SELECT id, title, user_id
-      FROM tasks
-      WHERE is_completed = false
-        AND due_date IS NOT NULL
-        AND due_date < NOW()
+      SELECT t.id, t.title, t.user_id
+      FROM tasks t
+      LEFT JOIN notification_preferences np ON t.user_id = np.user_id
+      WHERE t.is_completed = false
+        AND t.due_date IS NOT NULL
+        AND t.due_date < NOW()
+        AND COALESCE(np.overdue_tasks, true) = true
     `);
 
     for (const task of tasks) {

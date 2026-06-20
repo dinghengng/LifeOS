@@ -9,11 +9,13 @@ async function runJournalNudge() {
     const { rows: users } = await pool.query(`
       SELECT DISTINCT u.id
       FROM users u
-      WHERE NOT EXISTS (
-        SELECT 1 FROM journal_entries je
-        WHERE je.user_id = u.id
-          AND je.created_at::date = CURRENT_DATE
-      )
+      LEFT JOIN notification_preferences np ON u.user_id = np.user_id
+      WHERE COALESCE(np.journal_nudge, true) = true
+        AND NOT EXISTS (
+            SELECT 1 FROM journal_entries je
+            WHERE je.user_id = u.id
+            AND je.created_at::date = CURRENT_DATE
+        )
     `);
 
     for (const user of users) {

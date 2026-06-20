@@ -8,8 +8,10 @@ async function runStreakMilestones() {
     const today = new Date().toISOString().split('T')[0];
 
     const { rows: habits } = await pool.query(`
-      SELECT id, name, user_id, streak FROM habits
+      SELECT h.id, h.name, h.user_id, h.streak FROM habits h
+      LEFT JOIN notification_preferences np ON h.user_id = np.user_id
       WHERE streak = ANY($1)
+        AND COALESCE(np.streak_milestone, true) = true
     `, [MILESTONES]);
 
     for (const habit of habits) {

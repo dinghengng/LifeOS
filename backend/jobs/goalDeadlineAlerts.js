@@ -8,12 +8,14 @@ async function runGoalDeadlineAlerts() {
     const today = new Date().toISOString().split('T')[0];
 
     const { rows: goals } = await pool.query(`
-      SELECT id, title, user_id, due_date
-      FROM goals
-      WHERE progress < 100
-        AND due_date IS NOT NULL
-        AND due_date >= CURRENT_DATE
-        AND due_date <= CURRENT_DATE + INTERVAL '7 days'
+      SELECT g.id, g.title, g.user_id, g.due_date
+      FROM goals g
+      LEFT JOIN notification_preferences np ON g.user_id = np.user_id
+      WHERE g.progress < 100
+        AND g.due_date IS NOT NULL
+        AND g.due_date >= CURRENT_DATE
+        AND g.due_date <= CURRENT_DATE + INTERVAL '7 days'
+        AND COALESCE(np.goal_deadlines, true) = true
     `);
 
     for (const goal of goals) {

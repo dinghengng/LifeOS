@@ -4,20 +4,32 @@ import { useState, useEffect } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
+//toggles
 interface NotificationPrefs {
-  task_reminders: boolean;
-  habit_checkins: boolean;
-  lead_time_mins: number;
-  quiet_start: string;
-  quiet_end: string;
+  task_reminders:   boolean;
+  habit_checkins:   boolean;
+  lead_time_mins:   number;
+  quiet_start:      string;
+  quiet_end:        string;
+  overdue_tasks:    boolean;
+  goal_deadlines:   boolean;
+  streak_risk:      boolean;
+  streak_milestone: boolean;
+  journal_nudge:    boolean;
 }
 
+//default toggle values
 const DEFAULT_PREFS: NotificationPrefs = {
-  task_reminders: true,
-  habit_checkins: true,
-  lead_time_mins: 30,
-  quiet_start: "22:00",
-  quiet_end: "08:00",
+  task_reminders:   true,
+  habit_checkins:   true,
+  lead_time_mins:   30,
+  quiet_start:      "22:00",
+  quiet_end:        "08:00",
+  overdue_tasks:    true,
+  goal_deadlines:   true,
+  streak_risk:      true,
+  streak_milestone: true,
+  journal_nudge:    true,
 };
 
 export default function NotificationSettingsSection() {
@@ -65,8 +77,41 @@ export default function NotificationSettingsSection() {
     borderBottom: "1px solid #f1f5f9",
   };
 
+  const sectionLabelStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 700,
+    color: "#94a3b8",
+    textTransform: "uppercase",
+    letterSpacing: "0.07em",
+    padding: "18px 0 4px",
+  };
+
+  const CronToggle = ({
+    label,
+    description,
+    field,
+  }: {
+    label: string;
+    description: string;
+    field: keyof NotificationPrefs;
+  }) => (
+    <div style={rowStyle}>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>{label}</div>
+        <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{description}</div>
+      </div>
+      <input
+        type="checkbox"
+        checked={prefs[field] as boolean}
+        onChange={(e) => setPrefs({ ...prefs, [field]: e.target.checked })}
+        style={{ width: 18, height: 18, accentColor: "#4f46e5", cursor: "pointer" }}
+      />
+    </div>
+  );
+
   return (
     <div style={{ maxWidth: 520 }}>
+
       <div style={rowStyle}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Task due reminders</div>
@@ -142,6 +187,38 @@ export default function NotificationSettingsSection() {
           </div>
         </div>
       </div>
+
+      {/*notification toggles*/}
+      <div style={sectionLabelStyle}>Tasks &amp; Goals</div>
+      <CronToggle
+        label="Overdue task alerts"
+        description="Notified once per task that passes its due date incomplete"
+        field="overdue_tasks"
+      />
+      <CronToggle
+        label="Goal deadline warnings"
+        description="Alerts at 7, 3, and 1 day before a goal is due"
+        field="goal_deadlines"
+      />
+
+      <div style={sectionLabelStyle}>Habits</div>
+      <CronToggle
+        label="Streak at risk"
+        description="9pm reminder if you haven't logged a habit with an active streak"
+        field="streak_risk"
+      />
+      <CronToggle
+        label="Streak milestones"
+        description="Celebrate hitting 7, 14, 30, 60, and 100-day streaks"
+        field="streak_milestone"
+      />
+
+      <div style={sectionLabelStyle}>Journal</div>
+      <CronToggle
+        label="Daily journal nudge"
+        description="8pm reminder on days you haven't written an entry"
+        field="journal_nudge"
+      />
 
       <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 12 }}>
         <button

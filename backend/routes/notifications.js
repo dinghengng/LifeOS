@@ -44,18 +44,26 @@ function createNotificationRouter(requireAuth) {
 
   router.put('/preferences', requireAuth, async (req, res) => {
     try {
-      const { task_reminders, habit_checkins, lead_time_mins, quiet_start, quiet_end } = req.body;
+      const { task_reminders, habit_checkins, lead_time_mins, quiet_start, quiet_end,
+      overdue_tasks, goal_deadlines, streak_risk, streak_milestone, journal_nudge } = req.body;
       await pool.query(`
         INSERT INTO notification_preferences
-          (user_id, task_reminders, habit_checkins, lead_time_mins, quiet_start, quiet_end)
-        VALUES ($1, $2, $3, $4, $5, $6)
+          (user_id, task_reminders, habit_checkins, lead_time_mins, quiet_start, quiet_end,
+          overdue_tasks, goal_deadlines, streak_risk, streak_milestone, journal_nudge)
+        VALUES ($1, $2, $3, $4, $5, $6,$7,$8,$9,$10,$11)
         ON CONFLICT (user_id) DO UPDATE SET
           task_reminders = $2,
           habit_checkins = $3,
           lead_time_mins = $4,
           quiet_start = $5,
-          quiet_end = $6
-      `, [req.user.id, task_reminders, habit_checkins, lead_time_mins, quiet_start, quiet_end]);
+          quiet_end = $6,
+          overdue_tasks = $7,
+          goal_deadlines = $8,
+          streak_risk = $9,
+          streak_milestone = $10,
+          journal_nudge = $11
+      `, [req.user.id, task_reminders, habit_checkins, lead_time_mins, quiet_start, quiet_end, overdue_tasks, goal_deadlines,
+        streak_risk, streak_milestone, journal_nudge]);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update preferences' });

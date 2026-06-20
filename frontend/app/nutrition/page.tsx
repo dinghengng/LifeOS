@@ -715,7 +715,10 @@ export default function NutritionPage() {
                 </label>
                 <input
                   type="number"
+                  min="20"
+                  max="400"
                   step="0.1"
+                  placeholder="e.g. 75"
                   value={metricsForm.weight}
                   onChange={(e) =>
                     setMetricsForm({ ...metricsForm, weight: e.target.value })
@@ -738,6 +741,9 @@ export default function NutritionPage() {
                 {/* make it optional so users arent forced*/}
                 <input
                   type="number"
+                  min="50"
+                  max="270"
+                  placeholder="e.g. 175"
                   value={metricsForm.height}
                   onChange={(e) =>
                     setMetricsForm({ ...metricsForm, height: e.target.value })

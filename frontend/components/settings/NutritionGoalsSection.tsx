@@ -105,8 +105,8 @@ export default function NutritionGoalsSection() {
         </p>
         <input
           type="number"
-          min="30"
-          max="300"
+          min="20"
+          max="400"
           step="0.1"
           placeholder="e.g. 75"
           value={form.weight}
@@ -121,8 +121,8 @@ export default function NutritionGoalsSection() {
         </label>
         <input
           type="number"
-          min="100"
-          max="250"
+          min="50"
+          max="270"
           step="1"
           placeholder="e.g. 175"
           value={form.height}

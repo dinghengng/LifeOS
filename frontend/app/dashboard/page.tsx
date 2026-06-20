@@ -9,6 +9,7 @@ import { Habit } from "../../components/dashboard/HabitRow";
 import { Goal } from "../../components/dashboard/GoalCard";
 import { User } from "../../../shared/types";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
+import Navbar from "../../components/Navbar";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -281,82 +282,7 @@ export default function DashboardPage() {
         </div>
 
         <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            onClick={() => router.push("/")}
-            style={{
-              padding: "6px 16px",
-              fontSize: "14px",
-              fontWeight: 600,
-              borderRadius: "8px",
-              border: "1px solid var(--color-border-secondary)",
-              backgroundColor: "rgba(255, 255, 255, 0.7)",
-              color: "#334155",
-              cursor: "pointer",
-            }}
-          >
-            Tasks
-          </button>
-          <button
-            onClick={() => router.push("/dashboard")}
-            style={{
-              padding: "6px 16px",
-              fontSize: "14px",
-              fontWeight: 600,
-              borderRadius: "8px",
-              border: "1px solid #4f46e5",
-              backgroundColor: "#4f46e5",
-              color: "#ffffff",
-              cursor: "pointer",
-            }}
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={() => router.push("/journal")}
-            style={{
-              padding: "6px 16px",
-              fontSize: "14px",
-              fontWeight: 600,
-              borderRadius: "8px",
-              border: "1px solid var(--color-border-secondary)",
-              backgroundColor: "rgba(255, 255, 255, 0.7)",
-              color: "#334155",
-              cursor: "pointer",
-            }}
-          >
-            Journal
-          </button>
-          {/* Nutrition button*/}
-          <button
-            onClick={() => router.push("/nutrition")}
-            style={{
-              padding: "6px 16px",
-              fontSize: "14px",
-              fontWeight: 600,
-              borderRadius: "8px",
-              border: "1px solid var(--color-border-secondary)",
-              backgroundColor: "rgba(255, 255, 255, 0.7)",
-              color: "#334155",
-              cursor: "pointer",
-            }}
-          >
-            Nutrition
-          </button>
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: "6px 16px",
-              fontSize: "14px",
-              fontWeight: 600,
-              borderRadius: "8px",
-              border: "1px solid var(--color-border-secondary)",
-              backgroundColor: "rgba(255, 255, 255, 0.7)",
-              color: "#334155",
-              cursor: "pointer",
-            }}
-          >
-            Logout
-          </button>
+          <Navbar onLogout={handleLogout} />
         </div>
       </div>
       {/* error msg */}

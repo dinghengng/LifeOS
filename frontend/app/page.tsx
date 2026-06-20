@@ -8,6 +8,7 @@ import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import { useRouter } from "next/navigation";
 import GuidedTour from "../components/GuidedTour";
+import Navbar from "../components/Navbar";
 
 // Import types and unified API functions from the shared folder
 import { Task, Priority, User } from "../../shared/types";
@@ -285,57 +286,7 @@ export default function Page() {
           </span>
 
           <div className="flex gap-2">
-            {/* Active Tasks button styling */}
-            <button
-              onClick={() => router.push("/")}
-              className="bg-indigo-600 text-white font-semibold px-4 py-1.5 rounded-lg text-sm border border-indigo-600 shadow-sm transition"
-            >
-              Tasks
-            </button>
-            
-            {/* Dashboard button just like journal */}
-            <button
-              id="tour-dashboard"
-              onClick={() => router.push("/dashboard")}
-              className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
-            >
-              Dashboard
-            </button>
-            
-            {/* Journal button */}
-            <button
-              id="tour-journal"
-              onClick={() => router.push("/journal")}
-              className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm transition"
-            >
-              Journal
-            </button>
-            
-            {/* Nutrition button */}
-            <button
-              id="tour-nutrition"
-              onClick={() => router.push("/nutrition")}
-              style={{
-                padding: "6px 16px",
-                fontSize: "14px",
-                fontWeight: 600,
-                borderRadius: "8px",
-                border: "1px solid var(--color-border-secondary)",
-                backgroundColor: "rgba(255, 255, 255, 0.7)",
-                color: "#334155",
-                cursor: "pointer",
-              }}
-            >
-              Nutrition
-            </button>
-            
-            {/* Logout button */}
-            <button
-              onClick={handleLogout}
-              className="bg-white/70 backdrop-blur-sm text-slate-700 font-semibold px-4 py-1.5 rounded-lg text-sm border border-slate-200/50 hover:bg-red-50 hover:text-red-600 shadow-sm transition"
-            >
-              Logout
-            </button>
+            <Navbar onLogout={handleLogout} />
           </div>
         </div>
         

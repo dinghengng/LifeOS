@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToastContext } from "../../components/ToastContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -37,6 +38,7 @@ export default function NotificationSettingsSection() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { showToast } = useToastContext();
 
   useEffect(() => {
     fetch(`${API_BASE}/api/notifications/preferences`, { credentials: "include" })
@@ -58,10 +60,12 @@ export default function NotificationSettingsSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(prefs),
       });
+      showToast("Settings updated");
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
       console.error(err);
+      showToast("Failed to save settings. Try again.", "error");
     } finally {
       setSaving(false);
     }

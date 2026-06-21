@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, SyntheticEvent } from "react"; // In short, useState allows a React component to: remember data, change data when users interact, automatically update the UI when the data changes
+import { useToastContext } from "../components/ToastContext";
 
 type Priority = "critical" | "high" | "low" | "none";
 // Tell TypeScript we expect a function called 'onAddTask'
@@ -19,6 +20,7 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
   const [titleError, setTitleError] = useState<string | null>(null); // title error state
   const [deadlineError, setDeadlineError] = useState<string | null>(null); // deadline error state
   const [isSubmitting, setIsSubmitting] = useState(false); // submitting state
+  const { showToast } = useToastContext(); //toast noti
 
   // function to ensure title length between 0 to 150
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,6 +74,7 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
 
     // send the text
     onAddTask(trimmedTitle, combinedDueDate, taskPriority);
+    showToast("Task added successfully"); //toast confirmation noti
 
     // clear the input after adding
     setTaskTitle("");

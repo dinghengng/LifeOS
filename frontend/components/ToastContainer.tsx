@@ -1,6 +1,6 @@
 "use client";
 
-import { useToast, ToastType } from "../app/hooks/useToast";
+import { useToast, ToastType } from "@/app/hooks/useToast";
 
 const COLORS: Record<ToastType, { bg: string; border: string; icon: string }> = {
   success: { bg: "#f0fdf4", border: "#86efac", icon: "✓" },

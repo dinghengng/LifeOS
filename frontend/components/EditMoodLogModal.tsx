@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MoodLog, MoodLevel, StressLevel, Tag, TagsResponse, UpdateMoodLogPayload } from "../../shared/types";
 import { updateMoodLog } from "../../shared/api";
 import TagSelector from "./TagSelector";
+import { useToastContext } from "../components/ToastContext";
 
 const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string }[] = [
   { level: 1, emoji: "😢", label: "Awful" },
@@ -33,6 +34,7 @@ export default function EditMoodLogModal({ log, tags, onSaved, onClose, onTagsUp
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToastContext();
 
   const toggleTag = (tag: Tag) => {
     const key = `${tag.type}:${tag.id}`;
@@ -62,10 +64,12 @@ export default function EditMoodLogModal({ log, tags, onSaved, onClose, onTagsUp
 
     try {
       await updateMoodLog(log.id, payload);
+      showToast("Mood entry updated");
       onSaved();
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not save changes.");
+      showToast("Failed to update mood. Try again.", "error");
     } finally {
       setIsSubmitting(false);
     }

@@ -6,6 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { createJournalEntry } from "../../shared/api";
 import { CreateJournalEntryPayload, MoodLog, MoodLevel } from "../../shared/types";
+import { useToastContext } from "../components/ToastContext";
 
 const MOOD_EMOJI: Record<MoodLevel, string> = {
   1: "😢", 2: "😕", 3: "😐", 4: "🙂", 5: "😄",
@@ -36,6 +37,7 @@ export default function JournalEditor({
   const [, forceUpdate] = useState(0);
   const [title, setTitle] = useState("");
   const [isPromptLocked, setIsPromptLocked] = useState(false);
+  const { showToast } = useToastContext();
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -98,8 +100,10 @@ export default function JournalEditor({
       setIsExpanded(!compact);
       setLinkedMoodLogId(defaultMoodLogId);
       onSaved();
+      showToast("Journal entry saved"); //toast noti
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not save entry.");
+      showToast("Failed to save entry. Try again.", "error");
     } finally {
       setIsSubmitting(false);
     }

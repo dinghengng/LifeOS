@@ -8,6 +8,7 @@ import TagSelector from "./TagSelector";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { useToastContext } from "../components/ToastContext";
 
 // Default mood config
 // const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string; color: string }[] = [
@@ -42,6 +43,7 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, forceUpdate] = useState(0);
+  const { showToast } = useToastContext();
 
   const noteEditor = useEditor({
     immediatelyRender: false,
@@ -101,8 +103,10 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
       setSelectedTagKeys([]);
       noteEditor?.commands.clearContent();
       onSaved(newLog.id);
+      showToast("Mood logged");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not save mood log.");
+      showToast("Failed to save mood. Try again.", "error");
     } finally {
       setIsSubmitting(false);
     }

@@ -6,6 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { JournalEntry, MoodLog, MoodLevel, UpdateJournalEntryPayload } from "../../shared/types";
 import { updateJournalEntry } from "../../shared/api";
+import { useToastContext } from "../components/ToastContext";
 
 const MOOD_EMOJI: Record<MoodLevel, string> = {
   1: "😢", 2: "😕", 3: "😐", 4: "🙂", 5: "😄",
@@ -30,6 +31,7 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, forceUpdate] = useState(0);
+  const { showToast } = useToastContext();
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -77,10 +79,12 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
 
     try {
       await updateJournalEntry(entry.id, payload);
+      showToast("Journal entry updated"); //toast noti
       onSaved();
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not save changes.");
+      showToast("Failed to update entry. Try again.", "error");
     } finally {
       setIsSubmitting(false);
     }

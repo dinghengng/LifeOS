@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import type { Task, Priority } from "../../shared/types";
+import { useToastContext } from "../components/ToastContext";
 
 interface EditTaskFormProps {
   task: Task;
@@ -24,8 +25,9 @@ export default function EditTaskForm({
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [titleError, setTitleError] = useState<string | null>(null);
-const [deadlineError, setDeadlineError] = useState<string | null>(null);
-const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deadlineError, setDeadlineError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToastContext();
 
   // Initialise due date fields 
   useEffect(() => {
@@ -98,7 +100,7 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     dueDate: combinedDueDate,
     priority,
   });
-
+  showToast("Task updated"); //toast noti
   setIsSubmitting(false);
 };
 

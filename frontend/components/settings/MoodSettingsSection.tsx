@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { MoodLevelConfig, EmojiPack, MoodLevel } from "../../../shared/types";
 import { fetchEmojiPacks, saveMoodConfig } from "../../../shared/api";
+import { useToastContext } from "../../components/ToastContext";
 
 const DEFAULT_LEVELS: Omit<MoodLevelConfig, "id">[] = [
   { level: 1, label: "Awful", emoji: "😢", color: "#ef4444", displayOrder: 0 },
@@ -37,6 +38,7 @@ export default function MoodSettingsSection({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const { showToast } = useToastContext();
 
   useEffect(() => {
     fetchEmojiPacks()
@@ -83,10 +85,12 @@ export default function MoodSettingsSection({
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
+      showToast("Mood settings updated");
       onSaved?.(saved);
       return saved;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Save failed");
+      showToast("Failed to save mood settings.", "error");
       return null;
     } finally {
       setSaving(false);
@@ -192,7 +196,6 @@ export default function MoodSettingsSection({
           >
             {saving ? "Saving…" : saveLabel}
           </button>
-          {saveSuccess && <span className="text-sm text-green-600 font-medium">Saved ✓</span>}
           {saveError && <span className="text-sm text-red-500">{saveError}</span>}
         </div>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToastContext } from "../../components/ToastContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -24,6 +25,7 @@ export default function NutritionGoalsSection() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [preview, setPreview] = useState<{ calories: number; protein: number } | null>(null);
+  const { showToast } = useToastContext();
 
   useEffect(() => {
     fetch(`${API_BASE}/api/user/metrics`, { credentials: "include" })
@@ -68,8 +70,10 @@ export default function NutritionGoalsSection() {
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+      showToast("Nutrition goals updated");
     } catch (err) {
       console.error("Failed to save metrics", err);
+      showToast("Failed to save goals. Try again.", "error");
     } finally {
       setSaving(false);
     }
@@ -190,7 +194,6 @@ export default function NutritionGoalsSection() {
         >
           {saving ? "Saving…" : "Save Goals"}
         </button>
-        {saved && <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>✓ Saved</span>}
       </div>
     </form>
   );

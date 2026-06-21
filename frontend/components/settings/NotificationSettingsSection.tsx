@@ -242,7 +242,6 @@ export default function NotificationSettingsSection() {
         >
           {saving ? "Saving…" : "Save preferences"}
         </button>
-        {saved && <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>✓ Saved</span>}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const pool = require('../db');
 const { sendToUser } = require('../services/notificationService');
+const { sendTaskReminderEmail } = require('../services/emailService');
 const { runOverdueTaskAlerts }     = require('./overdueTaskAlerts');
 const { runGoalDeadlineAlerts }    = require('./goalDeadlineAlerts');
 const { runHabitStreakRiskAlerts } = require('./habitStreakRiskAlerts');
@@ -28,6 +29,19 @@ function startReminderJobs() {
           type: 'task_reminder',
           url: '/tasks'
         });
+
+        if (task.notifications_enabled && task.email) {
+          try {
+            await sendTaskReminderEmail({
+              to: task.email,
+              taskTitle: task.title,
+              dueDate: task.due_date,
+            });
+          } catch (emailErr) {
+            console.error(`[EmailReminder] Failed for task ${task.id}:`, emailErr.message);
+          }
+        }
+        
         await pool.query(
           'UPDATE tasks SET reminded = true WHERE id = $1', [task.id]
         );

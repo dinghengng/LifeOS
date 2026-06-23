@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import MoodLogger from "../../components/MoodLogger";
-import MoodHistory from "../../components/MoodHistory";
-import JournalEditor from "../../components/JournalEditor";
+import MoodLogger from "../../components/journal/MoodLogger";
+import MoodHistory from "../../components/journal/MoodHistory";
+import JournalEditor from "../../components/journal/JournalEditor";
 import OnboardingWizard from "../../components/OnboardingWizard";
 import { MoodLog, User, TagsResponse, JournalEntry, MoodLevelConfig } from "../../../shared/types";
 import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries, logoutUser, fetchMoodConfig } from "../../../shared/api";
-import PromptSection from "../../components/PromptSection";
+import PromptSection from "../../components/journal/PromptSection";
 import { Prompt } from "../../../shared/prompts";
 import Navbar from "../../components/Navbar";
 

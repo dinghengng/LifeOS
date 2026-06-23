@@ -8,21 +8,6 @@ const { runHabitStreakRiskAlerts } = require('./habitStreakRiskAlerts');
 const { runStreakMilestones }      = require('./streakMilestones');
 const { runJournalNudge }          = require('./journalNudge');
 
-
-function isQuietHours(quietStart, quietEnd) {
-  if (!quietStart || !quietEnd) return false;
-  const now = new Date();
-  const currentMins = now.getHours() * 60 + now.getMinutes();
-  const [sh, sm] = quietStart.split(':').map(Number);
-  const [eh, em] = quietEnd.split(':').map(Number);
-  const startMins = sh * 60 + sm;
-  const endMins   = eh * 60 + em;
-  if (startMins > endMins) {
-    return currentMins >= startMins || currentMins < endMins;
-  }
-  return currentMins >= startMins && currentMins < endMins;
-}
-
 function startReminderJobs() {
   cron.schedule('* * * * *', async () => {
     try {
@@ -96,4 +81,4 @@ function startReminderJobs() {
   cron.schedule('0 22 * * *', runJournalNudge);          //10pm
 }
 
-module.exports = { startReminderJobs, isQuietHours };
+module.exports = { startReminderJobs };

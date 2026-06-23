@@ -1,7 +1,7 @@
 const pool = require('../db');
 const { notifyInsert } = require('./notifyInsert');
 const { sendGoalDeadlineEmail } = require('../services/emailService');
-const { isQuietHours } = require('./reminderJob');
+const { isQuietHours } = require('./quietHours');
 
 const WARN_DAYS = [7, 3, 1]; //send alerts on these days
 

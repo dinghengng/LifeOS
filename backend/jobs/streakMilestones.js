@@ -1,7 +1,7 @@
 const pool = require('../db');
 const { notifyInsert } = require('./notifyInsert');
 const { sendStreakMilestoneEmail } = require('../services/emailService');
-const { isQuietHours } = require('./reminderJob');
+const { isQuietHours } = require('./quietHours');
 
 
 const MILESTONES = [2, 4, 7, 14, 30, 60, 100];

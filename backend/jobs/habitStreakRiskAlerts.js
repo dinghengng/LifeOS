@@ -1,7 +1,7 @@
 const pool = require('../db');
 const { notifyInsert } = require('./notifyInsert');
 const { sendStreakRiskEmail } = require('../services/emailService');
-const { isQuietHours } = require('./reminderJob');
+const { isQuietHours } = require('./quietHours');
 
 async function runHabitStreakRiskAlerts() {
   try {

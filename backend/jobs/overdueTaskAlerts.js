@@ -1,13 +1,16 @@
 const pool = require('../db');
 const { notifyInsert } = require('./notifyInsert');
+const { sendTaskReminderEmail } = require('../services/emailService');
+const { isQuietHours } = require('./quietHours');
 
 async function runOverdueTaskAlerts() {
   try {
     const today = new Date().toISOString().split('T')[0];
 
     const { rows: tasks } = await pool.query(`
-      SELECT t.id, t.title, t.user_id
+      SELECT t.id, t.title, t.user_id, u.email, np.quiet_start, np.quiet_end
       FROM tasks t
+      JOIN users u ON u.id = t.user_id
       LEFT JOIN notification_preferences np ON t.user_id = np.user_id
       WHERE t.is_completed = false
         AND t.due_date IS NOT NULL
@@ -24,6 +27,18 @@ async function runOverdueTaskAlerts() {
         task.id,
         today
       );
+
+      if (task.email && !isQuietHours(task.quiet_start, task.quiet_end)) {
+        try {
+          await sendTaskReminderEmail({
+            to: task.email,
+            taskTitle: task.title,
+            dueDate: task.due_date,
+          });
+        } catch (err) {
+          console.error(`[OverdueEmail] Failed for task ${task.id}:`, err.message);
+        }
+      }
     }
 
     if (tasks.length > 0) {

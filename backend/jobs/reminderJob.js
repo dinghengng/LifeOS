@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const pool = require('../db');
 const { sendToUser } = require('../services/notificationService');
+const { sendTaskReminderEmail } = require('../services/emailService');
 const { runOverdueTaskAlerts }     = require('./overdueTaskAlerts');
 const { runGoalDeadlineAlerts }    = require('./goalDeadlineAlerts');
 const { runHabitStreakRiskAlerts } = require('./habitStreakRiskAlerts');
@@ -12,9 +13,10 @@ function startReminderJobs() {
     try {
       const { rows: tasks } = await pool.query(`
         SELECT t.id, t.title, t.user_id,
-               np.lead_time_mins, np.task_reminders
+               np.lead_time_mins, np.task_reminders, np.quiet_start, np.quiet_end, u.email
         FROM tasks t
         JOIN notification_preferences np ON t.user_id = np.user_id
+        JOIN users u ON u.id = t.user_id
         WHERE np.task_reminders = true
           AND t.is_completed = false
           AND t.reminded = false
@@ -28,6 +30,19 @@ function startReminderJobs() {
           type: 'task_reminder',
           url: '/tasks'
         });
+
+        if (task.email && !isQuietHours(task.quiet_start, task.quiet_end)) {
+          try {
+            await sendTaskReminderEmail({
+              to: task.email,
+              taskTitle: task.title,
+              dueDate: task.due_date,
+            });
+          } catch (emailErr) {
+            console.error(`[EmailReminder] Failed for task ${task.id}:`, emailErr.message);
+          }
+        }
+
         await pool.query(
           'UPDATE tasks SET reminded = true WHERE id = $1', [task.id]
         );

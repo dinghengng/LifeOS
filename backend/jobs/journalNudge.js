@@ -1,5 +1,7 @@
 const pool = require('../db');
 const { notifyInsert } = require('./notifyInsert');
+const { sendJournalNudgeEmail } = require('../services/emailService');
+const { isQuietHours } = require('./quietHours');
 
 async function runJournalNudge() {
   try {
@@ -9,7 +11,7 @@ async function runJournalNudge() {
     const { rows: users } = await pool.query(`
       SELECT DISTINCT u.id
       FROM users u
-      LEFT JOIN notification_preferences np ON u.user_id = np.user_id
+      LEFT JOIN notification_preferences np ON u.id = np.user_id
       WHERE COALESCE(np.journal_nudge, true) = true
         AND NOT EXISTS (
             SELECT 1 FROM journal_entries je
@@ -27,6 +29,14 @@ async function runJournalNudge() {
         `journal-${user.id}`,
         today
       );
+
+      if (user.email && !isQuietHours(user.quiet_start, user.quiet_end)) {
+        try {
+          await sendJournalNudgeEmail({ to: user.email });
+        } catch (err) {
+          console.error(`[JournalNudgeEmail] Failed for user ${user.id}:`, err.message);
+        }
+      }
     }
   } catch (err) {
     console.error('journalNudge error:', err.message);

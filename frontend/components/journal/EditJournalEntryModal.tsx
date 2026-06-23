@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import { JournalEntry, MoodLog, MoodLevel, UpdateJournalEntryPayload } from "../../shared/types";
-import { updateJournalEntry } from "../../shared/api";
-import { useToastContext } from "../components/ToastContext";
+import { JournalEntry, MoodLog, MoodLevel, UpdateJournalEntryPayload } from "../../../shared/types";
+import { updateJournalEntry } from "../../../shared/api";
+import { useToastContext } from "../notifications/ToastContext";
 
 const MOOD_EMOJI: Record<MoodLevel, string> = {
   1: "😢", 2: "😕", 3: "😐", 4: "🙂", 5: "😄",

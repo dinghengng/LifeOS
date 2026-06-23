@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Tag, TagsResponse, MoodLevel, StressLevel, CreateMoodLogPayload, } from "../../shared/types";
-import { createMoodLog } from "../../shared/api";
-import { MoodLevelConfig } from "../../shared/types";
-import TagSelector from "./TagSelector";
+import { Tag, TagsResponse, MoodLevel, StressLevel, CreateMoodLogPayload, } from "../../../shared/types";
+import { createMoodLog } from "../../../shared/api";
+import { MoodLevelConfig } from "../../../shared/types";
+import TagSelector from "../TagSelector";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useToastContext } from "../components/ToastContext";
+import { useToastContext } from "../notifications/ToastContext";
 
 // Default mood config
 // const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string; color: string }[] = [

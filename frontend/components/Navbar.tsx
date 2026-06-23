@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import NotificationBell from "./NotificationBell";
+import NotificationBell from "./notifications/NotificationBell";
 import { Settings } from "lucide-react";
 
 interface AppNavbarProps {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getDailyPrompt, getPromptsByPack, PACK_CONFIG, ALL_PROMPTS, PromptPack, Prompt } from "../../shared/prompts";
+import { getDailyPrompt, getPromptsByPack, PACK_CONFIG, ALL_PROMPTS, PromptPack, Prompt } from "../../../shared/prompts";
 
 interface PromptSectionProps {
   onSelectPrompt: (prompt: Prompt) => void;

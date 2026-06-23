@@ -8,14 +8,30 @@ const { runHabitStreakRiskAlerts } = require('./habitStreakRiskAlerts');
 const { runStreakMilestones }      = require('./streakMilestones');
 const { runJournalNudge }          = require('./journalNudge');
 
+
+function isQuietHours(quietStart, quietEnd) {
+  if (!quietStart || !quietEnd) return false;
+  const now = new Date();
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+  const [sh, sm] = quietStart.split(':').map(Number);
+  const [eh, em] = quietEnd.split(':').map(Number);
+  const startMins = sh * 60 + sm;
+  const endMins   = eh * 60 + em;
+  if (startMins > endMins) {
+    return currentMins >= startMins || currentMins < endMins;
+  }
+  return currentMins >= startMins && currentMins < endMins;
+}
+
 function startReminderJobs() {
   cron.schedule('* * * * *', async () => {
     try {
       const { rows: tasks } = await pool.query(`
         SELECT t.id, t.title, t.user_id,
-               np.lead_time_mins, np.task_reminders
+               np.lead_time_mins, np.task_reminders, np.quiet_start, np.quiet_end, u.email
         FROM tasks t
         JOIN notification_preferences np ON t.user_id = np.user_id
+        JOIN users u ON u.id = t.user_id
         WHERE np.task_reminders = true
           AND t.is_completed = false
           AND t.reminded = false
@@ -30,7 +46,7 @@ function startReminderJobs() {
           url: '/tasks'
         });
 
-        if (task.notifications_enabled && task.email) {
+        if (task.email && !isQuietHours(task.quiet_start, task.quiet_end)) {
           try {
             await sendTaskReminderEmail({
               to: task.email,
@@ -41,7 +57,7 @@ function startReminderJobs() {
             console.error(`[EmailReminder] Failed for task ${task.id}:`, emailErr.message);
           }
         }
-        
+
         await pool.query(
           'UPDATE tasks SET reminded = true WHERE id = $1', [task.id]
         );
@@ -80,4 +96,4 @@ function startReminderJobs() {
   cron.schedule('0 22 * * *', runJournalNudge);          //10pm
 }
 
-module.exports = { startReminderJobs };
+module.exports = { startReminderJobs, isQuietHours };

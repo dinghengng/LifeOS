@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { MoodLog, MoodLevel, StressLevel, Tag, TagsResponse, UpdateMoodLogPayload } from "../../shared/types";
-import { updateMoodLog } from "../../shared/api";
-import TagSelector from "./TagSelector";
-import { useToastContext } from "../components/ToastContext";
+import { MoodLog, MoodLevel, StressLevel, Tag, TagsResponse, UpdateMoodLogPayload } from "../../../shared/types";
+import { updateMoodLog } from "../../../shared/api";
+import TagSelector from "../TagSelector";
+import { useToastContext } from "../notifications/ToastContext";
 
 const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string }[] = [
   { level: 1, emoji: "😢", label: "Awful" },

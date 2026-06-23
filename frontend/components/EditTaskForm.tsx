@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import type { Task, Priority } from "../../shared/types";
-import { useToastContext } from "../components/ToastContext";
+import { useToastContext } from "../components/notifications/ToastContext";
 
 interface EditTaskFormProps {
   task: Task;

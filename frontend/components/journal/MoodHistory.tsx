@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { MoodLog, MoodLevel, TagsResponse, Tag, JournalEntry } from "../../shared/types";
-import { deleteMoodLog, updateJournalEntry, deleteJournalEntry, } from "../../shared/api";
+import { MoodLog, MoodLevel, TagsResponse, Tag, JournalEntry } from "../../../shared/types";
+import { deleteMoodLog, updateJournalEntry, deleteJournalEntry, } from "../../../shared/api";
 import EditMoodLogModal from "./EditMoodLogModal";
 import EditJournalEntryModal from "./EditJournalEntryModal";
 import JournalEditor from "./JournalEditor";

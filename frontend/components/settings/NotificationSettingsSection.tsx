@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useToastContext } from "../../components/ToastContext";
+import { useToastContext } from "../../components/notifications/ToastContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -17,6 +17,7 @@ interface NotificationPrefs {
   streak_risk:      boolean;
   streak_milestone: boolean;
   journal_nudge:    boolean;
+  notifications_enabled: boolean;
 }
 
 //default toggle values
@@ -31,6 +32,7 @@ const DEFAULT_PREFS: NotificationPrefs = {
   streak_risk:      true,
   streak_milestone: true,
   journal_nudge:    true,
+  notifications_enabled: true,
 };
 
 export default function NotificationSettingsSection() {
@@ -115,6 +117,11 @@ export default function NotificationSettingsSection() {
 
   return (
     <div style={{ maxWidth: 520 }}>
+      <CronToggle
+        label="Email notifications"
+        description="Receive email reminders from LifeOS"
+        field="notifications_enabled"
+      />
 
       <div style={rowStyle}>
         <div>

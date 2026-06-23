@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, SyntheticEvent } from "react"; // In short, useState allows a React component to: remember data, change data when users interact, automatically update the UI when the data changes
-import { useToastContext } from "../components/ToastContext";
+import { useToastContext } from "../components/notifications/ToastContext";
 
 type Priority = "critical" | "high" | "low" | "none";
 // Tell TypeScript we expect a function called 'onAddTask'

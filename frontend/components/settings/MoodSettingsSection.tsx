@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { MoodLevelConfig, EmojiPack, MoodLevel } from "../../../shared/types";
 import { fetchEmojiPacks, saveMoodConfig } from "../../../shared/api";
-import { useToastContext } from "../../components/ToastContext";
+import { useToastContext } from "../notifications/ToastContext";
 
 const DEFAULT_LEVELS: Omit<MoodLevelConfig, "id">[] = [
   { level: 1, label: "Awful", emoji: "😢", color: "#ef4444", displayOrder: 0 },

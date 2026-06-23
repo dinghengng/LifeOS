@@ -34,7 +34,7 @@ function createNotificationRouter(requireAuth) {
   router.get('/preferences', requireAuth, async (req, res) => {
     try {
       const { rows: [prefs] } = await pool.query(
-        'SELECT * FROM notification_preferences WHERE user_id = $1', [req.user.id]
+        'SELECT * FROM notification_preferences JOIN users u ON u.id = np.user_id WHERE user_id = $1', [req.user.id]
       );
       res.json(prefs || {});
     } catch (err) {
@@ -45,7 +45,7 @@ function createNotificationRouter(requireAuth) {
   router.put('/preferences', requireAuth, async (req, res) => {
     try {
       const { task_reminders, habit_checkins, lead_time_mins, quiet_start, quiet_end,
-      overdue_tasks, goal_deadlines, streak_risk, streak_milestone, journal_nudge } = req.body;
+      overdue_tasks, goal_deadlines, streak_risk, streak_milestone, journal_nudge, notifications_enabled } = req.body;
       await pool.query(`
         INSERT INTO notification_preferences
           (user_id, task_reminders, habit_checkins, lead_time_mins, quiet_start, quiet_end,
@@ -64,6 +64,14 @@ function createNotificationRouter(requireAuth) {
           journal_nudge = $11
       `, [req.user.id, task_reminders, habit_checkins, lead_time_mins, quiet_start, quiet_end, overdue_tasks, goal_deadlines,
         streak_risk, streak_milestone, journal_nudge]);
+
+        if (notifications_enabled !== undefined) {
+          await pool.query(
+            'UPDATE users SET notifications_enabled = $1 WHERE id = $2',
+          [notifications_enabled, req.user.id]
+          );
+        }
+
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update preferences' });

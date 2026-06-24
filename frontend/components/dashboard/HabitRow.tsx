@@ -8,6 +8,7 @@ export type Habit = {
   icon: string;
   color: string;
   streak: number;
+  totalDays?: number;
   completedDays: boolean[]; // index 0 = Monday ... index 6 = Sunday, current week using SGT
 };
 
@@ -74,18 +75,36 @@ export default function HabitRow({
         >
           {habit.name}
         </p>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 11,
-            color: "var(--color-text-secondary)",
-          }}
-        >
-          🔥 {habit.streak} day streak
-        </p>
+       
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "3px" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
+            <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Streak</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: habit.streak > 0 ? "#f97316" : "var(--color-text-secondary)" }}>
+              🔥 {habit.streak}
+            </span>
+          </div>
+          <span
+            style={{
+              display: "block",
+              width: 0,
+              minWidth: 0,
+              height: 22,
+              minHeight: 22,
+              borderLeft: "1.5px solid #000000",
+              flexShrink: 0,
+              alignSelf: "center",
+            }}
+          />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
+            <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Total</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: (habit.totalDays || 0) > 0 ? "#eab308" : "var(--color-text-secondary)" }}>
+              ⭐ {habit.totalDays || 0}
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* 7 day cells for the current week (Mon-Sun, SGT) */}
+      {/* 7 day cells for the current week */}
       {habit.completedDays.map((done, i) => {
         const targetDate = new Date(sgtToday);
         targetDate.setDate(targetDate.getDate() + (i - todayIndex));

@@ -733,13 +733,13 @@ app.put('/mood/config', requireAuth, async (req, res) => {
 app.get('/api/habits', requireAuth, async (req, res) => {
   try {
     const habitsResult = await pool.query(
-      'SELECT id, name, icon, color, streak FROM habits WHERE user_id = $1 ORDER BY id ASC',
+      'SELECT id, name, icon, color, streak, total_days FROM habits WHERE user_id = $1 ORDER BY id ASC',
       [req.user.id]
     );
     const logsResult = await pool.query(
       `SELECT habit_id, completed_at::text FROM habit_logs 
        WHERE habit_id IN (SELECT id FROM habits WHERE user_id = $1)
-       AND completed_at >= CURRENT_DATE - INTERVAL '6 days'`,
+       AND completed_at >= date_trunc('week', CURRENT_DATE AT TIME ZONE 'Asia/Singapore') AT TIME ZONE 'Asia/Singapore'`,
       [req.user.id]
     );
 
@@ -752,20 +752,24 @@ app.get('/api/habits', requireAuth, async (req, res) => {
       completionMap[log.habit_id].add(dateStr);
     });
 
+    // Determine current week's Monday in SGT
+    const sgtDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date());
+    const sgtToday = new Date(sgtDateStr);
+    const jsDayOfWeek = sgtToday.getDay(); // 0=Sun n 6=Sat
+    const todayIndexMon = (jsDayOfWeek + 6) % 7; // 0=Mon n 6=Sun
+    const monday = new Date(sgtToday);
+    monday.setDate(sgtToday.getDate() - todayIndexMon);
+
+    // Widen the log fetch window to cover full week (Mon to Sun)
     const habits = habitsResult.rows.map(habit => {
       const completedDays = [];
       const habitDatesSet = completionMap[habit.id] || new Set();
 
-      for (let i = 6; i >= 0; i--) {
-        // Generate local date strings matching current date
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-
+      // Build Mon(0) → Sun(6) for the current SGT week
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        const dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
         completedDays.push(habitDatesSet.has(dateStr));
       }
 
@@ -775,6 +779,7 @@ app.get('/api/habits', requireAuth, async (req, res) => {
         icon: habit.icon,
         color: habit.color,
         streak: habit.streak,
+        totalDays: habit.total_days || 0,
         completedDays
       };
     });
@@ -794,12 +799,13 @@ app.post('/api/habits/:id/toggle', requireAuth, async (req, res) => {
   try {
     // Verify ownership of requested target habit parameter
     const verifyOwnership = await pool.query(
-      'SELECT id FROM habits WHERE id = $1 AND user_id = $2',
+      'SELECT id, streak, total_days FROM habits WHERE id = $1 AND user_id = $2',
       [habitId, req.user.id]
     );
     if (verifyOwnership.rows.length === 0) {
       return res.status(404).json({ error: "Habit configuration not found" });
     }
+    const currentHabit = verifyOwnership.rows[0];
 
     const checkLog = await pool.query(
       'SELECT id FROM habit_logs WHERE habit_id = $1 AND completed_at = $2',
@@ -807,15 +813,62 @@ app.post('/api/habits/:id/toggle', requireAuth, async (req, res) => {
     );
 
     if (checkLog.rows.length > 0) {
-      // Done then Untoggle (Delete the log entry and decrement streak value)
+      // Done then Untoggle (Delete the log entry, decrement streak, don't touch totalDays)
       await pool.query('DELETE FROM habit_logs WHERE habit_id = $1 AND completed_at = $2', [habitId, todayStr]);
-      await pool.query('UPDATE habits SET streak = GREATEST(0, streak - 1) WHERE id = $1', [habitId]);
-      res.json({ completed: false });
+      // Recalculate totalDays from log count after deletion (source of truth)
+      const totalDaysOff = await pool.query(
+        'SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1',
+        [habitId]
+      );
+      const newTotalDaysOff = parseInt(totalDaysOff.rows[0].total);
+      const updatedOff = await pool.query(
+        'UPDATE habits SET streak = GREATEST(0, streak - 1), total_days = $2 WHERE id = $1 RETURNING streak, total_days',
+        [habitId, newTotalDaysOff]
+      );
+      res.json({ completed: false, streak: updatedOff.rows[0].streak, totalDays: updatedOff.rows[0].total_days });
     } else {
-      // Not done then Toggle (Insert log entry and increment streak value)
+      // Not done then Toggle (Insert log entry, calculate new streak, increment totalDays only once)
       await pool.query('INSERT INTO habit_logs (habit_id, completed_at) VALUES ($1, $2)', [habitId, todayStr]);
-      await pool.query('UPDATE habits SET streak = streak + 1 WHERE id = $1', [habitId]);
-      res.json({ completed: true });
+      
+      // Get all logs for this habit to calculate proper streak
+      const logsResult = await pool.query(
+        `SELECT completed_at::text FROM habit_logs 
+         WHERE habit_id = $1 
+         ORDER BY completed_at DESC`,
+        [habitId]
+      );
+
+      // Calculate streak: count consecutive days backwards from today (Diff logic from total days)
+      let newStreak = 0;
+      const today = new Date(todayStr);
+      
+      for (let i = 0; i < logsResult.rows.length; i++) {
+        const logDate = new Date(logsResult.rows[i].completed_at.split(' ')[0]);
+        const expectedDate = new Date(today);
+        expectedDate.setDate(expectedDate.getDate() - i);
+        
+        const logDateStr = logDate.toISOString().split('T')[0];
+        const expectedDateStr = expectedDate.toISOString().split('T')[0];
+        
+        if (logDateStr === expectedDateStr) {
+          newStreak++;
+        } else {
+          break;
+        }
+      }
+
+      // Increment totalDays by counting all-time logs (source of truth, prevents drift)
+      const totalDaysResult = await pool.query(
+        'SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1',
+        [habitId]
+      );
+      const newTotalDays = parseInt(totalDaysResult.rows[0].total);
+      
+      const updatedOn = await pool.query(
+        'UPDATE habits SET streak = $1, total_days = $2 WHERE id = $3 RETURNING streak, total_days',
+        [newStreak, newTotalDays, habitId]
+      );
+      res.json({ completed: true, streak: updatedOn.rows[0].streak, totalDays: updatedOn.rows[0].total_days });
     }
   } catch (err) {
     console.error("Toggle habit error:", err.message);
@@ -874,16 +927,20 @@ app.post('/api/habits', requireAuth, async (req, res) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO habits (user_id, name, icon, color) 
-       VALUES ($1, $2, $3, $4) 
-       RETURNING id, name, icon, color, streak`,
+      `INSERT INTO habits (user_id, name, icon, color, total_days) 
+       VALUES ($1, $2, $3, $4, 0) 
+       RETURNING id, name, icon, color, streak, total_days`,
       [req.user.id, name, icon || '🏃', color || '#1D9E75']
     );
 
     // Format to match frontend structure with empty 7 days array
     const newHabit = {
-      ...result.rows[0],
       id: String(result.rows[0].id),
+      name: result.rows[0].name,
+      icon: result.rows[0].icon,
+      color: result.rows[0].color,
+      streak: result.rows[0].streak,
+      totalDays: result.rows[0].total_days || 0,
       completedDays: [false, false, false, false, false, false, false]
     };
     res.status(201).json(newHabit);
@@ -931,6 +988,7 @@ app.post('/api/goals', requireAuth, async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
+
 // Optimized & Secure: Toggle Goal Milestone by Index
 app.patch('/api/goals/:goalId/milestones/:milestoneIndex', requireAuth, async (req, res) => {
   const { goalId, milestoneIndex } = req.params;
@@ -988,7 +1046,7 @@ app.patch('/api/habits/:id', requireAuth, async (req, res) => {
       `UPDATE habits 
        SET name = $1, icon = $2, color = $3 
        WHERE id = $4 AND user_id = $5
-       RETURNING id, name, icon, color, streak`,
+       RETURNING id, name, icon, color, streak, total_days`,
       [name, icon || '🏃', color || '#1D9E75', habitId, req.user.id]
     );
 
@@ -997,8 +1055,12 @@ app.patch('/api/habits/:id', requireAuth, async (req, res) => {
     }
 
     res.json({
-      ...result.rows[0],
       id: String(result.rows[0].id),
+      name: result.rows[0].name,
+      icon: result.rows[0].icon,
+      color: result.rows[0].color,
+      streak: result.rows[0].streak,
+      totalDays: result.rows[0].total_days || 0
     });
   } catch (err) {
     console.error("Update habit error:", err.message);

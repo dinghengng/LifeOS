@@ -3,17 +3,85 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { SquarePen, Trash2 } from "lucide-react";
-import NutritionTracker, { Meal } from "../../components/nutrition/NutritionTracker";
+import NutritionTracker, {
+  Meal,
+} from "../../components/nutrition/NutritionTracker";
 import QuestPanel, { Quest } from "../../components/nutrition/QuestPanel";
-import SupplementTracker, { Supplement } from "../../components/nutrition/SupplementTracker";
+import SupplementTracker, {
+  Supplement,
+} from "../../components/nutrition/SupplementTracker";
 import { User } from "../../../shared/types";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
 import { UtensilsCrossed, Dumbbell, Target, Sunrise } from "lucide-react";
-import NutritionChart, { DayData } from "../../components/nutrition/NutritionChart";
+import NutritionChart, {
+  DayData,
+} from "../../components/nutrition/NutritionChart";
 import { Lightbulb } from "lucide-react";
 import Navbar from "../../components/Navbar";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
+
+const NUTRITION_QUOTES = [
+  "Eat for the body you want, not the body you have.",
+  "You can't out-train a bad diet.",
+  "Food is fuel, not therapy.",
+  "Strive for progress, not perfection.",
+  "Your diet is a bank account. Good food choices are good investments.",
+  "A year from now, you will wish you had started today.",
+  "It's not a short-term diet. It's a long-term lifestyle change.",
+  "Focus on how far you've come, not how far you have to go.",
+  "Consistency beats intensity every single time.",
+  "Your body is a reflection of your effort.",
+  "Nutrition is the foundation of wellness.",
+  "Small changes today, big results tomorrow.",
+  "Fuel your body like you love it.",
+  "Healthy habits create healthy lives.",
+  "Every meal is a chance to nourish your body.",
+  "Good nutrition is self-respect in action.",
+  "What you eat today shapes your tomorrow.",
+  "Discipline is choosing what you want most over what you want now.",
+  "Strong bodies are built in the kitchen.",
+  "Make food your ally, not your enemy.",
+  "The best project you'll ever work on is yourself.",
+  "Healthy eating is a form of self-care.",
+  "Your future self is watching your choices today.",
+  "Success starts with one healthy decision.",
+  "A balanced diet fuels a balanced life.",
+  "Take care of your body; it's the only place you have to live.",
+  "Every healthy choice counts.",
+  "Don't count calories, make calories count.",
+  "Eat with purpose, live with energy.",
+  "Wellness begins with what's on your plate.",
+  "Healthy eating isn't a punishment, it's a privilege.",
+  "Nourish your body and your mind will follow.",
+  "Small improvements compound into big transformations.",
+  "Choose foods that love you back.",
+  "The secret ingredient is consistency.",
+  "Good nutrition is the ultimate performance enhancer.",
+  "Healthy eating is an investment, not an expense.",
+  "Eat better, feel better, perform better.",
+  "Your habits shape your health.",
+  "Every bite is a vote for your future.",
+  "The goal is progress, not perfection.",
+  "Healthy choices become healthy habits.",
+  "Feed your goals, not your cravings.",
+  "Energy starts with nutrition.",
+  "Results come from repeated healthy actions.",
+  "Your body keeps score of your choices.",
+  "Eat smart today, thrive tomorrow.",
+  "Wellness is built one meal at a time.",
+  "Healthy living starts with healthy eating.",
+  "The strongest form of self-love is taking care of your health.",
+]; //Quotes that randomly generate
+
+function getDailyQuote() {
+  const date = new Date();
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date.getTime() - start.getTime();
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  return NUTRITION_QUOTES[dayOfYear % NUTRITION_QUOTES.length];
+}
 
 type SavedMeal = {
   id?: number | string;
@@ -71,59 +139,59 @@ function buildQuests(
     },
   ];
 }
-  //manual craft insights but may change depending on scale of the free ai that can be used
-  function generateInsight(
-    remainingCalories: number,
-    remainingProtein: number,
-    remainingCarbs: number,
-    remainingFats: number,
-    fitnessGoal: string,
-    mealsLoggedToday: number,
-    totalCalories: number,
-  ): string {
-    const goalLabel = fitnessGoal.replace("_", " ");
+//manual craft insights but may change depending on scale of the free ai that can be used
+function generateInsight(
+  remainingCalories: number,
+  remainingProtein: number,
+  remainingCarbs: number,
+  remainingFats: number,
+  fitnessGoal: string,
+  mealsLoggedToday: number,
+  totalCalories: number,
+): string {
+  const goalLabel = fitnessGoal.replace("_", " ");
 
-    // Hard over on calories
-    if (remainingCalories < -300)
-      return `You're ${Math.abs(remainingCalories)} kcal over today. Skip further snacks and close the day with a light, protein-rich dinner to limit the damage.`;
-    // Slightly over for calories
-    if (remainingCalories < 0 && remainingCalories >= -300)
-      return `You're ${Math.abs(remainingCalories)} kcal over but not critical. A 20-minute walk burns roughly 100 kcal and helps with digestion too.`;
-    // High protein gap but almost no calories left
-    if (remainingProtein > 30 && remainingCalories < 300)
-      return `${remainingProtein}g protein still needed but only ${remainingCalories} kcal left. A whey isolate shake (~120 kcal, 25g protein) or egg whites are your best options here.`;
-    // Protein hit but more than 300 calories remaining 
-    if (remainingProtein <= 0 && remainingCalories > 300)
-      return `Protein target nailed. You have ${remainingCalories} kcal left! use it on complex carbs like oats, sweet potato, or brown rice to fuel tomorrow's session.`;
-    // Protein hit, calories nearly done too
-    if (
-      remainingProtein <= 0 &&
-      remainingCalories <= 300 &&
-      remainingCalories > 0
-    )
-      return `Almost perfect day! Protein done, ${remainingCalories} kcal to spare. A piece of fruit or a handful of nuts closes it out cleanly.`;
-    // Fat is very high
-    if (remainingFats < -15)
-      return `Fat intake is running high today (${Math.abs(remainingFats)}g over). Keep your remaining meals lean. Grilled protein, vegetables, and skip any added oils or dressings.`;
-    // Nothing logged yet
-    if (mealsLoggedToday === 0)
-      return `Nothing logged yet today. Start with a high-protein breakfast — eggs, Greek yoghurt, or a shake to front-load your ${goalLabel} targets and reduce evening cravings.`;
-    // Under half calories by afternoon / evening 
-    if (totalCalories < remainingCalories * 0.4 && mealsLoggedToday >= 1)
-      return `You've used less than half your calorie budget so far. Make sure you're eating enough — under-fuelling on a ${goalLabel} plan stalls progress just as much as overeating.`;
-    // Carbs low for muscle gain
-    if (fitnessGoal === "muscle_gain" && remainingCarbs > 100)
-      return `You're ${remainingCarbs}g short on carbs. For muscle gain, carbs drive your training performance. Eat rice, pasta, or a banana before your next session would help.`;
-    // Fat loss and on track
-    if (
-      fitnessGoal === "fat_loss" &&
-      remainingCalories > 100 &&
-      remainingProtein < 20
-    )
-      return `Great deficit day. Protein is nearly there, a small lean protein source at dinner keeps muscle preserved while you're in the cut.`;
-    // All good
-    return `You're on track for your ${goalLabel} goal. Keep your next meal balanced and you'll close today cleanly.`;
-  }
+  // Hard over on calories
+  if (remainingCalories < -300)
+    return `You're ${Math.abs(remainingCalories)} kcal over today. Skip further snacks and close the day with a light, protein-rich dinner to limit the damage.`;
+  // Slightly over for calories
+  if (remainingCalories < 0 && remainingCalories >= -300)
+    return `You're ${Math.abs(remainingCalories)} kcal over but not critical. A 20-minute walk burns roughly 100 kcal and helps with digestion too.`;
+  // High protein gap but almost no calories left
+  if (remainingProtein > 30 && remainingCalories < 300)
+    return `${remainingProtein}g protein still needed but only ${remainingCalories} kcal left. A whey isolate shake (~120 kcal, 25g protein) or egg whites are your best options here.`;
+  // Protein hit but more than 300 calories remaining
+  if (remainingProtein <= 0 && remainingCalories > 300)
+    return `Protein target nailed. You have ${remainingCalories} kcal left! use it on complex carbs like oats, sweet potato, or brown rice to fuel tomorrow's session.`;
+  // Protein hit, calories nearly done too
+  if (
+    remainingProtein <= 0 &&
+    remainingCalories <= 300 &&
+    remainingCalories > 0
+  )
+    return `Almost perfect day! Protein done, ${remainingCalories} kcal to spare. A piece of fruit or a handful of nuts closes it out cleanly.`;
+  // Fat is very high
+  if (remainingFats < -15)
+    return `Fat intake is running high today (${Math.abs(remainingFats)}g over). Keep your remaining meals lean. Grilled protein, vegetables, and skip any added oils or dressings.`;
+  // Nothing logged yet
+  if (mealsLoggedToday === 0)
+    return `Nothing logged yet today. Start with a high-protein breakfast — eggs, Greek yoghurt, or a shake to front-load your ${goalLabel} targets and reduce evening cravings.`;
+  // Under half calories by afternoon / evening
+  if (totalCalories < remainingCalories * 0.4 && mealsLoggedToday >= 1)
+    return `You've used less than half your calorie budget so far. Make sure you're eating enough — under-fuelling on a ${goalLabel} plan stalls progress just as much as overeating.`;
+  // Carbs low for muscle gain
+  if (fitnessGoal === "muscle_gain" && remainingCarbs > 100)
+    return `You're ${remainingCarbs}g short on carbs. For muscle gain, carbs drive your training performance. Eat rice, pasta, or a banana before your next session would help.`;
+  // Fat loss and on track
+  if (
+    fitnessGoal === "fat_loss" &&
+    remainingCalories > 100 &&
+    remainingProtein < 20
+  )
+    return `Great deficit day. Protein is nearly there, a small lean protein source at dinner keeps muscle preserved while you're in the cut.`;
+  // All good
+  return `You're on track for your ${goalLabel} goal. Keep your next meal balanced and you'll close today cleanly.`;
+}
 
 export default function NutritionPage() {
   const router = useRouter();
@@ -146,7 +214,9 @@ export default function NutritionPage() {
   // Modal configuration states
   const [showMealModal, setShowMealModal] = useState(false);
   const [mealName, setMealName] = useState("");
-  const [modalMode, setModalMode] = useState<"create" | "edit_log" | "edit_saved">("create");
+  const [modalMode, setModalMode] = useState<
+    "create" | "edit_log" | "edit_saved"
+  >("create");
   const [editingId, setEditingId] = useState<string | number | null>(null);
 
   const [mealType, setMealType] = useState("Lunch");
@@ -162,7 +232,9 @@ export default function NutritionPage() {
 
   //Quests n Xp
   const [totalXP, setTotalXP] = useState(0);
-  const [awardedQuestIds, setAwardedQuestIds] = useState<Set<string>>(new Set());
+  const [awardedQuestIds, setAwardedQuestIds] = useState<Set<string>>(
+    new Set(),
+  );
   const totalCalories = meals.reduce((s, m) => s + m.calories, 0);
   const totalProtein = meals.reduce((s, m) => s + m.protein, 0);
   const totalCarbs = meals.reduce((s, m) => s + m.carbs, 0);
@@ -256,7 +328,9 @@ export default function NutritionPage() {
           fetch(`${API_BASE}/api/user/metrics`, { credentials: "include" }),
           fetch(`${API_BASE}/api/supplements`, { credentials: "include" }),
           fetch(`${API_BASE}/api/user/xp`, { credentials: "include" }),
-          fetch(`${API_BASE}/api/nutrition/history?days=7`, { credentials: "include"}),
+          fetch(`${API_BASE}/api/nutrition/history?days=7`, {
+            credentials: "include",
+          }),
         ]);
 
       if (historyRes.ok) setHistory(await historyRes.json());
@@ -541,8 +615,7 @@ export default function NutritionPage() {
     border: "1px solid #cbd5e1",
     color: "#1e293b",
   };
-
-  return (
+return (
     <div
       style={{
         minHeight: "100vh",
@@ -592,58 +665,185 @@ export default function NutritionPage() {
           Loading nutrition panel...
         </p>
       ) : (
-        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-          <QuestPanel quests={quests} totalXP={totalXP} />
-          <NutritionChart
-            history={history}
-            calorieTarget={targets.calories}
-            proteinTarget={targets.protein}
-          />
+        <div className="nutrition-grid">
+          {/* Left column consisting of Meal Logging & Supplements */}
+          <div className="nutrition-col">
+            {/* Removed the fixed-height 'nutrition-wrapper' class */}
+            <div className="tracker-wrapper">
+              <NutritionTracker
+                meals={meals}
+                onAddMealClick={openCreateModal}
+                onEditMealClick={openEditLogModal}
+                onDeleteMealClick={handleDeleteLog}
+                calorieTarget={targets.calories}
+                proteinTarget={targets.protein}
+                fitnessGoal={metricsForm.goal}
+              />
+            </div>
 
-          {/* Insight section thats newly added, might change see how */}
-          <div
-            style={{
-              background: "var(--color-background-primary)",
-              border: "0.5px solid var(--color-border-tertiary)",
-              borderRadius: "var(--border-radius-lg)",
-              padding: "1rem 1.25rem",
-              marginBottom: "1.5rem",
-              display: "flex",
-              gap: 12,
-              alignItems: "flex-start",
-            }}
-          >
-            <Lightbulb
-              size={18}
-              style={{ color: "#f59e0b", flexShrink: 0, marginTop: 1 }}
-            />
-            <p
+            {/* Supplement Tracker */}
+            {/* Removed the fixed-height 'supplement-wrapper' class */}
+            <div className="tracker-wrapper">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                <h3 style={{ margin: 0, fontSize: "16px", color: "var(--color-text-primary)" }}>Supplements</h3>
+                <button 
+                  onClick={() => setShowSuppModal(true)}
+                  style={{ background: "none", border: "none", color: "#4f46e5", cursor: "pointer", fontSize: "13px", fontWeight: 600 }}
+                >
+                  + Add New
+                </button>
+              </div>
+              <SupplementTracker
+                supplements={supplements}
+                checkedIds={checkedSupps}
+                onToggle={handleToggleSupp}
+                onDelete={handleDeleteSupp}
+              />
+            </div>
+
+            {/* Daily Motivation Quote */}
+            <div
               style={{
-                margin: 0,
-                fontSize: 13,
-                color: "var(--color-text-primary)",
-                lineHeight: 1.6,
+                background: "var(--color-background-primary)",
+                border: "0.5px solid var(--color-border-tertiary)",
+                borderRadius: "var(--border-radius-lg)",
+                padding: "2.5rem 2rem",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              {insight}
-            </p>
+              <span
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#64748b",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                Quote of the Day
+              </span>
+
+              <div
+                style={{
+                  position: "relative",
+                  padding: "0 1.5rem",
+                  textAlign: "center",
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-25px",
+                    left: "-15px",
+                    fontSize: "64px",
+                    color: "#e2e8f0",
+                    fontFamily: "Georgia, serif",
+                    lineHeight: 1,
+                  }}
+                >
+                  &ldquo;
+                </span>
+
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "22px",
+                    fontWeight: 700,
+                    color: "#0f172a",
+                    lineHeight: 1.4,
+                    letterSpacing: "-0.5px",
+                    position: "relative",
+                    zIndex: 1,
+                  }}
+                >
+                  {getDailyQuote()}
+                </p>
+
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: "-45px",
+                    right: "-15px",
+                    fontSize: "64px",
+                    color: "#e2e8f0",
+                    fontFamily: "Georgia, serif",
+                    lineHeight: 1,
+                  }}
+                >
+                  &rdquo;
+                </span>
+              </div>
+            </div>
           </div>
-          <NutritionTracker
-            meals={meals}
-            onAddMealClick={openCreateModal}
-            onEditMealClick={openEditLogModal}
-            onDeleteMealClick={handleDeleteLog}
-            calorieTarget={targets.calories}
-            proteinTarget={targets.protein}
-            fitnessGoal={metricsForm.goal}
-          />
-          <SupplementTracker
-            supplements={supplements}
-            checkedIds={checkedSupps}
-            onToggle={handleToggleSupp}
-            onAdd={handleAddSupp}
-            onDelete={handleDeleteSupp}
-          />
+          
+          {/* Right column - Quests & Progress */}
+          <div className="nutrition-col">
+            <QuestPanel quests={quests} totalXP={totalXP} />
+            <NutritionChart
+              history={history}
+              calorieTarget={targets.calories}
+              proteinTarget={targets.protein}
+            />
+            {/* Insight section */}
+            <div
+              style={{
+                background: "var(--color-background-primary)",
+                border: "0.5px solid var(--color-border-tertiary)",
+                borderRadius: "var(--border-radius-lg)",
+                padding: "1rem 1.25rem",
+                display: "flex",
+                gap: 12,
+                alignItems: "flex-start",
+              }}
+            >
+              <Lightbulb
+                size={18}
+                style={{ color: "#f59e0b", flexShrink: 0, marginTop: 1 }}
+              />
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  color: "var(--color-text-primary)",
+                  lineHeight: 1.6,
+                }}
+              >
+                {insight}
+              </p>
+            </div>
+          </div>
+
+          <style jsx>{`
+            .nutrition-grid {
+              max-width: 1280px;
+              margin: 0 auto;
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1.5rem;
+              align-items: start;
+            }
+            .nutrition-col {
+              display: flex;
+              flex-direction: column;
+              gap: 1.5rem;
+            }
+            .tracker-wrapper {
+              background: var(--color-background-primary);
+              border: 0.5px solid var(--color-border-tertiary);
+              border-radius: var(--border-radius-lg);
+              padding: 1.5rem;
+            }
+
+            @media (max-width: 900px) {
+              .nutrition-grid {
+                grid-template-columns: 1fr;
+              }
+            }
+          `}</style>
         </div>
       )}
 
@@ -738,7 +938,6 @@ export default function NutritionPage() {
                 >
                   Height (cm)
                 </label>
-                {/* make it optional so users arent forced*/}
                 <input
                   type="number"
                   min="50"

@@ -93,10 +93,30 @@ export default function DashboardPage() {
       const days = [...h.completedDays];
       const wasOn = days[todayIndex];
       days[todayIndex] = !days[todayIndex];
+
+      let newStreak = 0;
+      if (days[todayIndex]) {
+        // If we just turned it ON, count backwards from today
+        for (let i = todayIndex; i >= 0; i--) {
+          if (days[i]) {
+            newStreak++;
+          } else {
+            break;
+          }
+        }
+      } else {
+        // If we just turned it OFF, streak resets to 0
+        newStreak = 0;
+      }
+
+      // totalDays always increments (never decrements)
+      const newTotalDays = wasOn ? (h.totalDays || 0) : (h.totalDays || 0) + 1;
+
       return {
         ...h,
         completedDays: days,
-        streak: wasOn ? Math.max(0, h.streak - 1) : h.streak + 1,
+        streak: newStreak,
+        totalDays: newTotalDays,
       };
     });
   });
@@ -107,6 +127,19 @@ export default function DashboardPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Sync failed");
+      // Sync authoritative streak + totalDays from server to prevent drift on rapid toggling
+      const data = await res.json();
+      setHabits((prev) =>
+        prev.map((h) =>
+          h.id !== id
+            ? h
+            : {
+                ...h,
+                streak: data.streak ?? h.streak,
+                totalDays: data.totalDays ?? h.totalDays,
+              }
+        )
+      );
     } catch (err) {
       console.error(err);
       setHabits(fallbackHabits); // Roll back if network breaks

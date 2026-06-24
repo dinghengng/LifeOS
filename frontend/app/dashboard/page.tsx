@@ -13,6 +13,35 @@ import Navbar from "../../components/Navbar";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
+const GOAL_CATEGORIES = ["Fitness", "Spiritual", "Relationship", "Career", "Finance"];
+const GOAL_CATEGORY_ICONS: Record<string, string> = {
+  Fitness: "🏃",
+  Spiritual: "🧘",
+  Relationship: "❤️",
+  Career: "💼",
+  Finance: "💰",
+};
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function getYearOptions(): number[] {
+  const currentYear = new Date().getFullYear();
+  return Array.from({ length: 11 }, (_, i) => currentYear + i); // 10 years, long enough for a goal
+}
+
+// Parses a saved "Month Year" string (e.g. "May 2026") back into separate parts for editing.
+// Falls back to empty strings if the format doesn't match 
+function parseDueDate(dueDate: string): { month: string; year: string } {
+  const match = dueDate.trim().match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if (match && MONTH_NAMES.includes(match[1])) {
+    return { month: match[1], year: match[2] };
+  }
+  return { month: "", year: "" };
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -33,9 +62,10 @@ export default function DashboardPage() {
   const [habitColor, setHabitColor] = useState("#1D9E75");
 
   const [goalTitle, setGoalTitle] = useState("");
-  const [goalCategory, setGoalCategory] = useState("Fitness");
+  const [goalCategory, setGoalCategory] = useState(GOAL_CATEGORIES[0]);
   const [goalColor, setGoalColor] = useState("#534AB7");
-  const [goalDueDate, setGoalDueDate] = useState("");
+  const [goalMonth, setGoalMonth] = useState("");
+  const [goalYear, setGoalYear] = useState("");
   const [goalMilestones, setGoalMilestones] = useState("");
 
   // Track which habit/goal (if any) is currently being edited
@@ -247,7 +277,9 @@ export default function DashboardPage() {
     setGoalTitle(goal.title);
     setGoalCategory(goal.category);
     setGoalColor(goal.color);
-    setGoalDueDate(goal.dueDate);
+    const { month, year } = parseDueDate(goal.dueDate);
+    setGoalMonth(month);
+    setGoalYear(year);
     setGoalMilestones(goal.milestones.map((m) => m.label).join("\n"));
     setShowGoalModal(true);
   }
@@ -255,9 +287,10 @@ export default function DashboardPage() {
   function resetGoalForm() {
   setEditingGoalId(null);
   setGoalTitle("");
-  setGoalCategory("Fitness");
+  setGoalCategory(GOAL_CATEGORIES[0]);
   setGoalColor("#534AB7");
-  setGoalDueDate("");
+  setGoalMonth("");
+  setGoalYear("");
   setGoalMilestones("");
 }
 
@@ -318,7 +351,9 @@ export default function DashboardPage() {
   // Handle Form Submission for create Goal
   async function handleCreateGoal(e: React.FormEvent) {
     e.preventDefault();
-    if (!goalTitle.trim() || !goalDueDate.trim()) return;
+    if (!goalTitle.trim() || !goalMonth || !goalYear) return;
+
+    const goalDueDate = `${goalMonth} ${goalYear}`; 
 
     const milestonesArray = goalMilestones
       .split("\n")
@@ -388,7 +423,8 @@ export default function DashboardPage() {
         setGoals([...goals, newGoal]);
         setShowGoalModal(false);
         setGoalTitle("");
-        setGoalDueDate("");
+        setGoalMonth("");
+        setGoalYear("");
         setGoalMilestones("");
       }
     } catch (err) {
@@ -601,11 +637,11 @@ export default function DashboardPage() {
                     color: "#1e293b",
                   }}
                 >
-                  <option value="🏃">🏃 Physical</option>
+                  <option value="🏃">🏃 Fitness</option>
                   <option value="🧘">🧘 Spiritual</option>
-                  <option value="💧">💧 Health</option>
-                  <option value="🥗">🥗 Food</option>
-                  <option value="💻">💻 Study or Work?</option>
+                  <option value="❤️">❤️ Relationship</option>
+                  <option value="💼">💼 Career</option>
+                  <option value="💰">💰 Finance</option>
                 </select>
               </div>
               <div
@@ -729,38 +765,82 @@ export default function DashboardPage() {
               required
             />
             
-            <div style={{ display: "flex", gap: "12px", width: "100%" }}>
-              <input
-                type="text"
-                placeholder="Category (e.g. Health)"
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "12px", color: "#64748b" }}>
+                Category
+              </span>
+              <select
                 value={goalCategory}
                 onChange={(e) => setGoalCategory(e.target.value)}
                 style={{
-                  flex: 1,
-                  minWidth: 0, 
                   padding: "8px",
                   borderRadius: "6px",
                   border: "1px solid #cbd5e1",
                   color: "#1e293b",
+                  width: "100%",
                   boxSizing: "border-box",
                 }}
-              />
-              <input
-                type="text"
-                placeholder="Target Date (e.g. Dec 2026)"
-                value={goalDueDate}
-                onChange={(e) => setGoalDueDate(e.target.value)}
-                style={{
-                  flex: 1,
-                  minWidth: 0, 
-                  padding: "8px",
-                  borderRadius: "6px",
-                  border: "1px solid #cbd5e1",
-                  color: "#1e293b",
-                  boxSizing: "border-box",
-                }}
-                required
-              />
+              >
+                {GOAL_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {GOAL_CATEGORY_ICONS[cat]} {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{ fontSize: "12px", color: "#64748b" }}>
+                Target Date
+              </span>
+              <div style={{ display: "flex", gap: "12px", width: "100%" }}>
+                <select
+                  value={goalMonth}
+                  onChange={(e) => setGoalMonth(e.target.value)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: "8px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    color: goalMonth ? "#1e293b" : "#94a3b8",
+                    boxSizing: "border-box",
+                  }}
+                  required
+                >
+                  <option value="" disabled>
+                    Month
+                  </option>
+                  {MONTH_NAMES.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={goalYear}
+                  onChange={(e) => setGoalYear(e.target.value)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: "8px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    color: goalYear ? "#1e293b" : "#94a3b8",
+                    boxSizing: "border-box",
+                  }}
+                  required
+                >
+                  <option value="" disabled>
+                    Year
+                  </option>
+                  {getYearOptions().map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>

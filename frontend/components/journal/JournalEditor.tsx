@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -19,6 +19,7 @@ interface JournalEditorProps {
   onCancel?: () => void;
   compact?: boolean;
   promptText?: string | null;
+  jumpToEditorToken?: number;
 }
 
 export default function JournalEditor({
@@ -28,6 +29,7 @@ export default function JournalEditor({
   onCancel,
   compact = false,
   promptText = null,
+  jumpToEditorToken = 0,
 }: JournalEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,7 @@ export default function JournalEditor({
   const [title, setTitle] = useState("");
   const [isPromptLocked, setIsPromptLocked] = useState(false);
   const { showToast } = useToastContext();
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -81,6 +84,17 @@ export default function JournalEditor({
       setIsPromptLocked(true);
     }
   }, [promptText]);
+
+  useEffect(() => {
+    if (!jumpToEditorToken || !editor) return;
+
+    setIsExpanded(true);
+
+    requestAnimationFrame(() => {
+      containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => editor.commands.focus("end"), 150);
+    });
+  }, [jumpToEditorToken, editor]);
 
   const handleSave = async () => {
     if (!editor || !hasContent) return;
@@ -128,8 +142,7 @@ export default function JournalEditor({
   };
 
   return (
-    <div className={compact ? "w-full" : "bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 w-full max-w-3xl overflow-hidden"}>
-
+    <div ref={containerRef} className={ compact ? "w-full" : "bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 w-full max-w-3xl overflow-hidden"}>
       {/*Toolbar*/}
       {isExpanded && editor && (
         <div className="flex gap-1 px-3 pt-3 pb-1 border-b border-slate-100 flex-wrap">

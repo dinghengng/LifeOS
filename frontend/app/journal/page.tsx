@@ -24,6 +24,7 @@ export default function JournalPage() {
   const [activeTab, setActiveTab] = useState<Tab>("mood"); 
   const [pendingMoodLogId, setPendingMoodLogId] = useState<number | null>(null);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+  const [promptJumpToken, setPromptJumpToken] = useState(0);
   const [moodConfig, setMoodConfig] = useState<MoodLevelConfig[]>([]);
   const router = useRouter();
 
@@ -78,7 +79,18 @@ export default function JournalPage() {
   const handleSelectPrompt = (prompt: Prompt) => {
     setSelectedPrompt(prompt);
     setActiveTab("write");
+    setPromptJumpToken((n) => n + 1);
   };
+
+  const usedMoodLogIds = new Set(
+    entries
+      .filter((entry) => entry.moodLogId !== null)
+      .map((entry) => entry.moodLogId as number)
+  );
+
+  const availableMoodLogs = logs.filter(
+    (log) => !usedMoodLogIds.has(log.id) || log.id === pendingMoodLogId
+  );
 
   const today = new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" });
 
@@ -170,9 +182,10 @@ export default function JournalPage() {
                 setSelectedPrompt(null);
                 setPendingMoodLogId(null);
               }}
-              moodLogs={logs}
+              moodLogs={availableMoodLogs}
               defaultMoodLogId={pendingMoodLogId}
               promptText={selectedPrompt?.text ?? null}
+              jumpToEditorToken={promptJumpToken}
             />
           </div>
         )}
@@ -184,6 +197,7 @@ export default function JournalPage() {
               logs={logs}
               tags={tags}
               entries={entries}
+              moodConfig={moodConfig}
               onRefresh={loadData}
               onTagsUpdated={(newTag) =>
                 setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))

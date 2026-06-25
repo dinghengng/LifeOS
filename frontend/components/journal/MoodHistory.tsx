@@ -1,19 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { MoodLog, MoodLevel, TagsResponse, Tag, JournalEntry } from "../../../shared/types";
+import { MoodLog, MoodLevel, TagsResponse, Tag, JournalEntry, MoodLevelConfig } from "../../../shared/types";
 import { deleteMoodLog, updateJournalEntry, deleteJournalEntry, } from "../../../shared/api";
 import EditMoodLogModal from "./EditMoodLogModal";
 import EditJournalEntryModal from "./EditJournalEntryModal";
 import JournalEditor from "./JournalEditor";
-
-const MOOD_CONFIG: Record<MoodLevel, { emoji: string; label: string; color: string }> = {
-  1: { emoji: "😢", label: "Awful",  color: "bg-red-100 text-red-700 border-red-200"      },
-  2: { emoji: "😕", label: "Bad",    color: "bg-orange-100 text-orange-700 border-orange-200" },
-  3: { emoji: "😐", label: "Okay",   color: "bg-yellow-100 text-yellow-700 border-yellow-200" },
-  4: { emoji: "🙂", label: "Good",   color: "bg-green-100 text-green-700 border-green-200"  },
-  5: { emoji: "😄", label: "Great",  color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
-};
 
 const STRESS_ANCHORS: Record<number, string> = {
   1: "Calm", 2: "Calm", 3: "Relaxed", 4: "Relaxed", 5: "Neutral",
@@ -44,17 +36,32 @@ function deriveTitle(entry: JournalEntry): string {
   return "Untitled Entry";
 }
 
+function getMoodDisplay(
+  level: MoodLevel,
+  moodConfig?: MoodLevelConfig[]
+): { emoji: string; label: string; color: string } {
+  const cfg = moodConfig?.find((m) => m.level === level);
+
+  return {
+    emoji: cfg?.emoji ?? "🙂",
+    label: cfg?.label ?? "Mood",
+    color: cfg?.color ?? "#6366f1",
+  };
+}
+
 interface MoodHistoryProps {
   logs: MoodLog[];
   tags: TagsResponse;
-  entries?: JournalEntry[];  
+  entries?: JournalEntry[];
+  moodConfig?: MoodLevelConfig[];  
   onRefresh: () => void;
   onTagsUpdated: (tag: Tag) => void;
 }
 
-function LinkToMoodButton({ entry, logs, onLinked }: {
+function LinkToMoodButton({ entry, logs, moodConfig, onLinked }: {
   entry: JournalEntry;
   logs: MoodLog[];
+  moodConfig?: MoodLevelConfig[];
   onLinked: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -93,11 +100,14 @@ function LinkToMoodButton({ entry, logs, onLinked }: {
         className="text-xs border border-indigo-300 rounded-lg px-2 py-1 bg-white text-slate-600 max-w-40"
       >
         <option value="">Select mood...</option>
-        {logs.map((log) => (
-          <option key={log.id} value={log.id}>
-            {MOOD_CONFIG[log.moodLevel].emoji} {formatLogTime(log.loggedAt)}
-          </option>
-        ))}
+        {logs.map((log) => {
+          const mood = getMoodDisplay(log.moodLevel, moodConfig);
+          return (
+            <option key={log.id} value={log.id}>
+              {mood.emoji} {formatLogTime(log.loggedAt)}
+            </option>
+          );
+        })}
       </select>
       <button
         onClick={() => setOpen(false)}
@@ -110,7 +120,7 @@ function LinkToMoodButton({ entry, logs, onLinked }: {
 }
 
 
-export default function MoodHistory({ logs, tags, entries, onRefresh, onTagsUpdated }: MoodHistoryProps) {
+export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh, onTagsUpdated }: MoodHistoryProps) {
   const [editingLog, setEditingLog] = useState<MoodLog | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +134,12 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
       entryByMoodLog.set(entry.moodLogId, entry);
     }
   }
+
+  const linkedMoodLogIds = new Set(
+    (entries ?? [])
+      .filter((e) => e.moodLogId !== null)
+      .map((e) => e.moodLogId as number)
+  );
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this mood entry? This cannot be undone.")) return;
@@ -180,7 +196,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
       {editingEntry && (
         <EditJournalEntryModal
           entry={editingEntry}
-          logs={logs}
+          logs={logs.filter((log) => log.id === editingEntry.moodLogId || !linkedMoodLogIds.has(log.id))}
           onSaved={onRefresh}
           onClose={() => setEditingEntry(null)}
         />
@@ -197,7 +213,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
 
         <ul className="space-y-3">
           {logs.map((log) => {
-            const mood = MOOD_CONFIG[log.moodLevel];
+            const mood = getMoodDisplay(log.moodLevel, moodConfig);
             const linkedEntry = entryByMoodLog.get(log.id);
             const isAddingNote = expandedNoteId === log.id;
             return (
@@ -208,14 +224,21 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                 {/*Mood log row*/}
                 <div className="p-4 flex items-start gap-4">
                   {/*Mood emoji*/}
-                  <div className={`flex flex-col items-center justify-center rounded-xl border px-3 py-2 min-w-15 ${mood.color}`}>
+                  <div
+                    className="flex flex-col items-center justify-center rounded-xl border px-3 py-2 min-w-[60px]"
+                    style={{
+                      borderColor: mood.color,
+                      backgroundColor: `${mood.color}18`,
+                      color: mood.color,
+                    }}
+                  >
                     <span className="text-2xl">{mood.emoji}</span>
                     <span className="text-xs font-semibold mt-0.5">{mood.label}</span>
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-700 mb-0.5">
-                      Felt {mood.label}
+                      {linkedEntry ? deriveTitle(linkedEntry) : `Felt ${mood.label}`}
                     </p>
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-xs text-slate-400">{formatLogTime(log.loggedAt)}</span>
@@ -269,10 +292,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                     </p>
                   ) : linkedEntry ? (
                     <p className="text-sm text-slate-600 line-clamp-2">
-                      📝 <span className="font-medium">{deriveTitle(linkedEntry)}</span>
-                      {stripHtml(linkedEntry.content ?? "") && (
-                        <span className="text-slate-400"> · {stripHtml(linkedEntry.content ?? "").slice(0, 80)}</span>
-                      )}
+                      {stripHtml(linkedEntry.content ?? "") || "No journal text yet."}
                     </p>
                   ) : (
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -337,7 +357,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
 
                 <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/60 flex justify-between items-center">
                   {entry.moodLogId === null && (
-                    <LinkToMoodButton entry={entry} logs={logs} onLinked={onRefresh} />
+                    <LinkToMoodButton entry={entry} logs={logs.filter((log) => !linkedMoodLogIds.has(log.id))} moodConfig={moodConfig} onLinked={onRefresh}/>
                   )}
                 </div>
               </li>

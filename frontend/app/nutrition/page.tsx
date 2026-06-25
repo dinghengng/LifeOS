@@ -18,7 +18,6 @@ import NutritionChart, {
 } from "../../components/nutrition/NutritionChart";
 import { Lightbulb } from "lucide-react";
 import Navbar from "../../components/Navbar";
-import { useToastContext } from "../../components/notifications/ToastContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -264,8 +263,6 @@ export default function NutritionPage() {
     targets.protein,
   );
 
-  const { showToast } = useToastContext();
-
   const [history, setHistory] = useState<DayData[]>([]);
 
   // Award XP when a quest first flips to completed; persist to backend
@@ -285,7 +282,6 @@ export default function NutritionPage() {
     if (changed) {
       setTotalXP(newXP);
       setAwardedQuestIds(newIds);
-      showToast("Quest complete, XP earned", "success");
       fetch(`${API_BASE}/api/user/xp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -376,7 +372,6 @@ export default function NutritionPage() {
     } catch (err) {
       console.error(err);
       setError("Failed to load data.");
-      showToast("Failed to load nutrition data", "error");
     } finally {
       setDataLoading(false);
     }
@@ -405,14 +400,11 @@ export default function NutritionPage() {
       if (res.ok) {
         const created = await res.json();
         setSupplements((prev) => [...prev, created]);
-        showToast("Supplement added", "success");
       } else {
         setSupplements((prev) => [...prev, { ...s, id: `temp-${Date.now()}` }]);
-        showToast("Save failed.", "info");
       }
     } catch {
       setSupplements((prev) => [...prev, { ...s, id: `temp-${Date.now()}` }]);
-      showToast("No connection", "info");
     }
   };
 
@@ -453,13 +445,9 @@ export default function NutritionPage() {
           calculateTargets(parseFloat(metricsForm.weight), metricsForm.goal);
         }
         setShowMetricsModal(false);
-        showToast("Targets saved", "success");
-      } else {
-        showToast("Failed to save targets", "error");
       }
     } catch (err) {
       console.error("Failed to save metrics", err);
-      showToast("Something went wrong", "error");
     }
   };
 
@@ -584,26 +572,18 @@ export default function NutritionPage() {
               body: JSON.stringify(payload),
             });
             fetchNutritionData(); // Refresh saved meals list to save changes
-            showToast("Meal logged and saved", "success");
-          } else {
-            showToast("Meal logged", "success");
           }
         } else if (modalMode === "edit_log") {
           const updatedMeal = await res.json();
           setMeals(meals.map((m) => (m.id === editingId ? updatedMeal : m)));
-          showToast("Meal updated", "success");
         } else if (modalMode === "edit_saved") {
           fetchNutritionData(); // Refresh saved meals list to save changes
-          showToast("Saved meal updated", "success");
         }
 
         setShowMealModal(false);
-      } else {
-        showToast("Failed to save meal", "error");
       }
     } catch (err) {
       console.error(err);
-      showToast("Something went wrong", "error");
     }
   }
 
@@ -680,6 +660,86 @@ export default function NutritionPage() {
 
         <div style={{ display: "flex", gap: "8px" }}>
           <Navbar onLogout={handleLogout} />
+        </div>
+      </div>
+
+      {/* Daily Motivation Quote */}
+      <div
+        style={{
+          maxWidth: 1280,
+          margin: "0 auto 1.5rem",
+          background: "var(--color-background-primary)",
+          border: "0.5px solid var(--color-border-tertiary)",
+          borderRadius: "var(--border-radius-lg)",
+          padding: "2.5rem 2rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <span
+          style={{
+            fontSize: "12px",
+            fontWeight: 600,
+            color: "#64748b",
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            marginBottom: "1.5rem",
+          }}
+        >
+          Quote of the Day
+        </span>
+
+        <div
+          style={{
+            position: "relative",
+            padding: "0 1.5rem",
+            textAlign: "center",
+          }}
+        >
+          <span
+            style={{
+              position: "absolute",
+              top: "-25px",
+              left: "-15px",
+              fontSize: "64px",
+              color: "#e2e8f0",
+              fontFamily: "Georgia, serif",
+              lineHeight: 1,
+            }}
+          >
+            &ldquo;
+          </span>
+
+          <p
+            style={{
+              margin: 0,
+              fontSize: "22px",
+              fontWeight: 700,
+              color: "#0f172a",
+              lineHeight: 1.4,
+              letterSpacing: "-0.5px",
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
+            {getDailyQuote()}
+          </p>
+
+          <span
+            style={{
+              position: "absolute",
+              bottom: "-45px",
+              right: "-15px",
+              fontSize: "64px",
+              color: "#e2e8f0",
+              fontFamily: "Georgia, serif",
+              lineHeight: 1,
+            }}
+          >
+            &rdquo;
+          </span>
         </div>
       </div>
 
@@ -767,85 +827,6 @@ export default function NutritionPage() {
                   onDelete={handleDeleteSupp}
                 />
               )}
-            </div>
-
-
-            {/* Daily Motivation Quote */}
-            <div
-              style={{
-                background: "var(--color-background-primary)",
-                border: "0.5px solid var(--color-border-tertiary)",
-                borderRadius: "var(--border-radius-lg)",
-                padding: "2.5rem 2rem",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#64748b",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  marginBottom: "1.5rem",
-                }}
-              >
-                Quote of the Day
-              </span>
-
-              <div
-                style={{
-                  position: "relative",
-                  padding: "0 1.5rem",
-                  textAlign: "center",
-                }}
-              >
-                <span
-                  style={{
-                    position: "absolute",
-                    top: "-25px",
-                    left: "-15px",
-                    fontSize: "64px",
-                    color: "#e2e8f0",
-                    fontFamily: "Georgia, serif",
-                    lineHeight: 1,
-                  }}
-                >
-                  &ldquo;
-                </span>
-
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "22px",
-                    fontWeight: 700,
-                    color: "#0f172a",
-                    lineHeight: 1.4,
-                    letterSpacing: "-0.5px",
-                    position: "relative",
-                    zIndex: 1,
-                  }}
-                >
-                  {getDailyQuote()}
-                </p>
-
-                <span
-                  style={{
-                    position: "absolute",
-                    bottom: "-45px",
-                    right: "-15px",
-                    fontSize: "64px",
-                    color: "#e2e8f0",
-                    fontFamily: "Georgia, serif",
-                    lineHeight: 1,
-                  }}
-                >
-                  &rdquo;
-                </span>
-              </div>
             </div>
           </div>
 

@@ -117,62 +117,50 @@ export default function DashboardPage() {
   const STREAK_MILESTONES = [7, 30, 100];
 
 // habit toggle
-  async function toggleToday(id: string) {
-  const todayIndex = getTodayIndexSGT();
-  let fallbackHabits: Habit[] = [];
-  let milestoneHit: { name: string; streak: number } | null = null;
+ async function toggleToday(id: string) {
+    const todayIndex = getTodayIndexSGT();
+    
+    // Find the target habit and calculate the new state FIRST
+    const targetHabit = habits.find((h) => h.id === id);
+    if (!targetHabit) return;
 
-  setHabits((prev) => {
-    fallbackHabits = prev;
-    return prev.map((h) => {
-      if (h.id !== id) return h;
-      const days = [...h.completedDays];
-      const wasOn = days[todayIndex];
-      days[todayIndex] = !days[todayIndex];
+    const days = [...targetHabit.completedDays];
+    const wasOn = days[todayIndex];
+    days[todayIndex] = !days[todayIndex];
 
-      let newStreak = 0;
-      if (days[todayIndex]) {
-        // If we just turned it ON, count backwards from today
-        for (let i = todayIndex; i >= 0; i--) {
-          if (days[i]) {
-            newStreak++;
-          } else {
-            break;
-          }
-        }
-      } else {
-        // If we just turned it OFF, streak resets to 0
-        newStreak = 0;
+    let newStreak = 0;
+    if (days[todayIndex]) {
+      for (let i = todayIndex; i >= 0; i--) {
+        if (days[i]) newStreak++;
+        else break;
       }
+    }
 
-      // Only celebrate when the streak just reached a milestone on this toggle (not already past it)
-      if (newStreak > h.streak && STREAK_MILESTONES.includes(newStreak)) {
-        milestoneHit = { name: h.name, streak: newStreak };
-      }
+    // Trigger the toast immediately if a milestone is hit
+    if (newStreak > targetHabit.streak && STREAK_MILESTONES.includes(newStreak)) {
+      showToast(`🔥 ${newStreak}-day streak on "${targetHabit.name}"!`, "success");
+    }
 
-      // totalDays always increments (never decrements)
-      const newTotalDays = wasOn ? (h.totalDays || 0) : (h.totalDays || 0) + 1;
+    const newTotalDays = wasOn ? (targetHabit.totalDays || 0) : (targetHabit.totalDays || 0) + 1;
 
-      return {
-        ...h,
-        completedDays: days,
-        streak: newStreak,
-        totalDays: newTotalDays,
-      };
-    });
-  });
+    // Update the UI 
+    const fallbackHabits = [...habits];
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === id
+          ? { ...h, completedDays: days, streak: newStreak, totalDays: newTotalDays }
+          : h
+      )
+    );
 
-  if (milestoneHit) {
-    showToast(`🔥 ${milestoneHit.streak}-day streak on "${milestoneHit.name}"!`, "success");
-  }
-
+    // Sync with the server
     try {
       const res = await fetch(`${API_BASE}/api/habits/${id}/toggle`, {
         method: "POST",
         credentials: "include",
       });
       if (!res.ok) throw new Error("Sync failed");
-      // Sync authoritative streak + totalDays from server to prevent drift on rapid toggling
+      
       const data = await res.json();
       setHabits((prev) =>
         prev.map((h) =>
@@ -188,7 +176,6 @@ export default function DashboardPage() {
     } catch (err) {
       console.error(err);
       setHabits(fallbackHabits); // Roll back if network breaks
-      //showToast("Failed to sync habit", "error");
     }
   }
 

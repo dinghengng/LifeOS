@@ -201,6 +201,7 @@ export default function NutritionPage() {
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSuppModal, setShowSuppModal] = useState(false);
 
   // Macro optimization depends on like the user height and weight + goals
   const [targets, setTargets] = useState({ calories: 2300, protein: 140 });
@@ -615,7 +616,7 @@ export default function NutritionPage() {
     border: "1px solid #cbd5e1",
     color: "#1e293b",
   };
-return (
+  return (
     <div
       style={{
         minHeight: "100vh",
@@ -684,11 +685,33 @@ return (
             {/* Supplement Tracker */}
             {/* Removed the fixed-height 'supplement-wrapper' class */}
             <div className="tracker-wrapper">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                <h3 style={{ margin: 0, fontSize: "16px", color: "var(--color-text-primary)" }}>Supplements</h3>
-                <button 
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "1rem",
+                }}
+              >
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "16px",
+                    color: "var(--color-text-primary)",
+                  }}
+                >
+                  Supplements
+                </h3>
+                <button
                   onClick={() => setShowSuppModal(true)}
-                  style={{ background: "none", border: "none", color: "#4f46e5", cursor: "pointer", fontSize: "13px", fontWeight: 600 }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#4f46e5",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                  }}
                 >
                   + Add New
                 </button>
@@ -697,6 +720,7 @@ return (
                 supplements={supplements}
                 checkedIds={checkedSupps}
                 onToggle={handleToggleSupp}
+                onAdd={handleAddSupp}
                 onDelete={handleDeleteSupp}
               />
             </div>
@@ -779,7 +803,7 @@ return (
               </div>
             </div>
           </div>
-          
+
           {/* Right column - Quests & Progress */}
           <div className="nutrition-col">
             <QuestPanel quests={quests} totalXP={totalXP} />

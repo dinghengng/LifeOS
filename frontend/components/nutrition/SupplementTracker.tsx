@@ -235,10 +235,17 @@ export default function SupplementTracker({
         </div>
       ) : (
         <>
-          <RoutineBlock label="Morning" color={timingColor.AM} items={amSupps} prefix="AM"
-            checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} />
-          <RoutineBlock label="Evening" color={timingColor.PM} items={pmSupps} prefix="PM"
-            checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} />
+          <div style={{
+            maxHeight: 280,
+            overflowY: "auto",
+            paddingRight: 4,
+            marginRight: -4,
+          }}>
+            <RoutineBlock label="Morning" color={timingColor.AM} items={amSupps} prefix="AM"
+              checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} />
+            <RoutineBlock label="Evening" color={timingColor.PM} items={pmSupps} prefix="PM"
+              checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} />
+          </div>
 
           {allDone && (
             <div style={{

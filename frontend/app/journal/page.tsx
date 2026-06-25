@@ -152,6 +152,7 @@ export default function JournalPage() {
                 setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
               }
               moodConfig={moodConfig}
+              userName = {user?.name}
             />
           </div>
         )}

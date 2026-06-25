@@ -33,9 +33,10 @@ interface MoodLoggerProps {
   tags: TagsResponse;
   onTagsUpdated: (tag: Tag) => void;
   moodConfig: MoodLevelConfig[];
+  userName?: string | null;
 }
 
-export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }: MoodLoggerProps) {
+export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig, userName, }: MoodLoggerProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); //1=mood, 2=stress, 3=tags
   const [selectedMood, setSelectedMood] = useState<MoodLevel | null>(null);
   const [stressLevel, setStressLevel] = useState<StressLevel>(5);
@@ -44,6 +45,7 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
   const [error, setError] = useState<string | null>(null);
   const [, forceUpdate] = useState(0);
   const { showToast } = useToastContext();
+  const greetingName = userName?.trim() || "you"; //user name defaults to "you"
 
   const noteEditor = useEditor({
     immediatelyRender: false,
@@ -114,7 +116,7 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
 
   return (
     <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-6 w-full max-w-3xl">
-      <h2 className="text-xl font-bold text-slate-800 mb-1 text-center">What made you feel that way?</h2>
+      <h2 className="text-xl font-bold text-slate-800 mb-1 text-center">Hey, {greetingName}. How are you today?</h2>
 
       {/* Step indicator */}
       <div className="flex justify-center gap-2 mb-6">
@@ -131,22 +133,29 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
       {/*STEP 1: MOOD SELECTION*/}
       {step === 1 && (
         <div className="flex flex-col items-center gap-4">
-          <p className="text-sm text-slate-500">Select your mood</p>
           <div className="flex gap-3 justify-center flex-wrap">
-            {moodConfig.map((mood) => (
-          <button
-            key={mood.level}
-            onClick={() => { setSelectedMood(mood.level as MoodLevel); setStep(2); }}
-            className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all hover:scale-105 ${
-              selectedMood === mood.level
-                ? "border-indigo-500 bg-indigo-50 scale-105"
-                : "border-slate-200 bg-white hover:border-slate-300"
-            }`}
-          >
-            <span className="text-3xl">{mood.emoji}</span>
-            <span className="text-xs font-medium text-slate-600">{mood.label}</span>
-          </button>
-        ))}
+            {moodConfig.map((mood) => {
+              const isSelected = selectedMood === mood.level;
+
+              return (
+                <button
+                  key={mood.level}
+                  onClick={() => {
+                    setSelectedMood(mood.level as MoodLevel);
+                    setStep(2);
+                  }}
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all hover:scale-105"
+                  style={{
+                    borderColor: mood.color,
+                    backgroundColor: isSelected ? `${mood.color}28` : `${mood.color}18`,
+                    boxShadow: isSelected ? `0 0 0 3px ${mood.color}22` : "none",
+                  }}
+                >
+                  <span className="text-4xl leading-none">{mood.emoji}</span>
+                  <span className="text-xs font-medium text-slate-700">{mood.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

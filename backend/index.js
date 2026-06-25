@@ -1,13 +1,13 @@
-// Importing all the tools we need for our server 
-const express = require('express');
+// Importing all the tools we need for our server
+const express = require("express");
 const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
-const cors = require('cors');
+const cors = require("cors");
 const crypto = require("crypto");
-const pool = require('./db');
-require('dotenv').config();
-const { createNotificationRouter } = require('./routes/notifications');
-const { startReminderJobs } = require('./jobs/reminderJob');
+const pool = require("./db");
+require("dotenv").config();
+const { createNotificationRouter } = require("./routes/notifications");
+const { startReminderJobs } = require("./jobs/reminderJob");
 
 // Instantiating our application instance by calling the express function
 const app = express();
@@ -23,21 +23,25 @@ app.use(
       if (!origin) return callback(null, true);
 
       const allowedOrigins = [
-        "http://localhost:3000",        // local Next.js
-        process.env.FRONTEND_URL,       // Vercel URL
+        "http://localhost:3000", // local Next.js
+        process.env.FRONTEND_URL, // Vercel URL
       ].filter(Boolean); // remove undefined
 
       // Matches local development domains and any incoming wireless subnet pattern variations
-      if (allowedOrigins.includes(origin) || origin.includes("192.168.1.") || origin.includes("192.168.")) {
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.includes("192.168.1.") ||
+        origin.includes("192.168.")
+      ) {
         return callback(null, true);
       }
 
       return callback(new Error("Not allowed by CORS"));
     },
-    credentials: true, 
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Explicitly allow preflight
-    allowedHeaders: ['Content-Type', 'Authorization']// Crucial: allows session cookies to pass through
-  })
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // Explicitly allow preflight
+    allowedHeaders: ["Content-Type", "Authorization"], // Crucial: allows session cookies to pass through
+  }),
 );
 
 // Hybrid Middleware: Checks browser cookies OR Mobile Authorization headers
@@ -67,7 +71,7 @@ const requireAuth = async (req, res, next) => {
        JOIN users ON sessions.user_id = users.id
        WHERE sessions.id = $1
          AND sessions.expires_at > NOW()`,
-      [sessionId]
+      [sessionId],
     );
 
     if (result.rows.length === 0) {
@@ -83,7 +87,7 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
-app.use('/api/notifications', createNotificationRouter(requireAuth));
+app.use("/api/notifications", createNotificationRouter(requireAuth));
 
 // REGISTER A NEW USER ACCOUNT
 app.post("/auth/register", async (req, res) => {
@@ -93,14 +97,15 @@ app.post("/auth/register", async (req, res) => {
     return res.status(400).json({ error: "Email and password are required" });
   }
   if (password.length < 8) {
-    return res.status(400).json({ error: "Password must be at least 8 characters" });
+    return res
+      .status(400)
+      .json({ error: "Password must be at least 8 characters" });
   }
 
   try {
-    const existing = await pool.query(
-      "SELECT id FROM users WHERE email = $1",
-      [email.toLowerCase().trim()]
-    );
+    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [
+      email.toLowerCase().trim(),
+    ]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: "Email already in use" });
     }
@@ -111,7 +116,7 @@ app.post("/auth/register", async (req, res) => {
       `INSERT INTO users (email, password_hash, name)
        VALUES ($1, $2, $3)
        RETURNING id, email, name`,
-      [email.toLowerCase().trim(), passwordHash, name || null]
+      [email.toLowerCase().trim(), passwordHash, name || null],
     );
     const newUser = userResult.rows[0];
 
@@ -120,7 +125,7 @@ app.post("/auth/register", async (req, res) => {
 
     await pool.query(
       "INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)",
-      [sessionId, newUser.id, expiresAt]
+      [sessionId, newUser.id, expiresAt],
     );
 
     // Set cookie for web browsers
@@ -132,13 +137,19 @@ app.post("/auth/register", async (req, res) => {
     });
 
     // Mobile apps look inside the JSON response body payload directly for authentication parameters
-    res.status(201).json({ id: newUser.id, email: newUser.email, name: newUser.name, token: sessionId });
+    res
+      .status(201)
+      .json({
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        token: sessionId,
+      });
   } catch (err) {
     console.error("Register error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // USER LOGIN
 app.post("/auth/login", async (req, res) => {
@@ -149,10 +160,9 @@ app.post("/auth/login", async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email.toLowerCase().trim()]
-    );
+    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
+      email.toLowerCase().trim(),
+    ]);
 
     if (result.rows.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -170,7 +180,7 @@ app.post("/auth/login", async (req, res) => {
 
     await pool.query(
       "INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)",
-      [sessionId, user.id, expiresAt]
+      [sessionId, user.id, expiresAt],
     );
 
     const cookieOptions = {
@@ -186,13 +196,17 @@ app.post("/auth/login", async (req, res) => {
     res.cookie("sessionId", sessionId, cookieOptions);
 
     // Hand back token property configuration targets explicitly to authenticate your Expo phone environments
-    res.json({ id: user.id, email: user.email, name: user.name, token: sessionId });
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      token: sessionId,
+    });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 // USER LOGOUT
 app.post("/auth/logout", requireAuth, async (req, res) => {
@@ -214,18 +228,17 @@ app.post("/auth/logout", requireAuth, async (req, res) => {
   }
 });
 
-
 // GET CURRENT LOGGED-IN USER
 app.get("/auth/me", requireAuth, async (req, res) => {
   res.json({ id: req.user.id, email: req.user.email, name: req.user.name });
 });
 
 // RETRIEVE ALL TASKS (GET REQUEST)
-app.get('/tasks', requireAuth, async (req, res) => {
+app.get("/tasks", requireAuth, async (req, res) => {
   try {
     const allTasks = await pool.query(
       "SELECT * FROM tasks WHERE user_id = $1 ORDER BY id ASC",
-      [req.user.id]
+      [req.user.id],
     );
     res.json(allTasks.rows);
   } catch (err) {
@@ -234,9 +247,8 @@ app.get('/tasks', requireAuth, async (req, res) => {
   }
 });
 
-
 // CREATE A NEW TASK (POST REQUEST)
-app.post('/tasks', requireAuth, async (req, res) => {
+app.post("/tasks", requireAuth, async (req, res) => {
   try {
     const { title, dueDate, priority } = req.body;
     const safePriority = ["critical", "high", "low", "none"].includes(priority)
@@ -245,7 +257,7 @@ app.post('/tasks', requireAuth, async (req, res) => {
 
     const newTask = await pool.query(
       "INSERT INTO tasks (title, due_date, priority, user_id) VALUES($1, $2, $3, $4) RETURNING *",
-      [title, dueDate || null, safePriority, req.user.id]
+      [title, dueDate || null, safePriority, req.user.id],
     );
     res.status(201).json(newTask.rows[0]);
   } catch (err) {
@@ -254,18 +266,17 @@ app.post('/tasks', requireAuth, async (req, res) => {
   }
 });
 
-
 // UPDATE TASK STATUS (PUT REQUEST)
-app.put('/tasks/:id', requireAuth, async (req, res) => {
+app.put("/tasks/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { isCompleted } = req.body;
-    
+
     const updateTask = await pool.query(
       "UPDATE tasks SET is_completed = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
-      [isCompleted, id, req.user.id]
+      [isCompleted, id, req.user.id],
     );
-    
+
     if (updateTask.rows.length === 0) {
       return res.status(404).json({ error: "Task not found" });
     }
@@ -277,9 +288,8 @@ app.put('/tasks/:id', requireAuth, async (req, res) => {
   }
 });
 
-
 // EDIT TASK DETAILS (PATCH REQUEST)
-app.patch('/tasks/:id', requireAuth, async (req, res) => {
+app.patch("/tasks/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, dueDate, priority } = req.body;
@@ -298,7 +308,7 @@ app.patch('/tasks/:id', requireAuth, async (req, res) => {
       WHERE id = $4 AND user_id = $5
       RETURNING *
       `,
-      [title ?? null, dueDate ?? null, safePriority, id, req.user.id]
+      [title ?? null, dueDate ?? null, safePriority, id, req.user.id],
     );
 
     if (updateTask.rows.length === 0) {
@@ -312,14 +322,13 @@ app.patch('/tasks/:id', requireAuth, async (req, res) => {
   }
 });
 
-
 // PERMANENTLY ERASE A TASK (DELETE REQUEST)
-app.delete('/tasks/:id', requireAuth, async (req, res) => {
+app.delete("/tasks/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
       "DELETE FROM tasks WHERE id = $1 AND user_id = $2 RETURNING *",
-      [id, req.user.id]
+      [id, req.user.id],
     );
 
     if (result.rows.length === 0) {
@@ -335,14 +344,14 @@ app.delete('/tasks/:id', requireAuth, async (req, res) => {
 
 // Get mood tags (Start of feature 4:Journal)
 // returns tags + user created tags
-app.get('/mood/tags', requireAuth, async (req, res) => {
+app.get("/mood/tags", requireAuth, async (req, res) => {
   try {
     const systemTags = await pool.query(
-      "SELECT id, name, 'system' AS type FROM tags ORDER BY name ASC"
+      "SELECT id, name, 'system' AS type FROM tags ORDER BY name ASC",
     );
     const userTags = await pool.query(
       "SELECT id, name, 'custom' AS type FROM user_tags WHERE user_id = $1 ORDER BY name ASC",
-      [req.user.id]
+      [req.user.id],
     );
     res.json({ system: systemTags.rows, custom: userTags.rows });
   } catch (err) {
@@ -352,7 +361,7 @@ app.get('/mood/tags', requireAuth, async (req, res) => {
 });
 
 // Creates a custom "Other" tag
-app.post('/mood/tags/custom', requireAuth, async (req, res) => {
+app.post("/mood/tags/custom", requireAuth, async (req, res) => {
   const { name } = req.body;
 
   if (!name || !name.trim()) {
@@ -365,7 +374,7 @@ app.post('/mood/tags/custom', requireAuth, async (req, res) => {
        VALUES ($1, $2)
        ON CONFLICT (user_id, name) DO UPDATE SET name = EXCLUDED.name
        RETURNING id, name, 'custom' AS type`,
-      [req.user.id, name.trim().toLowerCase()]
+      [req.user.id, name.trim().toLowerCase()],
     ); //return exisiting tag if name already in use
 
     res.status(201).json(result.rows[0]);
@@ -405,11 +414,20 @@ app.delete('/mood/tags/custom/:id', requireAuth, async (req, res) => {
 
 // Create mood log
 // create mood entry with stress level and tags
-app.post('/mood/logs', requireAuth, async (req, res) => {
-  const { mood_level, stress_level, systemTagIds = [], customTagIds = [], loggedAt, note } = req.body;
+app.post("/mood/logs", requireAuth, async (req, res) => {
+  const {
+    mood_level,
+    stress_level,
+    systemTagIds = [],
+    customTagIds = [],
+    loggedAt,
+    note,
+  } = req.body;
 
   if (!mood_level || !stress_level) {
-    return res.status(400).json({ error: "mood_level and stress_level are required" });
+    return res
+      .status(400)
+      .json({ error: "mood_level and stress_level are required" });
   }
 
   try {
@@ -417,20 +435,26 @@ app.post('/mood/logs', requireAuth, async (req, res) => {
       `INSERT INTO mood_logs (user_id, mood_level, stress_level, logged_at, note)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [req.user.id, mood_level, stress_level, loggedAt || new Date().toISOString(), note || null]
+      [
+        req.user.id,
+        mood_level,
+        stress_level,
+        loggedAt || new Date().toISOString(),
+        note || null,
+      ],
     );
     const newLog = logResult.rows[0];
 
     for (const tagId of systemTagIds) {
       await pool.query(
         "INSERT INTO mood_log_tags (mood_log_id, tag_id) VALUES ($1, $2)",
-        [newLog.id, tagId]
+        [newLog.id, tagId],
       );
     }
     for (const userTagId of customTagIds) {
       await pool.query(
         "INSERT INTO mood_log_tags (mood_log_id, user_tag_id) VALUES ($1, $2)",
-        [newLog.id, userTagId]
+        [newLog.id, userTagId],
       );
     }
 
@@ -441,14 +465,14 @@ app.post('/mood/logs', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/mood/logs', requireAuth, async (req, res) => {
+app.get("/mood/logs", requireAuth, async (req, res) => {
   try {
     const logsResult = await pool.query(
       `SELECT id, mood_level, stress_level, logged_at, created_at, note
        FROM mood_logs
        WHERE user_id = $1
        ORDER BY logged_at DESC`,
-      [req.user.id]
+      [req.user.id],
     );
 
     if (logsResult.rows.length === 0) return res.json([]);
@@ -464,7 +488,7 @@ app.get('/mood/logs', requireAuth, async (req, res) => {
        LEFT JOIN tags t       ON mlt.tag_id = t.id
        LEFT JOIN user_tags ut ON mlt.user_tag_id = ut.id
        WHERE mlt.mood_log_id = ANY($1)`,
-      [logIds]
+      [logIds],
     );
 
     const tagsByLog = {};
@@ -490,14 +514,21 @@ app.get('/mood/logs', requireAuth, async (req, res) => {
 
 // Edit mood log
 // Updates mood level, stress level, tags, backfilled time
-app.patch('/mood/logs/:id', requireAuth, async (req, res) => {
+app.patch("/mood/logs/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { mood_level, stress_level, systemTagIds, customTagIds, loggedAt, note } = req.body;
+  const {
+    mood_level,
+    stress_level,
+    systemTagIds,
+    customTagIds,
+    loggedAt,
+    note,
+  } = req.body;
 
   try {
     const existing = await pool.query(
       "SELECT id FROM mood_logs WHERE id = $1 AND user_id = $2",
-      [id, req.user.id]
+      [id, req.user.id],
     );
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: "Mood log not found" });
@@ -513,23 +544,32 @@ app.patch('/mood/logs/:id', requireAuth, async (req, res) => {
          note         = COALESCE($4, note)
        WHERE id = $5 AND user_id = $6
        RETURNING *`,
-      [mood_level ?? null, stress_level ?? null, loggedAt ?? null, note ?? null, id, req.user.id]
+      [
+        mood_level ?? null,
+        stress_level ?? null,
+        loggedAt ?? null,
+        note ?? null,
+        id,
+        req.user.id,
+      ],
     );
 
     // Replace tags only if a new tag list was provided
     if (systemTagIds !== undefined || customTagIds !== undefined) {
-      await pool.query("DELETE FROM mood_log_tags WHERE mood_log_id = $1", [id]);
+      await pool.query("DELETE FROM mood_log_tags WHERE mood_log_id = $1", [
+        id,
+      ]);
 
       for (const tagId of systemTagIds || []) {
         await pool.query(
           "INSERT INTO mood_log_tags (mood_log_id, tag_id) VALUES ($1, $2)",
-          [id, tagId]
+          [id, tagId],
         );
       }
       for (const userTagId of customTagIds || []) {
         await pool.query(
           "INSERT INTO mood_log_tags (mood_log_id, user_tag_id) VALUES ($1, $2)",
-          [id, userTagId]
+          [id, userTagId],
         );
       }
     }
@@ -543,12 +583,12 @@ app.patch('/mood/logs/:id', requireAuth, async (req, res) => {
 
 // Delete mood log
 // Sets mood log to null
-app.delete('/mood/logs/:id', requireAuth, async (req, res) => {
+app.delete("/mood/logs/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
       "DELETE FROM mood_logs WHERE id = $1 AND user_id = $2 RETURNING *",
-      [id, req.user.id]
+      [id, req.user.id],
     );
 
     if (result.rows.length === 0) {
@@ -563,7 +603,7 @@ app.delete('/mood/logs/:id', requireAuth, async (req, res) => {
 });
 
 // Get journal entries
-app.get('/journal', requireAuth, async (req, res) => {
+app.get("/journal", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT
@@ -581,7 +621,7 @@ app.get('/journal', requireAuth, async (req, res) => {
        LEFT JOIN mood_logs ml ON je.mood_log_id = ml.id
        WHERE je.user_id = $1
        ORDER BY je.created_at DESC`,
-      [req.user.id]
+      [req.user.id],
     );
     res.json(result.rows);
   } catch (err) {
@@ -591,7 +631,7 @@ app.get('/journal', requireAuth, async (req, res) => {
 });
 
 // Create journal entry
-app.post('/journal', requireAuth, async (req, res) => {
+app.post("/journal", requireAuth, async (req, res) => {
   const { content, mood_log_id, prompt_used, title } = req.body;
 
   if (!content || !content.trim()) {
@@ -602,7 +642,7 @@ app.post('/journal', requireAuth, async (req, res) => {
     if (mood_log_id) {
       const check = await pool.query(
         "SELECT id FROM mood_logs WHERE id = $1 AND user_id = $2",
-        [mood_log_id, req.user.id]
+        [mood_log_id, req.user.id],
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: "Invalid mood log reference" });
@@ -613,7 +653,13 @@ app.post('/journal', requireAuth, async (req, res) => {
       `INSERT INTO journal_entries (user_id, mood_log_id, content, prompt_used, title)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [req.user.id, mood_log_id || null, content, prompt_used || null, title || null]
+      [
+        req.user.id,
+        mood_log_id || null,
+        content,
+        prompt_used || null,
+        title || null,
+      ],
     );
 
     res.status(201).json(result.rows[0]);
@@ -624,14 +670,14 @@ app.post('/journal', requireAuth, async (req, res) => {
 });
 
 // Edit journal entry
-app.patch('/journal/:id', requireAuth, async (req, res) => {
+app.patch("/journal/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   const { content, mood_log_id, title } = req.body;
 
   try {
     const existing = await pool.query(
       "SELECT id FROM journal_entries WHERE id = $1 AND user_id = $2",
-      [id, req.user.id]
+      [id, req.user.id],
     );
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: "Journal entry not found" });
@@ -640,7 +686,7 @@ app.patch('/journal/:id', requireAuth, async (req, res) => {
     if (mood_log_id !== undefined) {
       const check = await pool.query(
         "SELECT id FROM mood_logs WHERE id = $1 AND user_id = $2",
-        [mood_log_id, req.user.id]
+        [mood_log_id, req.user.id],
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: "Invalid mood log reference" });
@@ -656,7 +702,7 @@ app.patch('/journal/:id', requireAuth, async (req, res) => {
          updated_at  = NOW()
        WHERE id = $4 AND user_id = $5
        RETURNING *`,
-      [content ?? null, mood_log_id ?? null, title ?? null, id, req.user.id]
+      [content ?? null, mood_log_id ?? null, title ?? null, id, req.user.id],
     );
 
     res.json(result.rows[0]);
@@ -667,12 +713,12 @@ app.patch('/journal/:id', requireAuth, async (req, res) => {
 });
 
 // Delete journal entry
-app.delete('/journal/:id', requireAuth, async (req, res) => {
+app.delete("/journal/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
       "DELETE FROM journal_entries WHERE id = $1 AND user_id = $2 RETURNING *",
-      [id, req.user.id]
+      [id, req.user.id],
     );
 
     if (result.rows.length === 0) {
@@ -687,46 +733,51 @@ app.delete('/journal/:id', requireAuth, async (req, res) => {
 });
 
 // GET: mood packs
-app.get('/mood/emoji-packs', requireAuth, async (req, res) => {
+app.get("/mood/emoji-packs", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, emojis, is_default FROM emoji_packs ORDER BY is_default DESC, id ASC'
+      "SELECT id, name, emojis, is_default FROM emoji_packs ORDER BY is_default DESC, id ASC",
     );
     res.json(result.rows);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).send("Server Error");
   }
 });
 
 // GET: user chosen mood pack
-app.get('/mood/config', requireAuth, async (req, res) => {
+app.get("/mood/config", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, level, label, emoji, color, display_order
        FROM mood_levels
        WHERE user_id = $1
        ORDER BY display_order ASC`,
-      [req.user.id]
+      [req.user.id],
     );
     res.json(result.rows);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).send("Server Error");
   }
 });
 
 // PUT: all the mood packs to choose from
-app.put('/mood/config', requireAuth, async (req, res) => {
+app.put("/mood/config", requireAuth, async (req, res) => {
   const { levels } = req.body;
 
   if (!Array.isArray(levels) || levels.length !== 5) {
-    return res.status(400).json({ error: 'Exactly 5 mood levels required' });
+    return res.status(400).json({ error: "Exactly 5 mood levels required" });
   }
 
   for (const l of levels) {
-    if (![1, 2, 3, 4, 5].includes(l.level) || !l.label || !l.emoji || !l.color) {
-      return res.status(400).json({ error: 'Invalid mood level data' });
+    if (
+      ![1, 2, 3, 4, 5].includes(l.level) ||
+      !l.label ||
+      !l.emoji ||
+      !l.color
+    ) {
+      return res.status(400).json({ error: "Invalid mood level data" });
     }
   }
 
@@ -743,7 +794,14 @@ app.put('/mood/config', requireAuth, async (req, res) => {
            color         = EXCLUDED.color,
            display_order = EXCLUDED.display_order
          RETURNING id, level, label, emoji, color, display_order`,
-        [req.user.id, l.level, l.label, l.emoji, l.color, l.display_order ?? l.level - 1]
+        [
+          req.user.id,
+          l.level,
+          l.label,
+          l.emoji,
+          l.color,
+          l.display_order ?? l.level - 1,
+        ],
       );
       saved.push(result.rows[0]);
     }
@@ -751,29 +809,26 @@ app.put('/mood/config', requireAuth, async (req, res) => {
     res.json(saved);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).send("Server Error");
   }
 });
 
-
-// Feature 3: dashboard(HABITS & GOALS)
-
-app.get('/api/habits', requireAuth, async (req, res) => {
+app.get("/api/habits", requireAuth, async (req, res) => {
   try {
     const habitsResult = await pool.query(
-      'SELECT id, name, icon, color, streak, total_days FROM habits WHERE user_id = $1 ORDER BY id ASC',
-      [req.user.id]
+      "SELECT id, name, icon, color, category, streak, total_days FROM habits WHERE user_id = $1 ORDER BY id ASC",
+      [req.user.id],
     );
     const logsResult = await pool.query(
       `SELECT habit_id, completed_at::text FROM habit_logs 
        WHERE habit_id IN (SELECT id FROM habits WHERE user_id = $1)
        AND completed_at >= date_trunc('week', CURRENT_DATE AT TIME ZONE 'Asia/Singapore') AT TIME ZONE 'Asia/Singapore'`,
-      [req.user.id]
+      [req.user.id],
     );
 
     const completionMap = {};
-    logsResult.rows.forEach(log => {
-      const dateStr = log.completed_at.split(' ')[0]; 
+    logsResult.rows.forEach((log) => {
+      const dateStr = log.completed_at.split(" ")[0];
       if (!completionMap[log.habit_id]) {
         completionMap[log.habit_id] = new Set();
       }
@@ -781,7 +836,9 @@ app.get('/api/habits', requireAuth, async (req, res) => {
     });
 
     // Determine current week's Monday in SGT
-    const sgtDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Singapore' }).format(new Date());
+    const sgtDateStr = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Singapore",
+    }).format(new Date());
     const sgtToday = new Date(sgtDateStr);
     const jsDayOfWeek = sgtToday.getDay(); // 0=Sun n 6=Sat
     const todayIndexMon = (jsDayOfWeek + 6) % 7; // 0=Mon n 6=Sun
@@ -789,7 +846,7 @@ app.get('/api/habits', requireAuth, async (req, res) => {
     monday.setDate(sgtToday.getDate() - todayIndexMon);
 
     // Widen the log fetch window to cover full week (Mon to Sun)
-    const habits = habitsResult.rows.map(habit => {
+    const habits = habitsResult.rows.map((habit) => {
       const completedDays = [];
       const habitDatesSet = completionMap[habit.id] || new Set();
 
@@ -797,7 +854,7 @@ app.get('/api/habits', requireAuth, async (req, res) => {
       for (let i = 0; i < 7; i++) {
         const d = new Date(monday);
         d.setDate(monday.getDate() + i);
-        const dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
+        const dateStr = d.toISOString().split("T")[0]; // YYYY-MM-DD
         completedDays.push(habitDatesSet.has(dateStr));
       }
 
@@ -806,9 +863,10 @@ app.get('/api/habits', requireAuth, async (req, res) => {
         name: habit.name,
         icon: habit.icon,
         color: habit.color,
+        category: habit.category,
         streak: habit.streak,
         totalDays: habit.total_days || 0,
-        completedDays
+        completedDays,
       };
     });
 
@@ -820,15 +878,15 @@ app.get('/api/habits', requireAuth, async (req, res) => {
 });
 
 // TOGGLE completion status for id
-app.post('/api/habits/:id/toggle', requireAuth, async (req, res) => {
+app.post("/api/habits/:id/toggle", requireAuth, async (req, res) => {
   const habitId = req.params.id;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toISOString().split("T")[0];
 
   try {
     // Verify ownership of requested target habit parameter
     const verifyOwnership = await pool.query(
-      'SELECT id, streak, total_days FROM habits WHERE id = $1 AND user_id = $2',
-      [habitId, req.user.id]
+      "SELECT id, streak, total_days FROM habits WHERE id = $1 AND user_id = $2",
+      [habitId, req.user.id],
     );
     if (verifyOwnership.rows.length === 0) {
       return res.status(404).json({ error: "Habit configuration not found" });
@@ -836,48 +894,58 @@ app.post('/api/habits/:id/toggle', requireAuth, async (req, res) => {
     const currentHabit = verifyOwnership.rows[0];
 
     const checkLog = await pool.query(
-      'SELECT id FROM habit_logs WHERE habit_id = $1 AND completed_at = $2',
-      [habitId, todayStr]
+      "SELECT id FROM habit_logs WHERE habit_id = $1 AND completed_at = $2",
+      [habitId, todayStr],
     );
 
     if (checkLog.rows.length > 0) {
       // Done then Untoggle (Delete the log entry, decrement streak, don't touch totalDays)
-      await pool.query('DELETE FROM habit_logs WHERE habit_id = $1 AND completed_at = $2', [habitId, todayStr]);
+      await pool.query(
+        "DELETE FROM habit_logs WHERE habit_id = $1 AND completed_at = $2",
+        [habitId, todayStr],
+      );
       // Recalculate totalDays from log count after deletion (source of truth)
       const totalDaysOff = await pool.query(
-        'SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1',
-        [habitId]
+        "SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1",
+        [habitId],
       );
       const newTotalDaysOff = parseInt(totalDaysOff.rows[0].total);
       const updatedOff = await pool.query(
-        'UPDATE habits SET streak = GREATEST(0, streak - 1), total_days = $2 WHERE id = $1 RETURNING streak, total_days',
-        [habitId, newTotalDaysOff]
+        "UPDATE habits SET streak = GREATEST(0, streak - 1), total_days = $2 WHERE id = $1 RETURNING streak, total_days",
+        [habitId, newTotalDaysOff],
       );
-      res.json({ completed: false, streak: updatedOff.rows[0].streak, totalDays: updatedOff.rows[0].total_days });
+      res.json({
+        completed: false,
+        streak: updatedOff.rows[0].streak,
+        totalDays: updatedOff.rows[0].total_days,
+      });
     } else {
       // Not done then Toggle (Insert log entry, calculate new streak, increment totalDays only once)
-      await pool.query('INSERT INTO habit_logs (habit_id, completed_at) VALUES ($1, $2)', [habitId, todayStr]);
-      
+      await pool.query(
+        "INSERT INTO habit_logs (habit_id, completed_at) VALUES ($1, $2)",
+        [habitId, todayStr],
+      );
+
       // Get all logs for this habit to calculate proper streak
       const logsResult = await pool.query(
         `SELECT completed_at::text FROM habit_logs 
          WHERE habit_id = $1 
          ORDER BY completed_at DESC`,
-        [habitId]
+        [habitId],
       );
 
       // Calculate streak: count consecutive days backwards from today (Diff logic from total days)
       let newStreak = 0;
       const today = new Date(todayStr);
-      
+
       for (let i = 0; i < logsResult.rows.length; i++) {
-        const logDate = new Date(logsResult.rows[i].completed_at.split(' ')[0]);
+        const logDate = new Date(logsResult.rows[i].completed_at.split(" ")[0]);
         const expectedDate = new Date(today);
         expectedDate.setDate(expectedDate.getDate() - i);
-        
-        const logDateStr = logDate.toISOString().split('T')[0];
-        const expectedDateStr = expectedDate.toISOString().split('T')[0];
-        
+
+        const logDateStr = logDate.toISOString().split("T")[0];
+        const expectedDateStr = expectedDate.toISOString().split("T")[0];
+
         if (logDateStr === expectedDateStr) {
           newStreak++;
         } else {
@@ -887,16 +955,20 @@ app.post('/api/habits/:id/toggle', requireAuth, async (req, res) => {
 
       // Increment totalDays by counting all-time logs (source of truth, prevents drift)
       const totalDaysResult = await pool.query(
-        'SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1',
-        [habitId]
+        "SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1",
+        [habitId],
       );
       const newTotalDays = parseInt(totalDaysResult.rows[0].total);
-      
+
       const updatedOn = await pool.query(
-        'UPDATE habits SET streak = $1, total_days = $2 WHERE id = $3 RETURNING streak, total_days',
-        [newStreak, newTotalDays, habitId]
+        "UPDATE habits SET streak = $1, total_days = $2 WHERE id = $3 RETURNING streak, total_days",
+        [newStreak, newTotalDays, habitId],
       );
-      res.json({ completed: true, streak: updatedOn.rows[0].streak, totalDays: updatedOn.rows[0].total_days });
+      res.json({
+        completed: true,
+        streak: updatedOn.rows[0].streak,
+        totalDays: updatedOn.rows[0].total_days,
+      });
     }
   } catch (err) {
     console.error("Toggle habit error:", err.message);
@@ -905,40 +977,40 @@ app.post('/api/habits/:id/toggle', requireAuth, async (req, res) => {
 });
 
 // fetch all goals with the checklists
-app.get('/api/goals', requireAuth, async (req, res) => {
+app.get("/api/goals", requireAuth, async (req, res) => {
   try {
     const goalsResult = await pool.query(
       'SELECT id, title, category, color, progress, due_date AS "dueDate" FROM goals WHERE user_id = $1 ORDER BY id ASC',
-      [req.user.id]
+      [req.user.id],
     );
 
     if (goalsResult.rows.length === 0) return res.json([]);
 
-    const goalIds = goalsResult.rows.map(g => g.id);
+    const goalIds = goalsResult.rows.map((g) => g.id);
     const milestonesResult = await pool.query(
-      'SELECT id, goal_id, label, is_done AS done FROM goal_milestones WHERE goal_id = ANY($1) ORDER BY display_order ASC',
-      [goalIds]
+      "SELECT id, goal_id, label, is_done AS done FROM goal_milestones WHERE goal_id = ANY($1) ORDER BY display_order ASC",
+      [goalIds],
     );
 
     const milestonesMap = {};
-    milestonesResult.rows.forEach(ms => {
+    milestonesResult.rows.forEach((ms) => {
       if (!milestonesMap[ms.goal_id]) {
         milestonesMap[ms.goal_id] = [];
       }
       milestonesMap[ms.goal_id].push({
         label: ms.label,
-        done: ms.done
+        done: ms.done,
       });
     });
 
-    const goals = goalsResult.rows.map(goal => ({
+    const goals = goalsResult.rows.map((goal) => ({
       id: String(goal.id),
       title: goal.title,
       category: goal.category,
       color: goal.color,
       progress: goal.progress,
       dueDate: goal.dueDate,
-      milestones: milestonesMap[goal.id] || []
+      milestones: milestonesMap[goal.id] || [],
     }));
 
     res.json(goals);
@@ -949,16 +1021,16 @@ app.get('/api/goals', requireAuth, async (req, res) => {
 });
 
 // CREATE A NEW HABIT
-app.post('/api/habits', requireAuth, async (req, res) => {
-  const { name, icon, color } = req.body;
+app.post("/api/habits", requireAuth, async (req, res) => {
+  const { name, icon, color, category } = req.body;
   if (!name) return res.status(400).json({ error: "Name is required" });
 
   try {
     const result = await pool.query(
-      `INSERT INTO habits (user_id, name, icon, color, total_days) 
-       VALUES ($1, $2, $3, $4, 0) 
-       RETURNING id, name, icon, color, streak, total_days`,
-      [req.user.id, name, icon || '🏃', color || '#1D9E75']
+      `INSERT INTO habits (user_id, name, icon, color, category, total_days) 
+       VALUES ($1, $2, $3, $4, $5, 0) 
+       RETURNING id, name, icon, color, category, streak, total_days`,
+      [req.user.id, name, icon || "🏃", color || "#1D9E75", category || null],
     );
 
     // Format to match frontend structure with empty 7 days array
@@ -967,9 +1039,10 @@ app.post('/api/habits', requireAuth, async (req, res) => {
       name: result.rows[0].name,
       icon: result.rows[0].icon,
       color: result.rows[0].color,
+      category: result.rows[0].category,
       streak: result.rows[0].streak,
       totalDays: result.rows[0].total_days || 0,
-      completedDays: [false, false, false, false, false, false, false]
+      completedDays: [false, false, false, false, false, false, false],
     };
     res.status(201).json(newHabit);
   } catch (err) {
@@ -979,17 +1052,17 @@ app.post('/api/habits', requireAuth, async (req, res) => {
 });
 
 // CREATE A NEW GOAL
-app.post('/api/goals', requireAuth, async (req, res) => {
+app.post("/api/goals", requireAuth, async (req, res) => {
   const { title, category, color, dueDate, milestones = [] } = req.body;
-  if (!title || !dueDate) return res.status(400).json({ error: "Title and Due Date are required" });
-
+  if (!title || !dueDate)
+    return res.status(400).json({ error: "Title and Due Date are required" });
   try {
     // Insert goal
     const goalResult = await pool.query(
       `INSERT INTO goals (user_id, title, category, color, progress, due_date) 
        VALUES ($1, $2, $3, $4, 0, $5) 
        RETURNING id, title, category, color, progress, due_date AS "dueDate"`,
-      [req.user.id, title, category || 'General', color || '#534AB7', dueDate]
+      [req.user.id, title, category || "General", color || "#534AB7", dueDate],
     );
     const newGoal = goalResult.rows[0];
 
@@ -1001,7 +1074,7 @@ app.post('/api/goals', requireAuth, async (req, res) => {
         `INSERT INTO goal_milestones (goal_id, label, is_done, display_order) 
          VALUES ($1, $2, FALSE, $3) 
          RETURNING label, is_done AS done`,
-        [newGoal.id, milestones[i].trim(), i]
+        [newGoal.id, milestones[i].trim(), i],
       );
       savedMilestones.push(msResult.rows[0]);
     }
@@ -1009,7 +1082,7 @@ app.post('/api/goals', requireAuth, async (req, res) => {
     res.status(201).json({
       ...newGoal,
       id: String(newGoal.id),
-      milestones: savedMilestones
+      milestones: savedMilestones,
     });
   } catch (err) {
     console.error("Create goal error:", err.message);
@@ -1018,12 +1091,14 @@ app.post('/api/goals', requireAuth, async (req, res) => {
 });
 
 // Optimized & Secure: Toggle Goal Milestone by Index
-app.patch('/api/goals/:goalId/milestones/:milestoneIndex', requireAuth, async (req, res) => {
-  const { goalId, milestoneIndex } = req.params;
-
-  try {
-    const milestoneResult = await pool.query(
-      `UPDATE goal_milestones 
+app.patch(
+  "/api/goals/:goalId/milestones/:milestoneIndex",
+  requireAuth,
+  async (req, res) => {
+    const { goalId, milestoneIndex } = req.params;
+    try {
+      const milestoneResult = await pool.query(
+        `UPDATE goal_milestones 
        SET is_done = NOT is_done 
        FROM goals
        WHERE goal_milestones.goal_id = $1 
@@ -1031,51 +1106,65 @@ app.patch('/api/goals/:goalId/milestones/:milestoneIndex', requireAuth, async (r
          AND goal_milestones.goal_id = goals.id 
          AND goals.user_id = $3
        RETURNING goal_milestones.goal_id, goal_milestones.is_done`,
-      [goalId, milestoneIndex, req.user.id]
-    );
+        [goalId, milestoneIndex, req.user.id],
+      );
 
-    if (milestoneResult.rows.length === 0) {
-      return res.status(404).json({ error: "Milestone not found or unauthorized" });
-    }
+      if (milestoneResult.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: "Milestone not found or unauthorized" });
+      }
 
-    const { goal_id, is_done } = milestoneResult.rows[0];
-    const statsResult = await pool.query(
-      `SELECT 
+      const { goal_id, is_done } = milestoneResult.rows[0];
+      const statsResult = await pool.query(
+        `SELECT 
          COUNT(*) AS total,
          COUNT(*) FILTER (WHERE is_done = TRUE) AS completed
        FROM goal_milestones 
        WHERE goal_id = $1`,
-      [goal_id]
-    );
-    const { total, completed } = statsResult.rows[0];
-    const newProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
-    await pool.query(
-      'UPDATE goals SET progress = $1 WHERE id = $2',
-      [newProgress, goal_id]
-    );
+        [goal_id],
+      );
+      const { total, completed } = statsResult.rows[0];
+      const newProgress = total > 0 ? Math.round((completed / total) * 100) : 0;
+      await pool.query("UPDATE goals SET progress = $1 WHERE id = $2", [
+        newProgress,
+        goal_id,
+      ]);
 
-    res.json({ goalId: String(goal_id), index: milestoneIndex, done: is_done, progress: newProgress });
-    
-  } catch (err) {
-    console.error("Toggle milestone error:", err.message);
-    res.status(500).send("Server Error");
-  }
-});
+      res.json({
+        goalId: String(goal_id),
+        index: milestoneIndex,
+        done: is_done,
+        progress: newProgress,
+      });
+    } catch (err) {
+      console.error("Toggle milestone error:", err.message);
+      res.status(500).send("Server Error");
+    }
+  },
+);
 
 // Edit habit
-app.patch('/api/habits/:id', requireAuth, async (req, res) => {
+app.patch("/api/habits/:id", requireAuth, async (req, res) => {
   const habitId = req.params.id;
-  const { name, icon, color } = req.body;
+  const { name, icon, color, category } = req.body;
 
   if (!name) return res.status(400).json({ error: "Name is required" });
 
   try {
     const result = await pool.query(
       `UPDATE habits 
-       SET name = $1, icon = $2, color = $3 
-       WHERE id = $4 AND user_id = $5
-       RETURNING id, name, icon, color, streak, total_days`,
-      [name, icon || '🏃', color || '#1D9E75', habitId, req.user.id]
+       SET name = $1, icon = $2, color = $3, category = $4 
+       WHERE id = $5 AND user_id = $6
+       RETURNING id, name, icon, color, category, streak, total_days`,
+      [
+        name,
+        icon || "🏃",
+        color || "#1D9E75",
+        category || null,
+        habitId,
+        req.user.id,
+      ],
     );
 
     if (result.rows.length === 0) {
@@ -1087,8 +1176,9 @@ app.patch('/api/habits/:id', requireAuth, async (req, res) => {
       name: result.rows[0].name,
       icon: result.rows[0].icon,
       color: result.rows[0].color,
+      category: result.rows[0].category,
       streak: result.rows[0].streak,
-      totalDays: result.rows[0].total_days || 0
+      totalDays: result.rows[0].total_days || 0,
     });
   } catch (err) {
     console.error("Update habit error:", err.message);
@@ -1097,19 +1187,19 @@ app.patch('/api/habits/:id', requireAuth, async (req, res) => {
 });
 
 // delete habit
-app.delete('/api/habits/:id', requireAuth, async (req, res) => {
+app.delete("/api/habits/:id", requireAuth, async (req, res) => {
   const habitId = req.params.id;
   try {
     const verifyOwnership = await pool.query(
-      'SELECT id FROM habits WHERE id = $1 AND user_id = $2',
-      [habitId, req.user.id]
+      "SELECT id FROM habits WHERE id = $1 AND user_id = $2",
+      [habitId, req.user.id],
     );
     if (verifyOwnership.rows.length === 0) {
       return res.status(404).json({ error: "Habit configuration not found" });
     }
     // Remove associated logs first to satisfy foreign key constraints
-    await pool.query('DELETE FROM habit_logs WHERE habit_id = $1', [habitId]);
-    await pool.query('DELETE FROM habits WHERE id = $1', [habitId]);
+    await pool.query("DELETE FROM habit_logs WHERE habit_id = $1", [habitId]);
+    await pool.query("DELETE FROM habits WHERE id = $1", [habitId]);
     res.json({ success: true });
   } catch (err) {
     console.error("Delete habit error:", err.message);
@@ -1118,36 +1208,40 @@ app.delete('/api/habits/:id', requireAuth, async (req, res) => {
 });
 
 // Edit goal
-app.patch('/api/goals/:id', requireAuth, async (req, res) => {
+app.patch("/api/goals/:id", requireAuth, async (req, res) => {
   const goalId = req.params.id;
   const { title, category, color, dueDate, milestones = [] } = req.body;
-  if (!title || !dueDate) return res.status(400).json({ error: "Title and Due Date are required" });
+  if (!title || !dueDate)
+    return res.status(400).json({ error: "Title and Due Date are required" });
   try {
     // Verify ownership
     const verify = await pool.query(
-      'SELECT id FROM goals WHERE id = $1 AND user_id = $2',
-      [goalId, req.user.id]
+      "SELECT id FROM goals WHERE id = $1 AND user_id = $2",
+      [goalId, req.user.id],
     );
-    if (verify.rows.length === 0) return res.status(404).json({ error: "Goal not found" });
+    if (verify.rows.length === 0)
+      return res.status(404).json({ error: "Goal not found" });
     // Update goal core fields
     const goalResult = await pool.query(
       `UPDATE goals 
        SET title = $1, category = $2, color = $3, due_date = $4 
        WHERE id = $5 
        RETURNING id, title, category, color, progress, due_date AS "dueDate"`,
-      [title, category || 'General', color || '#534AB7', dueDate, goalId]
+      [title, category || "General", color || "#534AB7", dueDate, goalId],
     );
     const updatedGoal = goalResult.rows[0];
     // Fetch existing milestones so completed checkboxes survive an edit
     const existingMs = await pool.query(
-      'SELECT label, is_done FROM goal_milestones WHERE goal_id = $1',
-      [goalId]
+      "SELECT label, is_done FROM goal_milestones WHERE goal_id = $1",
+      [goalId],
     );
     const existingDoneMap = {};
-    existingMs.rows.forEach(ms => {
+    existingMs.rows.forEach((ms) => {
       existingDoneMap[ms.label] = ms.is_done;
     });
-    await pool.query('DELETE FROM goal_milestones WHERE goal_id = $1', [goalId]);
+    await pool.query("DELETE FROM goal_milestones WHERE goal_id = $1", [
+      goalId,
+    ]);
     const savedMilestones = [];
     for (let i = 0; i < milestones.length; i++) {
       const label = milestones[i].trim();
@@ -1157,22 +1251,25 @@ app.patch('/api/goals/:id', requireAuth, async (req, res) => {
         `INSERT INTO goal_milestones (goal_id, label, is_done, display_order) 
          VALUES ($1, $2, $3, $4) 
          RETURNING label, is_done AS done`,
-        [goalId, label, isDone, i]
+        [goalId, label, isDone, i],
       );
       savedMilestones.push(msResult.rows[0]);
     }
 
     // Recalculate progress from the new checklist
     const total = savedMilestones.length;
-    const done = savedMilestones.filter(m => m.done).length;
+    const done = savedMilestones.filter((m) => m.done).length;
     const progress = total > 0 ? Math.round((done / total) * 100) : 0;
-    await pool.query('UPDATE goals SET progress = $1 WHERE id = $2', [progress, goalId]);
+    await pool.query("UPDATE goals SET progress = $1 WHERE id = $2", [
+      progress,
+      goalId,
+    ]);
 
     res.json({
       ...updatedGoal,
       id: String(updatedGoal.id),
       progress,
-      milestones: savedMilestones
+      milestones: savedMilestones,
     });
   } catch (err) {
     console.error("Update goal error:", err.message);
@@ -1181,20 +1278,23 @@ app.patch('/api/goals/:id', requireAuth, async (req, res) => {
 });
 
 // DELETE A GOAL
-app.delete('/api/goals/:id', requireAuth, async (req, res) => {
+app.delete("/api/goals/:id", requireAuth, async (req, res) => {
   const goalId = req.params.id;
 
   try {
     // Verify ownership
     const verify = await pool.query(
-      'SELECT id FROM goals WHERE id = $1 AND user_id = $2',
-      [goalId, req.user.id]
+      "SELECT id FROM goals WHERE id = $1 AND user_id = $2",
+      [goalId, req.user.id],
     );
-    if (verify.rows.length === 0) return res.status(404).json({ error: "Goal not found" });
+    if (verify.rows.length === 0)
+      return res.status(404).json({ error: "Goal not found" });
 
     // Remove associated milestones first to satisfy foreign key constraints
-    await pool.query('DELETE FROM goal_milestones WHERE goal_id = $1', [goalId]);
-    await pool.query('DELETE FROM goals WHERE id = $1', [goalId]);
+    await pool.query("DELETE FROM goal_milestones WHERE goal_id = $1", [
+      goalId,
+    ]);
+    await pool.query("DELETE FROM goals WHERE id = $1", [goalId]);
 
     res.json({ success: true });
   } catch (err) {
@@ -1205,9 +1305,9 @@ app.delete('/api/goals/:id', requireAuth, async (req, res) => {
 
 // For new nutrition section(Feature 4: Nutrition)
 // POST: LOG A NEW MEAL
-app.post('/api/nutrition', requireAuth, async (req, res) => {
+app.post("/api/nutrition", requireAuth, async (req, res) => {
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
-  
+
   if (!mealName || !mealType) {
     return res.status(400).json({ error: "Meal name and type are required" });
   }
@@ -1218,14 +1318,14 @@ app.post('/api/nutrition', requireAuth, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, meal_name AS "mealName", meal_type AS "mealType", calories, protein, carbs, fats, created_at AS "createdAt"`,
       [
-        req.user.id, 
-        mealName.trim(), 
-        mealType, 
-        parseInt(calories) || 0, 
-        parseInt(protein) || 0, 
-        parseInt(carbs) || 0, 
-        parseInt(fats) || 0
-      ]
+        req.user.id,
+        mealName.trim(),
+        mealType,
+        parseInt(calories) || 0,
+        parseInt(protein) || 0,
+        parseInt(carbs) || 0,
+        parseInt(fats) || 0,
+      ],
     );
 
     res.status(201).json(result.rows[0]);
@@ -1236,7 +1336,7 @@ app.post('/api/nutrition', requireAuth, async (req, res) => {
 });
 
 // GET: fetch todays meal logs
-app.get('/api/nutrition', requireAuth, async (req, res) => {
+app.get("/api/nutrition", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
@@ -1252,7 +1352,7 @@ app.get('/api/nutrition', requireAuth, async (req, res) => {
        WHERE user_id = $1 
          AND created_at::date = CURRENT_DATE
        ORDER BY created_at ASC`,
-      [req.user.id]
+      [req.user.id],
     );
 
     res.json(result.rows);
@@ -1263,11 +1363,11 @@ app.get('/api/nutrition', requireAuth, async (req, res) => {
 });
 
 // GET: FETCH SAVED MEALS (QUICK-ADD)
-app.get('/api/nutrition/saved', requireAuth, async (req, res) => {
+app.get("/api/nutrition/saved", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT * FROM saved_meals WHERE user_id = $1 ORDER BY meal_name ASC`,
-      [req.user.id]
+      [req.user.id],
     );
     res.json(result.rows);
   } catch (err) {
@@ -1277,7 +1377,7 @@ app.get('/api/nutrition/saved', requireAuth, async (req, res) => {
 });
 
 // POST: create saved meal for easier access
-app.post('/api/nutrition/saved', requireAuth, async (req, res) => {
+app.post("/api/nutrition/saved", requireAuth, async (req, res) => {
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
   try {
     const result = await pool.query(
@@ -1285,10 +1385,14 @@ app.post('/api/nutrition/saved', requireAuth, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
-        req.user.id, mealName.trim(), mealType, 
-        parseInt(calories) || 0, parseInt(protein) || 0, 
-        parseInt(carbs) || 0, parseInt(fats) || 0
-      ]
+        req.user.id,
+        mealName.trim(),
+        mealType,
+        parseInt(calories) || 0,
+        parseInt(protein) || 0,
+        parseInt(carbs) || 0,
+        parseInt(fats) || 0,
+      ],
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -1298,11 +1402,11 @@ app.post('/api/nutrition/saved', requireAuth, async (req, res) => {
 });
 
 // GET: fetch user body metrics (for personalized recommendations and progress tracking)
-app.get('/api/user/metrics', requireAuth, async (req, res) => {
+app.get("/api/user/metrics", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT weight_kg, height_cm, fitness_goal FROM users WHERE id = $1`,
-      [req.user.id]
+      [req.user.id],
     );
     res.json(result.rows[0] || {});
   } catch (err) {
@@ -1311,8 +1415,8 @@ app.get('/api/user/metrics', requireAuth, async (req, res) => {
   }
 });
 
-//post: update the user body metrics 
-app.post('/api/user/metrics', requireAuth, async (req, res) => {
+//post: update the user body metrics
+app.post("/api/user/metrics", requireAuth, async (req, res) => {
   const { weight_kg, height_cm, fitness_goal } = req.body;
   try {
     const result = await pool.query(
@@ -1320,7 +1424,7 @@ app.post('/api/user/metrics', requireAuth, async (req, res) => {
        SET weight_kg = $1, height_cm = $2, fitness_goal = $3 
        WHERE id = $4 
        RETURNING weight_kg, height_cm, fitness_goal`,
-      [weight_kg, height_cm, fitness_goal, req.user.id]
+      [weight_kg, height_cm, fitness_goal, req.user.id],
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -1329,56 +1433,70 @@ app.post('/api/user/metrics', requireAuth, async (req, res) => {
   }
 });
 
-// edit under the quick add 
-app.patch('/api/nutrition/saved/:id', requireAuth, async (req, res) => {
+// edit under the quick add
+app.patch("/api/nutrition/saved/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
   try {
     const result = await pool.query(
       `UPDATE saved_meals SET meal_name=$1, meal_type=$2, calories=$3, protein=$4, carbs=$5, fats=$6 
        WHERE id=$7 AND user_id=$8 RETURNING *`,
-      [mealName, mealType, calories, protein, carbs, fats, id, req.user.id]
+      [mealName, mealType, calories, protein, carbs, fats, id, req.user.id],
     );
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).send("Server Error"); }
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
 });
 
-// delete under the quick add 
-app.delete('/api/nutrition/saved/:id', requireAuth, async (req, res) => {
+// delete under the quick add
+app.delete("/api/nutrition/saved/:id", requireAuth, async (req, res) => {
   try {
-    await pool.query('DELETE FROM saved_meals WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    await pool.query("DELETE FROM saved_meals WHERE id=$1 AND user_id=$2", [
+      req.params.id,
+      req.user.id,
+    ]);
     res.json({ message: "Deleted successfully" });
-  } catch (err) { res.status(500).send("Server Error"); }
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
 });
 
 // edit the meal logs
-app.patch('/api/nutrition/:id', requireAuth, async (req, res) => {
+app.patch("/api/nutrition/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
   try {
     const result = await pool.query(
       `UPDATE meal_logs SET meal_name=$1, meal_type=$2, calories=$3, protein=$4, carbs=$5, fats=$6 
        WHERE id=$7 AND user_id=$8 RETURNING *`,
-      [mealName, mealType, calories, protein, carbs, fats, id, req.user.id]
+      [mealName, mealType, calories, protein, carbs, fats, id, req.user.id],
     );
     res.json(result.rows[0]);
-  } catch (err) { res.status(500).send("Server Error"); }
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
 });
 
 // delete meal log entries
-app.delete('/api/nutrition/:id', requireAuth, async (req, res) => {
+app.delete("/api/nutrition/:id", requireAuth, async (req, res) => {
   try {
-    await pool.query('DELETE FROM meal_logs WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    await pool.query("DELETE FROM meal_logs WHERE id=$1 AND user_id=$2", [
+      req.params.id,
+      req.user.id,
+    ]);
     res.json({ message: "Deleted successfully" });
-  } catch (err) { res.status(500).send("Server Error"); }
+  } catch (err) {
+    res.status(500).send("Server Error");
+  }
 });
 
 // GET: fetch user supplements
-app.get('/api/supplements', requireAuth, async (req, res) => {
+app.get("/api/supplements", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM supplements WHERE user_id = $1 ORDER BY timing, name',
-      [req.user.id]
+      "SELECT * FROM supplements WHERE user_id = $1 ORDER BY timing, name",
+      [req.user.id],
     );
     res.json(result.rows);
   } catch (err) {
@@ -1388,15 +1506,17 @@ app.get('/api/supplements', requireAuth, async (req, res) => {
 });
 
 //  POST: add a new supplement
-app.post('/api/supplements', requireAuth, async (req, res) => {
+app.post("/api/supplements", requireAuth, async (req, res) => {
   const { name, dose, timing } = req.body;
   if (!name || !dose || !timing) {
-    return res.status(400).json({ error: "Name, dose, and timing are required" });
+    return res
+      .status(400)
+      .json({ error: "Name, dose, and timing are required" });
   }
   try {
     const result = await pool.query(
-      'INSERT INTO supplements (user_id, name, dose, timing) VALUES ($1, $2, $3, $4) RETURNING *',
-      [req.user.id, name, dose, timing]
+      "INSERT INTO supplements (user_id, name, dose, timing) VALUES ($1, $2, $3, $4) RETURNING *",
+      [req.user.id, name, dose, timing],
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -1406,11 +1526,11 @@ app.post('/api/supplements', requireAuth, async (req, res) => {
 });
 
 // DELETE /api/supplements/:id
-app.delete('/api/supplements/:id', requireAuth, async (req, res) => {
+app.delete("/api/supplements/:id", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'DELETE FROM supplements WHERE id = $1 AND user_id = $2 RETURNING *',
-      [req.params.id, req.user.id]
+      "DELETE FROM supplements WHERE id = $1 AND user_id = $2 RETURNING *",
+      [req.params.id, req.user.id],
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Supplement not found" });
@@ -1423,11 +1543,11 @@ app.delete('/api/supplements/:id', requireAuth, async (req, res) => {
 });
 
 // GET: fetch user XP
-app.get('/api/user/xp', requireAuth, async (req, res) => {
+app.get("/api/user/xp", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT total_xp, awarded_quest_ids FROM user_xp WHERE user_id = $1',
-      [req.user.id]
+      "SELECT total_xp, awarded_quest_ids FROM user_xp WHERE user_id = $1",
+      [req.user.id],
     );
     res.json(result.rows[0] ?? { total_xp: 0, awarded_quest_ids: [] });
   } catch (err) {
@@ -1437,10 +1557,12 @@ app.get('/api/user/xp', requireAuth, async (req, res) => {
 });
 
 //  POST: update user XP
-app.post('/api/user/xp', requireAuth, async (req, res) => {
+app.post("/api/user/xp", requireAuth, async (req, res) => {
   const { total_xp, awarded_quest_ids } = req.body;
   if (total_xp === undefined || !awarded_quest_ids) {
-    return res.status(400).json({ error: "total_xp and awarded_quest_ids are required" });
+    return res
+      .status(400)
+      .json({ error: "total_xp and awarded_quest_ids are required" });
   }
   try {
     const result = await pool.query(
@@ -1449,7 +1571,7 @@ app.post('/api/user/xp', requireAuth, async (req, res) => {
        ON CONFLICT (user_id) DO UPDATE
        SET total_xp = $2, awarded_quest_ids = $3
        RETURNING *`,
-      [req.user.id, total_xp, awarded_quest_ids]
+      [req.user.id, total_xp, awarded_quest_ids],
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -1458,8 +1580,8 @@ app.post('/api/user/xp', requireAuth, async (req, res) => {
   }
 });
 
-// for insights page 
-app.get('/api/nutrition/history', requireAuth, async (req, res) => {
+// for insights page
+app.get("/api/nutrition/history", requireAuth, async (req, res) => {
   const days = Math.min(parseInt(req.query.days) || 7, 30);
   try {
     const result = await pool.query(
@@ -1476,7 +1598,7 @@ app.get('/api/nutrition/history', requireAuth, async (req, res) => {
              >= (NOW() AT TIME ZONE 'Asia/Singapore')::date - ($2 - 1) * INTERVAL '1 day'
        GROUP BY (created_at AT TIME ZONE 'Asia/Singapore')::date
        ORDER BY date ASC`,
-      [req.user.id, days]
+      [req.user.id, days],
     );
 
     const filled = [];
@@ -1485,21 +1607,22 @@ app.get('/api/nutrition/history', requireAuth, async (req, res) => {
       const sgtOffset = 8 * 60 * 60 * 1000;
       const sgtDate = new Date(d.getTime() + sgtOffset);
       sgtDate.setUTCDate(sgtDate.getUTCDate() - i);
-      const dateStr = sgtDate.toISOString().split('T')[0];
+      const dateStr = sgtDate.toISOString().split("T")[0];
 
-      const row = result.rows.find(r => {
-        const rowDate = r.date instanceof Date
-          ? r.date.toISOString().split('T')[0]
-          : String(r.date);
+      const row = result.rows.find((r) => {
+        const rowDate =
+          r.date instanceof Date
+            ? r.date.toISOString().split("T")[0]
+            : String(r.date);
         return rowDate === dateStr;
       });
 
       filled.push({
         date: dateStr,
-        calories:   parseInt(row?.calories)   || 0,
-        protein:    parseInt(row?.protein)    || 0,
-        carbs:      parseInt(row?.carbs)      || 0,
-        fats:       parseInt(row?.fats)       || 0,
+        calories: parseInt(row?.calories) || 0,
+        protein: parseInt(row?.protein) || 0,
+        carbs: parseInt(row?.carbs) || 0,
+        fats: parseInt(row?.fats) || 0,
         meal_count: parseInt(row?.meal_count) || 0,
       });
     }
@@ -1511,7 +1634,9 @@ app.get('/api/nutrition/history', requireAuth, async (req, res) => {
 });
 
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running natively and open to wireless network devices on port ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(
+    `Server is running natively and open to wireless network devices on port ${PORT}`,
+  );
   startReminderJobs();
 });

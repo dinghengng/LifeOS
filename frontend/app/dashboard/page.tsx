@@ -10,6 +10,7 @@ import { Goal } from "../../components/dashboard/GoalCard";
 import { User } from "../../../shared/types";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
 import Navbar from "../../components/Navbar";
+import { useToastContext } from "../../components/notifications/ToastContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -72,6 +73,7 @@ export default function DashboardPage() {
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 
+  const { showToast } = useToastContext();
 
   // Auth check on mount
   useEffect(() => {
@@ -102,6 +104,7 @@ export default function DashboardPage() {
     } catch (err) {
       console.error(err);
       setError("Failed to load dashboard data.");
+      //showToast("Failed to load dashboard data", "error");
     } finally {
       setDataLoading(false);
     }
@@ -173,6 +176,7 @@ export default function DashboardPage() {
     } catch (err) {
       console.error(err);
       setHabits(fallbackHabits); // Roll back if network breaks
+      //showToast("Failed to sync habit", "error");
     }
   }
 
@@ -217,6 +221,7 @@ export default function DashboardPage() {
     } catch (err) {
       console.error("Milestone sync failure:", err);
       setGoals(fallbackGoals);
+      //showToast("Failed to update milestone", "error");
     }
   }
 
@@ -235,9 +240,11 @@ export default function DashboardPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Delete failed");
+      //showToast("Habit deleted", "success");
     } catch (err) {
       console.error("Habit delete failure:", err);
       setHabits(fallbackHabits); // Roll back if network breaks
+      //showToast("Failed to delete habit", "error");
     }
   }
 
@@ -256,9 +263,11 @@ export default function DashboardPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Delete failed");
+      //showToast("Goal deleted", "success");
     } catch (err) {
       console.error("Goal delete failure:", err);
       setGoals(fallbackGoals); // Roll back if network breaks
+      //showToast("Failed to delete goal.", "error");
     }
   }
 
@@ -323,6 +332,9 @@ export default function DashboardPage() {
           setShowHabitModal(false);
           setHabitName("");
           setEditingHabitId(null);
+          showToast("Habit updated", "success");
+        } else {
+          showToast("Failed to update habit", "error");
         }
         return;
       }
@@ -342,9 +354,13 @@ export default function DashboardPage() {
         setHabits([...habits, newHabit]);
         setShowHabitModal(false);
         setHabitName("");
+        showToast("Habit added", "success");
+      } else {
+        showToast("Failed to create habit", "error");
       }
     } catch (err) {
       console.error(err);
+      showToast("Something went wrong", "error");
     }
   }
 
@@ -402,6 +418,9 @@ export default function DashboardPage() {
           );
           setShowGoalModal(false);
           resetGoalForm();
+          showToast("Goal updated", "success");
+        } else {
+          showToast("Failed to update goal", "error");
         }
         return;
       }
@@ -426,9 +445,13 @@ export default function DashboardPage() {
         setGoalMonth("");
         setGoalYear("");
         setGoalMilestones("");
+        showToast("Goal added", "success");
+      } else {
+        showToast("Failed to create goal", "error");
       }
     } catch (err) {
       console.error(err);
+      showToast("Something went wrong", "error");
     }
   }
 

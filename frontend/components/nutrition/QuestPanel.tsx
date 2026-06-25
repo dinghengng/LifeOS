@@ -81,16 +81,7 @@ export default function QuestPanel({ quests, totalXP }: QuestPanelProps) {
   const offset = circ - (progress / 100) * circ;
 
   return (
-    <div
-      style={{
-        background: "var(--color-background-primary, #ffffff)",
-        border: "0.5px solid var(--color-border-tertiary)",
-        borderRadius: "var(--border-radius-lg)",
-        padding: "1.5rem",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-        marginBottom: "1.5rem",
-      }}
-    >
+    <div>
       {/* Header row */}
       <div
         style={{

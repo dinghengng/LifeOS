@@ -36,15 +36,7 @@ export default function NutritionTracker({
   const totalProtein = meals.reduce((sum, m) => sum + m.protein, 0);
 
   return (
-    <div
-      style={{
-        background: "var(--color-background-primary, #ffffff)",
-        border: "0.5px solid var(--color-border-tertiary)",
-        borderRadius: "var(--border-radius-lg)",
-        padding: "1.5rem",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-      }}
-    >
+    <div>
       <div
         style={{
           display: "flex",

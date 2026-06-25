@@ -55,7 +55,8 @@ interface MoodHistoryProps {
   entries?: JournalEntry[];
   moodConfig?: MoodLevelConfig[];  
   onRefresh: () => void;
-  onTagsUpdated: (tag: Tag) => void;
+  onCustomTagCreated: (tag: Tag) => void;
+  onCustomTagDeleted: (tagId: number) => void;
 }
 
 function LinkToMoodButton({ entry, logs, moodConfig, onLinked }: {
@@ -120,11 +121,10 @@ function LinkToMoodButton({ entry, logs, moodConfig, onLinked }: {
 }
 
 
-export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh, onTagsUpdated }: MoodHistoryProps) {
+export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh, onCustomTagCreated, onCustomTagDeleted }: MoodHistoryProps) {
   const [editingLog, setEditingLog] = useState<MoodLog | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [expandedNoteId, setExpandedNoteId] = useState<number | null>(null);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
 const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
 
@@ -188,7 +188,8 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
           tags={tags}
           onSaved={onRefresh}
           onClose={() => setEditingLog(null)}
-          onTagsUpdated={onTagsUpdated}
+          onCustomTagCreated={onCustomTagCreated}
+          onCustomTagDeleted={onCustomTagDeleted}
         />
       )}
 
@@ -215,7 +216,6 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
           {logs.map((log) => {
             const mood = getMoodDisplay(log.moodLevel, moodConfig);
             const linkedEntry = entryByMoodLog.get(log.id);
-            const isAddingNote = expandedNoteId === log.id;
             return (
               <li
                 key={log.id}

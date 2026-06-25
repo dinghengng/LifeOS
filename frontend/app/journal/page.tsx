@@ -6,7 +6,7 @@ import MoodLogger from "../../components/journal/MoodLogger";
 import MoodHistory from "../../components/journal/MoodHistory";
 import JournalEditor from "../../components/journal/JournalEditor";
 import OnboardingWizard from "../../components/OnboardingWizard";
-import { MoodLog, User, TagsResponse, JournalEntry, MoodLevelConfig } from "../../../shared/types";
+import { MoodLog, User, TagsResponse, JournalEntry, MoodLevelConfig, Tag } from "../../../shared/types";
 import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries, logoutUser, fetchMoodConfig } from "../../../shared/api";
 import PromptSection from "../../components/journal/PromptSection";
 import { Prompt } from "../../../shared/prompts";
@@ -80,6 +80,20 @@ export default function JournalPage() {
     setSelectedPrompt(prompt);
     setActiveTab("write");
     setPromptJumpToken((n) => n + 1);
+  };
+
+  const handleCustomTagCreated = (newTag: Tag) => {
+    setTags((prev) => ({
+      ...prev,
+      custom: [...prev.custom, newTag],
+    }));
+  };
+
+  const handleCustomTagDeleted = (tagId: number) => {
+    setTags((prev) => ({
+      ...prev,
+      custom: prev.custom.filter((tag) => tag.id !== tagId),
+    }));
   };
 
   const usedMoodLogIds = new Set(
@@ -160,9 +174,8 @@ export default function JournalPage() {
             <MoodLogger
               onSaved={handleMoodSaved}
               tags={tags}
-              onTagsUpdated={(newTag) =>
-                setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
-              }
+              onCustomTagCreated={handleCustomTagCreated}
+              onCustomTagDeleted={handleCustomTagDeleted}
               moodConfig={moodConfig}
               userName = {user?.name}
             />
@@ -199,9 +212,8 @@ export default function JournalPage() {
               entries={entries}
               moodConfig={moodConfig}
               onRefresh={loadData}
-              onTagsUpdated={(newTag) =>
-                setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
-              }
+              onCustomTagCreated={handleCustomTagCreated}
+              onCustomTagDeleted={handleCustomTagDeleted}
             />
           </div>
         )}

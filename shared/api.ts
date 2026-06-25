@@ -233,6 +233,25 @@ export const createCustomTag = async (name: string): Promise<Tag> => {
   return await response.json();
 };
 
+// delete custom tag
+export const deleteCustomTag = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_URL}/mood/tags/custom/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+
+    try {
+      const err = JSON.parse(text);
+      throw new Error(err.error || "Failed to delete custom tag");
+    } catch {
+      throw new Error(`Failed to delete custom tag (${response.status})`);
+    }
+  }
+};
+
 // Journal api
 import { JournalEntry, DBJournalEntry, CreateJournalEntryPayload, UpdateJournalEntryPayload, } from "./types";
 

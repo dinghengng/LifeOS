@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MoodLog, MoodLevel, StressLevel, Tag, TagsResponse, UpdateMoodLogPayload } from "../../../shared/types";
 import { updateMoodLog } from "../../../shared/api";
-import TagSelector from "../TagSelector";
+import TagSelector from "./TagSelector";
 import { useToastContext } from "../notifications/ToastContext";
 
 const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string }[] = [
@@ -23,10 +23,11 @@ interface EditMoodLogModalProps {
   tags: TagsResponse;
   onSaved: () => void;
   onClose: () => void;
-  onTagsUpdated: (tag: Tag) => void;
+  onCustomTagCreated: (tag: Tag) => void;
+  onCustomTagDeleted: (tagId: number) => void;
 }
 
-export default function EditMoodLogModal({ log, tags, onSaved, onClose, onTagsUpdated }: EditMoodLogModalProps) {
+export default function EditMoodLogModal({ log, tags, onSaved, onClose, onCustomTagCreated, onCustomTagDeleted }: EditMoodLogModalProps) {
   const [selectedMood, setSelectedMood] = useState<MoodLevel>(log.moodLevel);
   const [stressLevel, setStressLevel] = useState<StressLevel>(log.stressLevel);
   const [selectedTagKeys, setSelectedTagKeys] = useState<string[]>(
@@ -134,8 +135,12 @@ export default function EditMoodLogModal({ log, tags, onSaved, onClose, onTagsUp
                 selectedTagKeys={selectedTagKeys}
                 onToggle={toggleTag}
                 onCustomTagCreated={(newTag) => {
-                    onTagsUpdated(newTag);
+                    onCustomTagCreated(newTag);
                     setSelectedTagKeys((prev) => [...prev, `custom:${newTag.id}`]);
+                }}
+                onCustomTagDeleted={(tagId) => {
+                  onCustomTagDeleted(tagId);
+                  setSelectedTagKeys((prev) => prev.filter((key) => key !== `custom:${tagId}`));
                 }}
             />
         </div>

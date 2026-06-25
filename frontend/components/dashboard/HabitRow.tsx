@@ -7,6 +7,7 @@ export type Habit = {
   name: string;
   icon: string;
   color: string;
+  category?: string;
   streak: number;
   totalDays?: number;
   completedDays: boolean[]; // index 0 = Monday ... index 6 = Sunday, current week using SGT
@@ -47,6 +48,9 @@ export default function HabitRow({
   const todayIndex = getTodayIndexSGT();
   const todayDone = habit.completedDays[todayIndex];
   const sgtToday = getSGTDate();
+  const daysSoFar = todayIndex + 1; // only count days up to and including today
+  const completedSoFar = habit.completedDays.slice(0, daysSoFar).filter(Boolean).length;
+  const weeklyPct = daysSoFar > 0 ? Math.round((completedSoFar / daysSoFar) * 100) : 0;
 
   return (
     <div
@@ -101,6 +105,27 @@ export default function HabitRow({
               ⭐ {habit.totalDays || 0}
             </span>
           </div>
+          <span
+            style={{
+              display: "block",
+              width: 0,
+              minWidth: 0,
+              height: 22,
+              minHeight: 22,
+              borderLeft: "1.5px solid #000000",
+              flexShrink: 0,
+              alignSelf: "center",
+            }}
+          />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
+            <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>This wk</span>
+            <span
+              title={`${completedSoFar} of ${daysSoFar} day${daysSoFar === 1 ? "" : "s"} completed so far this week (Mon–today)`}
+              style={{ fontSize: 11, fontWeight: 600, color: weeklyPct >= 70 ? "#1D9E75" : weeklyPct >= 40 ? "#eab308" : "var(--color-text-secondary)" }}
+            >
+              {completedSoFar}/{daysSoFar}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -125,7 +150,9 @@ export default function HabitRow({
                 : "var(--color-background-secondary)",
               border: done
                 ? "none"
-                : "0.5px solid var(--color-border-secondary)",
+                : i === todayIndex
+                  ? "1.5px solid #94a3b8"
+                  : "0.5px solid var(--color-border-secondary)",
               opacity: i === todayIndex ? 1 : 0.8,
             }}
           />
@@ -138,16 +165,26 @@ export default function HabitRow({
           height: 28,
           borderRadius: "50%",
           border: todayDone
-            ? "none"
-            : "1.5px solid var(--color-border-secondary)",
+            ? "2px solid #000000"
+            : "2px solid #1e293b",
           backgroundColor: todayDone ? habit.color : "transparent",
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 13,
-          color: todayDone ? "#fff" : "var(--color-text-secondary)",
+          fontSize: 14,
+          fontWeight: 700,
+          color: todayDone ? "#fff" : "#1e293b",
           transition: "all 0.15s ease",
+          boxShadow: todayDone
+            ? "0 0 0 2px " + habit.color + "33"
+            : "0 1px 2px rgba(0,0,0,0.08)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "scale(1.1)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "scale(1)";
         }}
         aria-label={todayDone ? "Mark incomplete" : "Mark complete"}
       >

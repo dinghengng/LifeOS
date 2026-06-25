@@ -59,8 +59,8 @@ export default function DashboardPage() {
 
   // Form states
   const [habitName, setHabitName] = useState("");
-  const [habitIcon, setHabitIcon] = useState("🏃");
   const [habitColor, setHabitColor] = useState("#1D9E75");
+  const [habitCategory, setHabitCategory] = useState(GOAL_CATEGORIES[0]);
 
   const [goalTitle, setGoalTitle] = useState("");
   const [goalCategory, setGoalCategory] = useState(GOAL_CATEGORIES[0]);
@@ -114,10 +114,13 @@ export default function DashboardPage() {
     if (!authLoading) fetchDashboardData();
   }, [authLoading, fetchDashboardData]);
 
-  // habit toggle
+  const STREAK_MILESTONES = [7, 30, 100];
+
+// habit toggle
   async function toggleToday(id: string) {
   const todayIndex = getTodayIndexSGT();
   let fallbackHabits: Habit[] = [];
+  let milestoneHit: { name: string; streak: number } | null = null;
 
   setHabits((prev) => {
     fallbackHabits = prev;
@@ -142,6 +145,11 @@ export default function DashboardPage() {
         newStreak = 0;
       }
 
+      // Only celebrate when the streak just reached a milestone on this toggle (not already past it)
+      if (newStreak > h.streak && STREAK_MILESTONES.includes(newStreak)) {
+        milestoneHit = { name: h.name, streak: newStreak };
+      }
+
       // totalDays always increments (never decrements)
       const newTotalDays = wasOn ? (h.totalDays || 0) : (h.totalDays || 0) + 1;
 
@@ -153,6 +161,10 @@ export default function DashboardPage() {
       };
     });
   });
+
+  if (milestoneHit) {
+    showToast(`🔥 ${milestoneHit.streak}-day streak on "${milestoneHit.name}"!`, "success");
+  }
 
     try {
       const res = await fetch(`${API_BASE}/api/habits/${id}/toggle`, {
@@ -275,8 +287,8 @@ export default function DashboardPage() {
   function handleEditHabitClick(habit: Habit) {
     setEditingHabitId(habit.id);
     setHabitName(habit.name);
-    setHabitIcon(habit.icon);
     setHabitColor(habit.color);
+    setHabitCategory(habit.category || GOAL_CATEGORIES[0]);
     setShowHabitModal(true);
   }
 
@@ -308,6 +320,10 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!habitName.trim()) return;
 
+    // No icon picker in the form — icon is derived from the chosen category so habit rows
+    // still have something to display, without asking the user to pick it separately.
+    const derivedIcon = GOAL_CATEGORY_ICONS[habitCategory] || "🏃";
+
     try {
       // If editing an existing habit, update it instead of creating a new one
       if (editingHabitId) {
@@ -317,15 +333,17 @@ export default function DashboardPage() {
           credentials: "include",
           body: JSON.stringify({
             name: habitName,
-            icon: habitIcon,
+            icon: derivedIcon,
             color: habitColor,
+            category: habitCategory,
           }),
         });
         if (res.ok) {
+          const updated = await res.json();
           setHabits((prev) =>
             prev.map((h) =>
               h.id === editingHabitId
-                ? { ...h, name: habitName, icon: habitIcon, color: habitColor }
+                ? { ...h, name: habitName, icon: derivedIcon, color: habitColor, category: updated.category ?? habitCategory }
                 : h,
             ),
           );
@@ -345,13 +363,14 @@ export default function DashboardPage() {
         credentials: "include",
         body: JSON.stringify({
           name: habitName,
-          icon: habitIcon,
+          icon: derivedIcon,
           color: habitColor,
+          category: habitCategory,
         }),
       });
       if (res.ok) {
         const newHabit = await res.json();
-        setHabits([...habits, newHabit]);
+        setHabits([...habits, { ...newHabit, category: newHabit.category ?? habitCategory }]);
         setShowHabitModal(false);
         setHabitName("");
         showToast("Habit added", "success");
@@ -547,7 +566,42 @@ export default function DashboardPage() {
       )}
 
       {dataLoading ? (
-        <p style={{ textAlign: "center", color: "#64748b" }}>Loading...</p>
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: "1.75rem" }}>
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="skeleton-pulse"
+                style={{ height: 64, borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)" }}
+              />
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: "1.5rem", width: "100%", alignItems: "flex-start" }}>
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className="skeleton-pulse"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: 320,
+                  borderRadius: "var(--border-radius-lg)",
+                  background: "var(--color-background-primary)",
+                  border: "0.5px solid var(--color-border-tertiary)",
+                }}
+              />
+            ))}
+          </div>
+          <style jsx>{`
+            .skeleton-pulse {
+              animation: pulse 1.5s ease-in-out infinite;
+            }
+            @keyframes pulse {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.5; }
+            }
+          `}</style>
+        </>
       ) : (
         <>
           <StatsSummary
@@ -572,8 +626,8 @@ export default function DashboardPage() {
                 onAddClick={() => {
                   setEditingHabitId(null);
                   setHabitName("");
-                  setHabitIcon("🏃");
                   setHabitColor("#1D9E75");
+                  setHabitCategory(GOAL_CATEGORIES[0]);
                   setShowHabitModal(true);
                 }}
                 onEditHabit={handleEditHabitClick}
@@ -649,10 +703,10 @@ export default function DashboardPage() {
                   gap: "4px",
                 }}
               >
-                <span style={{ fontSize: "12px", color: "#64748b" }}>Icon</span>
+                <span style={{ fontSize: "12px", color: "#64748b" }}>Category</span>
                 <select
-                  value={habitIcon}
-                  onChange={(e) => setHabitIcon(e.target.value)}
+                  value={habitCategory}
+                  onChange={(e) => setHabitCategory(e.target.value)}
                   style={{
                     padding: "8px",
                     borderRadius: "6px",
@@ -660,11 +714,11 @@ export default function DashboardPage() {
                     color: "#1e293b",
                   }}
                 >
-                  <option value="🏃">🏃 Fitness</option>
-                  <option value="🧘">🧘 Spiritual</option>
-                  <option value="❤️">❤️ Relationship</option>
-                  <option value="💼">💼 Career</option>
-                  <option value="💰">💰 Finance</option>
+                  {GOAL_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {GOAL_CATEGORY_ICONS[cat]} {cat}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div

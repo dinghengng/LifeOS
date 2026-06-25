@@ -203,6 +203,8 @@ export default function NutritionPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSuppModal, setShowSuppModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<"meals" | "supplements">("meals");
+  const [activeRightTab, setActiveRightTab] = useState<"quests" | "progress">("quests");
 
   // Macro optimization depends on like the user height and weight + goals
   const [targets, setTargets] = useState({ calories: 2300, protein: 140 });
@@ -689,61 +691,84 @@ export default function NutritionPage() {
         <div className="nutrition-grid">
           {/* Left column consisting of Meal Logging & Supplements */}
           <div className="nutrition-col">
-            {/* Removed the fixed-height 'nutrition-wrapper' class */}
-            <div className="tracker-wrapper">
-              <NutritionTracker
-                meals={meals}
-                onAddMealClick={openCreateModal}
-                onEditMealClick={openEditLogModal}
-                onDeleteMealClick={handleDeleteLog}
-                calorieTarget={targets.calories}
-                proteinTarget={targets.protein}
-                fitnessGoal={metricsForm.goal}
-              />
-            </div>
-
-            {/* Supplement Tracker */}
-            {/* Removed the fixed-height 'supplement-wrapper' class */}
+            {/* Meals / Supplements tabbed card */}
             <div className="tracker-wrapper">
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem",
+                  gap: 4,
+                  marginBottom: "1.25rem",
+                  borderBottom: "1px solid var(--color-border-tertiary)",
                 }}
               >
-                <h3
+                <button
+                  onClick={() => setActiveTab("meals")}
                   style={{
-                    margin: 0,
-                    fontSize: "16px",
-                    color: "var(--color-text-primary)",
+                    padding: "8px 4px",
+                    marginRight: 20,
+                    background: "none",
+                    border: "none",
+                    borderBottom:
+                      activeTab === "meals"
+                        ? "2px solid #1D9E75"
+                        : "2px solid transparent",
+                    color:
+                      activeTab === "meals"
+                        ? "var(--color-text-primary)"
+                        : "#94a3b8",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    marginBottom: -1,
+                  }}
+                >
+                  Meals
+                </button>
+                <button
+                  onClick={() => setActiveTab("supplements")}
+                  style={{
+                    padding: "8px 4px",
+                    background: "none",
+                    border: "none",
+                    borderBottom:
+                      activeTab === "supplements"
+                        ? "2px solid #1D9E75"
+                        : "2px solid transparent",
+                    color:
+                      activeTab === "supplements"
+                        ? "var(--color-text-primary)"
+                        : "#94a3b8",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    marginBottom: -1,
                   }}
                 >
                   Supplements
-                </h3>
-                <button
-                  onClick={() => setShowSuppModal(true)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#4f46e5",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                  }}
-                >
-                  + Add New
                 </button>
               </div>
-              <SupplementTracker
-                supplements={supplements}
-                checkedIds={checkedSupps}
-                onToggle={handleToggleSupp}
-                onAdd={handleAddSupp}
-                onDelete={handleDeleteSupp}
-              />
+
+              {activeTab === "meals" ? (
+                <NutritionTracker
+                  meals={meals}
+                  onAddMealClick={openCreateModal}
+                  onEditMealClick={openEditLogModal}
+                  onDeleteMealClick={handleDeleteLog}
+                  calorieTarget={targets.calories}
+                  proteinTarget={targets.protein}
+                  fitnessGoal={metricsForm.goal}
+                />
+              ) : (
+                <SupplementTracker
+                  supplements={supplements}
+                  checkedIds={checkedSupps}
+                  onToggle={handleToggleSupp}
+                  onAdd={handleAddSupp}
+                  onDelete={handleDeleteSupp}
+                />
+              )}
             </div>
+
 
             {/* Daily Motivation Quote */}
             <div
@@ -826,40 +851,103 @@ export default function NutritionPage() {
 
           {/* Right column - Quests & Progress */}
           <div className="nutrition-col">
-            <QuestPanel quests={quests} totalXP={totalXP} />
-            <NutritionChart
-              history={history}
-              calorieTarget={targets.calories}
-              proteinTarget={targets.protein}
-            />
-            {/* Insight section */}
-            <div
-              style={{
-                background: "var(--color-background-primary)",
-                border: "0.5px solid var(--color-border-tertiary)",
-                borderRadius: "var(--border-radius-lg)",
-                padding: "1rem 1.25rem",
-                display: "flex",
-                gap: 12,
-                alignItems: "flex-start",
-              }}
-            >
-              <Lightbulb
-                size={18}
-                style={{ color: "#f59e0b", flexShrink: 0, marginTop: 1 }}
-              />
-              <p
+            <div className="tracker-wrapper">
+              <div
                 style={{
-                  margin: 0,
-                  fontSize: 13,
-                  color: "var(--color-text-primary)",
-                  lineHeight: 1.6,
+                  display: "flex",
+                  gap: 4,
+                  marginBottom: "1.25rem",
+                  borderBottom: "1px solid var(--color-border-tertiary)",
                 }}
               >
-                {insight}
-              </p>
+                <button
+                  onClick={() => setActiveRightTab("quests")}
+                  style={{
+                    padding: "8px 4px",
+                    marginRight: 20,
+                    background: "none",
+                    border: "none",
+                    borderBottom:
+                      activeRightTab === "quests"
+                        ? "2px solid #1D9E75"
+                        : "2px solid transparent",
+                    color:
+                      activeRightTab === "quests"
+                        ? "var(--color-text-primary)"
+                        : "#94a3b8",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    marginBottom: -1,
+                  }}
+                >
+                  Quests
+                </button>
+                <button
+                  onClick={() => setActiveRightTab("progress")}
+                  style={{
+                    padding: "8px 4px",
+                    background: "none",
+                    border: "none",
+                    borderBottom:
+                      activeRightTab === "progress"
+                        ? "2px solid #1D9E75"
+                        : "2px solid transparent",
+                    color:
+                      activeRightTab === "progress"
+                        ? "var(--color-text-primary)"
+                        : "#94a3b8",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    marginBottom: -1,
+                  }}
+                >
+                  Progress
+                </button>
+              </div>
+
+              {activeRightTab === "quests" ? (
+                <QuestPanel quests={quests} totalXP={totalXP} />
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                  <NutritionChart
+                    history={history}
+                    calorieTarget={targets.calories}
+                    proteinTarget={targets.protein}
+                  />
+                  {/* Insight section */}
+                  <div
+                    style={{
+                      background: "var(--color-background-primary)",
+                      border: "0.5px solid var(--color-border-tertiary)",
+                      borderRadius: "var(--border-radius-lg)",
+                      padding: "1rem 1.25rem",
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <Lightbulb
+                      size={18}
+                      style={{ color: "#f59e0b", flexShrink: 0, marginTop: 1 }}
+                    />
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 13,
+                        color: "var(--color-text-primary)",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {insight}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+
 
           <style jsx>{`
             .nutrition-grid {

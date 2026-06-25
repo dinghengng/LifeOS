@@ -166,14 +166,7 @@ export default function SupplementTracker({
     pmSupps.every((s) => checkedIds.has(`PM-${s.id}`));
 
   return (
-    <div style={{
-      background: "var(--color-background-primary, #ffffff)",
-      border: "0.5px solid var(--color-border-tertiary)",
-      borderRadius: "var(--border-radius-lg)",
-      padding: "1.5rem",
-      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-      marginTop: "1.5rem",
-    }}>
+    <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)" }}>

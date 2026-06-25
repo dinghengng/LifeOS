@@ -86,14 +86,7 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
   const targetLinePct = `${Math.min((target / maxVal) * 100, 100)}%`;
 
   return (
-    <div style={{
-      background: "var(--color-background-primary)",
-      border: "0.5px solid var(--color-border-tertiary)",
-      borderRadius: "var(--border-radius-lg)",
-      padding: "1.5rem",
-      marginBottom: "1.5rem",
-    }}>
-
+    <div>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
         <div>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Tag, TagsResponse } from "../../shared/types";
-import { createCustomTag } from "../../shared/api";
+import { Tag, TagsResponse } from "../../../shared/types";
+import { createCustomTag, deleteCustomTag } from "../../../shared/api";
 
 const tagKey = (tag: Tag) => `${tag.type}:${tag.id}`; //Unique keys to handle collisions
 
@@ -11,6 +11,7 @@ interface TagSelectorProps {
   selectedTagKeys: string[];     
   onToggle: (tag: Tag) => void;
   onCustomTagCreated: (tag: Tag) => void;
+  onCustomTagDeleted: (tagId: number) => void;
 }
 
 export default function TagSelector({
@@ -18,10 +19,12 @@ export default function TagSelector({
   selectedTagKeys,
   onToggle,
   onCustomTagCreated,
+  onCustomTagDeleted,
 }: TagSelectorProps) {
   const [otherInput, setOtherInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [deletingTagId, setDeletingTagId] = useState<number | null>(null);
 
   const handleCreateCustomTag = async () => {
     const trimmed = otherInput.trim();
@@ -36,6 +39,23 @@ export default function TagSelector({
       setCreateError(err instanceof Error ? err.message : "Could not create tag.");
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleDeleteCustomTag = async (tag: Tag) => {
+    if (tag.type !== "custom") return;
+    if (!confirm(`Delete "${tag.name}"?`)) return;
+
+    setDeletingTagId(tag.id);
+    setCreateError(null);
+
+    try {
+      await deleteCustomTag(tag.id);
+      onCustomTagDeleted(tag.id);
+    } catch (err: unknown) {
+      setCreateError(err instanceof Error ? err.message : "Could not delete tag.");
+    } finally {
+      setDeletingTagId(null);
     }
   };
 
@@ -68,17 +88,38 @@ export default function TagSelector({
         <div className="flex flex-wrap gap-2 justify-center">
           <span className="text-xs text-slate-400 w-full text-center">Your tags</span>
           {tags.custom.map((tag) => (
-            <button
+            <div
               key={tagKey(tag)}
-              onClick={() => onToggle(tag)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all capitalize ${
+              className={`flex items-center rounded-full border transition-all capitalize ${
                 selectedTagKeys.includes(tagKey(tag))
                   ? "bg-violet-600 text-white border-violet-600"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-violet-300"
+                  : "bg-white text-slate-600 border-slate-200"
               }`}
             >
-              {tag.name}
-            </button>
+              <button
+                onClick={() => onToggle(tag)}
+                className="px-3 py-1.5 text-xs font-medium"
+              >
+                {tag.name}
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteCustomTag(tag);
+                }}
+                disabled={deletingTagId === tag.id}
+                className={`pr-2 text-xs ${
+                  selectedTagKeys.includes(tagKey(tag))
+                    ? "text-white/80 hover:text-white"
+                    : "text-slate-400 hover:text-red-500"
+                }`}
+                aria-label={`Delete ${tag.name}`}
+                title={`Delete ${tag.name}`}
+              >
+                {deletingTagId === tag.id ? "…" : "✕"}
+              </button>
+            </div>
           ))}
         </div>
       )}

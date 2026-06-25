@@ -6,7 +6,7 @@ import MoodLogger from "../../components/journal/MoodLogger";
 import MoodHistory from "../../components/journal/MoodHistory";
 import JournalEditor from "../../components/journal/JournalEditor";
 import OnboardingWizard from "../../components/OnboardingWizard";
-import { MoodLog, User, TagsResponse, JournalEntry, MoodLevelConfig } from "../../../shared/types";
+import { MoodLog, User, TagsResponse, JournalEntry, MoodLevelConfig, Tag } from "../../../shared/types";
 import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries, logoutUser, fetchMoodConfig } from "../../../shared/api";
 import PromptSection from "../../components/journal/PromptSection";
 import { Prompt } from "../../../shared/prompts";
@@ -24,6 +24,7 @@ export default function JournalPage() {
   const [activeTab, setActiveTab] = useState<Tab>("mood"); 
   const [pendingMoodLogId, setPendingMoodLogId] = useState<number | null>(null);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+  const [promptJumpToken, setPromptJumpToken] = useState(0);
   const [moodConfig, setMoodConfig] = useState<MoodLevelConfig[]>([]);
   const router = useRouter();
 
@@ -78,7 +79,32 @@ export default function JournalPage() {
   const handleSelectPrompt = (prompt: Prompt) => {
     setSelectedPrompt(prompt);
     setActiveTab("write");
+    setPromptJumpToken((n) => n + 1);
   };
+
+  const handleCustomTagCreated = (newTag: Tag) => {
+    setTags((prev) => ({
+      ...prev,
+      custom: [...prev.custom, newTag],
+    }));
+  };
+
+  const handleCustomTagDeleted = (tagId: number) => {
+    setTags((prev) => ({
+      ...prev,
+      custom: prev.custom.filter((tag) => tag.id !== tagId),
+    }));
+  };
+
+  const usedMoodLogIds = new Set(
+    entries
+      .filter((entry) => entry.moodLogId !== null)
+      .map((entry) => entry.moodLogId as number)
+  );
+
+  const availableMoodLogs = logs.filter(
+    (log) => !usedMoodLogIds.has(log.id) || log.id === pendingMoodLogId
+  );
 
   const today = new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" });
 
@@ -148,10 +174,10 @@ export default function JournalPage() {
             <MoodLogger
               onSaved={handleMoodSaved}
               tags={tags}
-              onTagsUpdated={(newTag) =>
-                setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
-              }
+              onCustomTagCreated={handleCustomTagCreated}
+              onCustomTagDeleted={handleCustomTagDeleted}
               moodConfig={moodConfig}
+              userName = {user?.name}
             />
           </div>
         )}
@@ -169,9 +195,10 @@ export default function JournalPage() {
                 setSelectedPrompt(null);
                 setPendingMoodLogId(null);
               }}
-              moodLogs={logs}
+              moodLogs={availableMoodLogs}
               defaultMoodLogId={pendingMoodLogId}
               promptText={selectedPrompt?.text ?? null}
+              jumpToEditorToken={promptJumpToken}
             />
           </div>
         )}
@@ -183,10 +210,10 @@ export default function JournalPage() {
               logs={logs}
               tags={tags}
               entries={entries}
+              moodConfig={moodConfig}
               onRefresh={loadData}
-              onTagsUpdated={(newTag) =>
-                setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }))
-              }
+              onCustomTagCreated={handleCustomTagCreated}
+              onCustomTagDeleted={handleCustomTagDeleted}
             />
           </div>
         )}

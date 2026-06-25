@@ -375,6 +375,34 @@ app.post('/mood/tags/custom', requireAuth, async (req, res) => {
   }
 });
 
+// DELETE a custom tag
+app.delete('/mood/tags/custom/:id', requireAuth, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const existing = await pool.query(
+      'SELECT id FROM user_tags WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Custom tag not found' });
+    }
+
+    await pool.query('DELETE FROM mood_log_tags WHERE user_tag_id = $1', [id]);
+
+    await pool.query('DELETE FROM user_tags WHERE id = $1 AND user_id = $2', [
+      id,
+      req.user.id,
+    ]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete custom tag error:', err.message);
+    res.status(500).json({ error: 'Failed to delete custom tag' });
+  }
+});
+
 // Create mood log
 // create mood entry with stress level and tags
 app.post('/mood/logs', requireAuth, async (req, res) => {

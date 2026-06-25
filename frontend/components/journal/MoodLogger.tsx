@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Tag, TagsResponse, MoodLevel, StressLevel, CreateMoodLogPayload, } from "../../../shared/types";
 import { createMoodLog } from "../../../shared/api";
 import { MoodLevelConfig } from "../../../shared/types";
-import TagSelector from "../TagSelector";
+import TagSelector from "./TagSelector";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -19,23 +19,30 @@ import { useToastContext } from "../notifications/ToastContext";
 //   { level: 5, emoji: "😄", label: "Great",   color: "#6366f1" },
 // ];
 
-// Stress slider labels at positions 1, 3, 5, 7, 10
+// Stress slider labels at all positions
 const STRESS_ANCHORS: Record<number, string> = {
   1: "Calm",
+  2: "Calm",
   3: "Relaxed",
+  4: "Relaxed",
   5: "Neutral",
+  6: "Neutral",
   7: "Tense",
+  8: "Tense",
+  9: "Overwhelmed",
   10: "Overwhelmed",
 };
 
 interface MoodLoggerProps {
   onSaved: (newLogId: number) => void;
   tags: TagsResponse;
-  onTagsUpdated: (tag: Tag) => void;
+  onCustomTagCreated: (tag: Tag) => void; 
+  onCustomTagDeleted: (tagId: number) => void;
   moodConfig: MoodLevelConfig[];
+  userName?: string | null;
 }
 
-export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }: MoodLoggerProps) {
+export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustomTagDeleted, moodConfig, userName, }: MoodLoggerProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); //1=mood, 2=stress, 3=tags
   const [selectedMood, setSelectedMood] = useState<MoodLevel | null>(null);
   const [stressLevel, setStressLevel] = useState<StressLevel>(5);
@@ -44,6 +51,7 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
   const [error, setError] = useState<string | null>(null);
   const [, forceUpdate] = useState(0);
   const { showToast } = useToastContext();
+  const greetingName = userName?.trim() || "you"; //user name defaults to "you"
 
   const noteEditor = useEditor({
     immediatelyRender: false,
@@ -114,7 +122,13 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
 
   return (
     <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-6 w-full max-w-3xl">
-      <h2 className="text-xl font-bold text-slate-800 mb-1 text-center">What made you feel that way?</h2>
+      {/*Headers for each step*/}
+      <h2 className="text-xl font-bold text-slate-800 mb-1 text-center">
+        {step === 1 && `Hey, ${greetingName}. How are you today?`}
+        {step === 2 && "How stressed do you feel?"}
+        {step === 3 && "What's been on your mind? (optional)"}
+        {step === 4 && "Add a quick note (optional)"}
+      </h2>
 
       {/* Step indicator */}
       <div className="flex justify-center gap-2 mb-6">
@@ -131,22 +145,29 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
       {/*STEP 1: MOOD SELECTION*/}
       {step === 1 && (
         <div className="flex flex-col items-center gap-4">
-          <p className="text-sm text-slate-500">Select your mood</p>
           <div className="flex gap-3 justify-center flex-wrap">
-            {moodConfig.map((mood) => (
-          <button
-            key={mood.level}
-            onClick={() => { setSelectedMood(mood.level as MoodLevel); setStep(2); }}
-            className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all hover:scale-105 ${
-              selectedMood === mood.level
-                ? "border-indigo-500 bg-indigo-50 scale-105"
-                : "border-slate-200 bg-white hover:border-slate-300"
-            }`}
-          >
-            <span className="text-3xl">{mood.emoji}</span>
-            <span className="text-xs font-medium text-slate-600">{mood.label}</span>
-          </button>
-        ))}
+            {moodConfig.map((mood) => {
+              const isSelected = selectedMood === mood.level;
+
+              return (
+                <button
+                  key={mood.level}
+                  onClick={() => {
+                    setSelectedMood(mood.level as MoodLevel);
+                    setStep(2);
+                  }}
+                  className="flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all hover:scale-105"
+                  style={{
+                    borderColor: mood.color,
+                    backgroundColor: isSelected ? `${mood.color}28` : `${mood.color}18`,
+                    boxShadow: isSelected ? `0 0 0 3px ${mood.color}22` : "none",
+                  }}
+                >
+                  <span className="text-4xl leading-none">{mood.emoji}</span>
+                  <span className="text-xs font-medium text-slate-700">{mood.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -154,12 +175,13 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
       {/*STEP 2: STRESS SLIDER*/}
       {step === 2 && (
         <div className="flex flex-col items-center gap-6">
-          <p className="text-sm text-slate-500">How stressed do you feel?</p>
           <div className="w-full max-w-sm">
             <div className="flex justify-between text-xs text-slate-400 mb-1 px-1">
-              {Object.entries(STRESS_ANCHORS).map(([pos, label]) => (
-                <span key={pos}>{label}</span>
-              ))}
+              <span>Calm</span>
+              <span>Relaxed</span>
+              <span>Neutral</span>
+              <span>Tense</span>
+              <span>Overwhelmed</span>
             </div>
             <input
               type="range"
@@ -193,14 +215,17 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
       {/*STEP 3: TAG SELECTION*/}
       {step === 3 && (
         <div className="flex flex-col items-center gap-4">
-            <p className="text-sm text-slate-500">What's been on your mind? (optional)</p>
             <TagSelector
                 tags={tags}
                 selectedTagKeys={selectedTagKeys}
                 onToggle={toggleTag}
                 onCustomTagCreated={(newTag) => {
-                    onTagsUpdated(newTag);
+                    onCustomTagCreated(newTag);
                     setSelectedTagKeys((prev) => [...prev, `custom:${newTag.id}`]);
+                }}
+                onCustomTagDeleted={(tagId) => {
+                  onCustomTagDeleted(tagId);
+                  setSelectedTagKeys((prev) => prev.filter((key) => key !== `custom:${tagId}`));
                 }}
             />
 
@@ -230,7 +255,6 @@ export default function MoodLogger({ onSaved, tags, onTagsUpdated, moodConfig }:
       {/*STEP 4: OPTIONAL NOTE*/}
       {step === 4 && (
         <div className="flex flex-col gap-4 w-full">
-          <p className="text-sm text-slate-500 text-center">Add a quick note (optional)</p>
 
           {noteEditor && (
             <div className="flex gap-1 px-1 flex-wrap">

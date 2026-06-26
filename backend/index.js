@@ -50,7 +50,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // Explicitly allow preflight
     allowedHeaders: ["Content-Type", "Authorization"], // Crucial: allows session cookies to pass through
-  }),
+  ),
 );
 
 // Hybrid Middleware: Checks browser cookies OR Mobile Authorization headers

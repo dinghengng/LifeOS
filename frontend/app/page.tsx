@@ -7,8 +7,8 @@ import EditTaskForm from "../components/EditTaskForm";
 import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import { useRouter } from "next/navigation";
-import GuidedTour from "../components/GuidedTour";
 import Navbar from "../components/Navbar";
+import HelpCentre from "../components/GuidedTour";
 
 // Import types and unified API functions from the shared folder
 import { Task, Priority, User } from "../../shared/types";
@@ -270,8 +270,6 @@ export default function Page() {
 // Display Core App Dashboard Interface
  return (
     <> 
-      {/* Move help centre outside */}
-      <GuidedTour />
       <main
         className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col items-center py-10 px-4 transition-all duration-1000 ease-in-out"
         style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
@@ -290,7 +288,7 @@ export default function Page() {
           </div>
         </div>
         
-        <div id="tour-tasks" className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 h-fit">
+       <div id="tour-tasks" className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 max-h-[85vh] overflow-y-auto">
           <h1 className="text-3xl font-bold text-slate-800 mb-4 text-center">
             LifeOS Tasks
           </h1>
@@ -302,10 +300,10 @@ export default function Page() {
             <p className="text-slate-500 text-center mt-4">Loading tasks...</p>
           ) : (
             <>
-              <NewTaskForm onAddTask={handleAddTask} />
+              <div id="tour-add-task"><NewTaskForm onAddTask={handleAddTask} /></div>
 
               {/* Filter controls */}
-              <div className="flex gap-2 mb-6 flex-wrap justify-center">
+              <div id="tour-priority-filter" className="flex gap-2 mb-6 flex-wrap justify-center">
                 {(["all", "critical", "high", "low", "none"] as const).map(
                   (level) => {
                     const count =
@@ -356,6 +354,7 @@ export default function Page() {
           )}
         </div>
       </main>
+      <HelpCentre />
     </> 
   );
 }

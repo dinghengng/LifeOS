@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { X, Rocket, CheckSquare, Trophy, BookOpen, Salad } from 'lucide-react';
 
@@ -77,34 +77,40 @@ const CustomTooltip = ({
 const tourSteps = [
   {
     target: 'body',
-    content: 'LifeOS helps you track tasks, goals, journaling, and nutrition! All in one place.',
-    title: 'Welcome to LifeOS',
+    content: 'LifeOS helps you track tasks, goals, journaling, and nutrition — all in one place. Let\'s take a quick look at the Tasks page!',
+    title: 'Welcome to LifeOS 🚀',
     placement: 'center',
     disableBeacon: true,
+    disableScrolling: true,
   },
   {
     target: '#tour-tasks',
-    content: 'Stay on top of your daily to-dos and priorities. Check off tasks as you complete them to build momentum!',
-    title: 'Task Management',
+    content: 'This is your task board. Add new tasks, set priorities, and check them off as you go.',
+    title: 'Your Tasks',
     disableBeacon: true,
+    disableScrolling: true,
+    placement: 'left',
   },
   {
-    target: '#tour-dashboard',
-    content: "Get a view of your progress. Track your long-term goals and celebrate your major milestones here.",
-    title: 'Goals & Milestones',
+    target: '#tour-add-task',
+    content: 'Use this form to quickly add a new task. You can set a due date and priority level.',
+    title: 'Add a Task',
     disableBeacon: true,
+    disableScrolling: true,
   },
   {
-    target: '#tour-journal',
-    content: 'Reflect on your day. Log your mood levels and answer custom prompts to track your mental well-being.',
-    title: 'Lifestyle Journaling',
+    target: '#tour-priority-filter',
+    content: 'Filter your tasks by priority — Critical, High, Low, or view all at once.',
+    title: 'Filter by Priority',
     disableBeacon: true,
+    disableScrolling: true,
   },
   {
-    target: '#tour-nutrition',
-    content: 'Log your meals, track your macros, and manage your health!',
-    title: 'Nutrition Tracker',
+    target: '#tour-navbar',
+    content: 'Navigate to Dashboard, Journal, and Nutrition from here. Each section has its own tour when you get there!',
+    title: 'Navigation',
     disableBeacon: true,
+    disableScrolling: true,
   },
 ];
 
@@ -130,6 +136,17 @@ export default function HelpCentre() {
   const [open, setOpen] = useState(false);
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
+  useEffect(() => {
+    if (run) {
+      document.body.style.overflow = 'hidden'; // Freeze page
+    } else {
+      document.body.style.overflow = 'unset';  
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [run]);
+
   const handleJoyrideCallback = (data: JoyrideData) => {
     if (['finished', 'skipped'].includes(data.status)) {
       setRun(false);

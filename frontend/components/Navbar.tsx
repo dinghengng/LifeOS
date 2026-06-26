@@ -20,7 +20,7 @@ export default function AppNavbar({ onLogout }: AppNavbarProps) {
   const pathname = usePathname();
 
   return (
-    <nav style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+    <nav id="tour-navbar" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
       {NAV_LINKS.map(({ label, path }) => {
         const isActive = pathname === path;
         return (

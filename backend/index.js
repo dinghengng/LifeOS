@@ -27,7 +27,7 @@ app.use(
         process.env.FRONTEND_URL, // Vercel URL
       ].filter(Boolean); // remove undefined
 
-      // TEMP DEBUG 
+      // TEMP DEBUG
       console.log("CORS DEBUG incoming origin:", JSON.stringify(origin));
       console.log("CORS DEBUG FRONTEND_URL:", JSON.stringify(process.env.FRONTEND_URL));
       console.log("CORS DEBUG allowedOrigins:", JSON.stringify(allowedOrigins));
@@ -43,14 +43,11 @@ app.use(
       }
 
       return callback(new Error("Not allowed by CORS"));
-      }
-
-      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // Explicitly allow preflight
     allowedHeaders: ["Content-Type", "Authorization"], // Crucial: allows session cookies to pass through
-  ),
+  }),
 );
 
 // Hybrid Middleware: Checks browser cookies OR Mobile Authorization headers

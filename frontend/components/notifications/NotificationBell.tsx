@@ -46,8 +46,9 @@ export default function NotificationBell() {
   const fetchInbox = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/notifications/inbox`, {
+      const res = await fetch(`${API_BASE}/api/notifications/inbox?t=${Date.now()}`, {
         credentials: "include",
+        cache: "no-store",
       });
       if (res.ok) setNotifications(await res.json());
     } catch (err) {

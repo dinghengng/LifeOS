@@ -80,6 +80,7 @@ function createNotificationRouter(requireAuth) {
 
   // GET the last 30 notis
   router.get('/inbox', requireAuth, async (req, res) => {
+    res.set('Cache-Control', 'no-store');
     try {
       const { rows } = await pool.query(
         `SELECT id, type, title, body, sent_at, read_at, status

@@ -5,6 +5,7 @@ const db = require('../db');
 const expo = new Expo();
 
 function isQuietHours(quietStart, quietEnd) {
+  if (!quietStart || !quietEnd) return false;
   const now = new Date();
   const current = now.getHours() * 60 + now.getMinutes();
   const [startH, startM] = quietStart.split(':').map(Number);
@@ -22,6 +23,12 @@ async function sendToUser(userId, { title, body, type, url = '/' }) {
 
   if (prefs && isQuietHours(prefs.quiet_start, prefs.quiet_end)) return;
 
+  await db.query(
+    `INSERT INTO notification_log (user_id, type, title, body, status)
+     VALUES ($1, $2, $3, $4, 'sent')`,
+    [userId, type, title, body]
+  );
+  
   const { rows: tokens } = await db.query(
     'SELECT * FROM device_tokens WHERE user_id = $1 AND is_active = true', [userId]
   );
@@ -78,4 +85,4 @@ async function sendToUser(userId, { title, body, type, url = '/' }) {
   }
 }
 
-module.exports = { sendToUser };
+module.exports = { sendToUser, isQuietHours };

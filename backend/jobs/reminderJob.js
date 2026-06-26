@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const pool = require('../db');
-const { sendToUser } = require('../services/notificationService');
+const { sendToUser, isQuietHours } = require('../services/notificationService');
 const { sendTaskReminderEmail } = require('../services/emailService');
 const { runOverdueTaskAlerts }     = require('./overdueTaskAlerts');
 const { runGoalDeadlineAlerts }    = require('./goalDeadlineAlerts');
@@ -10,6 +10,7 @@ const { runJournalNudge }          = require('./journalNudge');
 
 function startReminderJobs() {
   cron.schedule('* * * * *', async () => {
+    console.log('TEST Task reminder cron fired:', new Date().toISOString()); //TEST
     try {
       const { rows: tasks } = await pool.query(`
         SELECT t.id, t.title, t.user_id,
@@ -23,7 +24,10 @@ function startReminderJobs() {
           AND t.due_date BETWEEN NOW() AND NOW() + (np.lead_time_mins || ' minutes')::INTERVAL
       `);
 
+      console.log('Tasks found for reminder:', tasks.length); //TEST
+
       for (const task of tasks) {
+        console.log('Processing task:', task.title, 'for user:', task.user_id); //TEST
         await sendToUser(task.user_id, {
           title: 'Task Due Soon',
           body: `"${task.title}" is due soon!`,

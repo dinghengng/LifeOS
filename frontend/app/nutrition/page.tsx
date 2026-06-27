@@ -507,7 +507,26 @@ export default function NutritionPage() {
         method: "DELETE",
         credentials: "include",
       });
-      if (res.ok) setMeals(meals.filter((m) => m.id !== id));
+      if (res.ok) {
+        const nextMeals = meals.filter((m) => m.id !== id);
+        setMeals(nextMeals);
+        const todayStr = (() => {
+          const now = new Date();
+          return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        })();
+        setHistory((prev) => {
+          const todayEntry = {
+            date: todayStr,
+            calories: nextMeals.reduce((s, m) => s + m.calories, 0),
+            protein:  nextMeals.reduce((s, m) => s + m.protein,  0),
+            carbs:    nextMeals.reduce((s, m) => s + m.carbs,    0),
+            fats:     nextMeals.reduce((s, m) => s + m.fats,     0),
+            meal_count: nextMeals.length,
+          };
+          const without = prev.filter((d) => d.date !== todayStr);
+          return [...without, todayEntry].sort((a, b) => a.date.localeCompare(b.date));
+        });
+      }
     } catch (err) {
       console.error(err);
     }
@@ -560,9 +579,12 @@ export default function NutritionPage() {
       });
 
       if (res.ok) {
+        let nextMeals = meals;
+
         if (modalMode === "create") {
           const newMeal = await res.json();
-          setMeals([...meals, newMeal]);
+          nextMeals = [...meals, newMeal];
+          setMeals(nextMeals);
 
           if (saveToFavorites) {
             await fetch(`${API_BASE}/api/nutrition/saved`, {
@@ -575,9 +597,31 @@ export default function NutritionPage() {
           }
         } else if (modalMode === "edit_log") {
           const updatedMeal = await res.json();
-          setMeals(meals.map((m) => (m.id === editingId ? updatedMeal : m)));
+          nextMeals = meals.map((m) => (m.id === editingId ? updatedMeal : m));
+          setMeals(nextMeals);
         } else if (modalMode === "edit_saved") {
-          fetchNutritionData(); // Refresh saved meals list to save changes
+          fetchNutritionData();
+        }
+
+        // Keep the chart in sync without a round-trip:
+        // Recalculate today's totals from the updated meals list and patch history.
+        if (modalMode === "create" || modalMode === "edit_log") {
+          const todayStr = (() => {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+          })();
+          setHistory((prev) => {
+            const todayEntry = {
+              date: todayStr,
+              calories: nextMeals.reduce((s, m) => s + m.calories, 0),
+              protein:  nextMeals.reduce((s, m) => s + m.protein,  0),
+              carbs:    nextMeals.reduce((s, m) => s + m.carbs,    0),
+              fats:     nextMeals.reduce((s, m) => s + m.fats,     0),
+              meal_count: nextMeals.length,
+            };
+            const without = prev.filter((d) => d.date !== todayStr);
+            return [...without, todayEntry].sort((a, b) => a.date.localeCompare(b.date));
+          });
         }
 
         setShowMealModal(false);

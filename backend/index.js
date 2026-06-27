@@ -1335,22 +1335,23 @@ app.post("/api/nutrition", requireAuth, async (req, res) => {
   }
 });
 
-// GET: fetch todays meal logs
+// GET: FETCH TODAY'S MEAL LOGS
 app.get("/api/nutrition", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
          id, 
-         meal_name AS "mealName", 
-         meal_type AS "mealType", 
+         meal_name      AS "mealName", 
+         meal_type      AS "mealType", 
          calories, 
          protein, 
          carbs, 
          fats, 
-         created_at AS "createdAt"
+         created_at     AS "createdAt"
        FROM meal_logs
        WHERE user_id = $1 
-         AND created_at::date = CURRENT_DATE
+         AND (created_at AT TIME ZONE 'Asia/Singapore')::date
+             = (NOW() AT TIME ZONE 'Asia/Singapore')::date
        ORDER BY created_at ASC`,
       [req.user.id],
     );
@@ -1376,7 +1377,7 @@ app.get("/api/nutrition/saved", requireAuth, async (req, res) => {
   }
 });
 
-// POST: create saved meal for easier access
+// POST: CREATE SAVED MEAL FOR QUICK-ADD
 app.post("/api/nutrition/saved", requireAuth, async (req, res) => {
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
   try {
@@ -1401,7 +1402,7 @@ app.post("/api/nutrition/saved", requireAuth, async (req, res) => {
   }
 });
 
-// GET: fetch user body metrics (for personalized recommendations and progress tracking)
+// GET: FETCH USER BODY METRICS
 app.get("/api/user/metrics", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1415,7 +1416,7 @@ app.get("/api/user/metrics", requireAuth, async (req, res) => {
   }
 });
 
-//post: update the user body metrics
+// POST: UPDATE USER BODY METRICS
 app.post("/api/user/metrics", requireAuth, async (req, res) => {
   const { weight_kg, height_cm, fitness_goal } = req.body;
   try {
@@ -1433,7 +1434,7 @@ app.post("/api/user/metrics", requireAuth, async (req, res) => {
   }
 });
 
-// edit under the quick add
+// PATCH: EDIT SAVED MEAL
 app.patch("/api/nutrition/saved/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
@@ -1449,7 +1450,7 @@ app.patch("/api/nutrition/saved/:id", requireAuth, async (req, res) => {
   }
 });
 
-// delete under the quick add
+// DELETE: REMOVE SAVED MEAL
 app.delete("/api/nutrition/saved/:id", requireAuth, async (req, res) => {
   try {
     await pool.query("DELETE FROM saved_meals WHERE id=$1 AND user_id=$2", [
@@ -1462,7 +1463,7 @@ app.delete("/api/nutrition/saved/:id", requireAuth, async (req, res) => {
   }
 });
 
-// edit the meal logs
+// PATCH: EDIT MEAL LOG ENTRY
 app.patch("/api/nutrition/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   const { mealName, mealType, calories, protein, carbs, fats } = req.body;
@@ -1478,7 +1479,7 @@ app.patch("/api/nutrition/:id", requireAuth, async (req, res) => {
   }
 });
 
-// delete meal log entries
+// DELETE: REMOVE MEAL LOG ENTRY
 app.delete("/api/nutrition/:id", requireAuth, async (req, res) => {
   try {
     await pool.query("DELETE FROM meal_logs WHERE id=$1 AND user_id=$2", [
@@ -1491,7 +1492,7 @@ app.delete("/api/nutrition/:id", requireAuth, async (req, res) => {
   }
 });
 
-// GET: fetch user supplements
+// GET: FETCH USER SUPPLEMENTS
 app.get("/api/supplements", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1505,7 +1506,7 @@ app.get("/api/supplements", requireAuth, async (req, res) => {
   }
 });
 
-//  POST: add a new supplement
+// POST: ADD A NEW SUPPLEMENT
 app.post("/api/supplements", requireAuth, async (req, res) => {
   const { name, dose, timing } = req.body;
   if (!name || !dose || !timing) {
@@ -1525,7 +1526,7 @@ app.post("/api/supplements", requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/supplements/:id
+// DELETE: REMOVE A SUPPLEMENT
 app.delete("/api/supplements/:id", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1542,7 +1543,7 @@ app.delete("/api/supplements/:id", requireAuth, async (req, res) => {
   }
 });
 
-// GET: fetch user XP
+// GET: FETCH USER XP
 app.get("/api/user/xp", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -1556,7 +1557,7 @@ app.get("/api/user/xp", requireAuth, async (req, res) => {
   }
 });
 
-//  POST: update user XP
+// POST: UPDATE USER XP
 app.post("/api/user/xp", requireAuth, async (req, res) => {
   const { total_xp, awarded_quest_ids } = req.body;
   if (total_xp === undefined || !awarded_quest_ids) {
@@ -1580,7 +1581,7 @@ app.post("/api/user/xp", requireAuth, async (req, res) => {
   }
 });
 
-// for insights page
+// GET: FETCH WEEKLY NUTRITION HISTORY (for insights/chart) fix for sgt alignment
 app.get("/api/nutrition/history", requireAuth, async (req, res) => {
   const days = Math.min(parseInt(req.query.days) || 7, 30);
   try {
@@ -1601,31 +1602,34 @@ app.get("/api/nutrition/history", requireAuth, async (req, res) => {
       [req.user.id, days],
     );
 
+    const SGT_OFFSET_MS = 8 * 60 * 60 * 1000;
     const filled = [];
+
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date();
-      const sgtOffset = 8 * 60 * 60 * 1000;
-      const sgtDate = new Date(d.getTime() + sgtOffset);
+      // Date.now() is always UTC milliseconds — safe on any server timezone
+      const sgtNowMs = Date.now() + SGT_OFFSET_MS;
+      const sgtDate  = new Date(sgtNowMs);
       sgtDate.setUTCDate(sgtDate.getUTCDate() - i);
-      const dateStr = sgtDate.toISOString().split("T")[0];
+      const dateStr = sgtDate.toISOString().split("T")[0]; // "YYYY-MM-DD"
 
       const row = result.rows.find((r) => {
         const rowDate =
           r.date instanceof Date
             ? r.date.toISOString().split("T")[0]
-            : String(r.date);
+            : String(r.date).split("T")[0]; // guard for "2025-06-27T00:00:00.000Z" strings
         return rowDate === dateStr;
       });
 
       filled.push({
-        date: dateStr,
-        calories: parseInt(row?.calories) || 0,
-        protein: parseInt(row?.protein) || 0,
-        carbs: parseInt(row?.carbs) || 0,
-        fats: parseInt(row?.fats) || 0,
+        date:       dateStr,
+        calories:   parseInt(row?.calories)   || 0,
+        protein:    parseInt(row?.protein)    || 0,
+        carbs:      parseInt(row?.carbs)      || 0,
+        fats:       parseInt(row?.fats)       || 0,
         meal_count: parseInt(row?.meal_count) || 0,
       });
     }
+
     res.json(filled);
   } catch (err) {
     console.error("History fetch error:", err.message);

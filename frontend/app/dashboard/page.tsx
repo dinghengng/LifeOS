@@ -475,7 +475,7 @@ export default function DashboardPage() {
     day: "numeric",
     month: "long",
   });
-  const completedToday = habits.filter((h) => h.completedDays[6]).length;
+  const completedToday = habits.filter((h) => h.completedDays[getTodayIndexSGT()]).length;
   const totalStreak = habits.reduce((sum, h) => sum + h.streak, 0);
   const avgGoalProgress = goals.length
     ? Math.round(goals.reduce((sum, g) => sum + g.progress, 0) / goals.length)

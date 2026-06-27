@@ -813,6 +813,7 @@ app.put("/mood/config", requireAuth, async (req, res) => {
   }
 });
 
+//Feature 3 Dashboard: Habits + goals
 app.get("/api/habits", requireAuth, async (req, res) => {
   try {
     const habitsResult = await pool.query(
@@ -880,10 +881,9 @@ app.get("/api/habits", requireAuth, async (req, res) => {
 // TOGGLE completion status for id
 app.post("/api/habits/:id/toggle", requireAuth, async (req, res) => {
   const habitId = req.params.id;
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Singapore",}).format(new Date()); //chg to SGT
 
   try {
-    // Verify ownership of requested target habit parameter
     const verifyOwnership = await pool.query(
       "SELECT id, streak, total_days FROM habits WHERE id = $1 AND user_id = $2",
       [habitId, req.user.id],
@@ -891,13 +891,12 @@ app.post("/api/habits/:id/toggle", requireAuth, async (req, res) => {
     if (verifyOwnership.rows.length === 0) {
       return res.status(404).json({ error: "Habit configuration not found" });
     }
-    const currentHabit = verifyOwnership.rows[0];
-
+ 
     const checkLog = await pool.query(
       "SELECT id FROM habit_logs WHERE habit_id = $1 AND completed_at = $2",
       [habitId, todayStr],
     );
-
+    
     if (checkLog.rows.length > 0) {
       // Done then Untoggle (Delete the log entry, decrement streak, don't touch totalDays)
       await pool.query(
@@ -936,30 +935,25 @@ app.post("/api/habits/:id/toggle", requireAuth, async (req, res) => {
 
       // Calculate streak: count consecutive days backwards from today (Diff logic from total days)
       let newStreak = 0;
-      const today = new Date(todayStr);
-
       for (let i = 0; i < logsResult.rows.length; i++) {
-        const logDate = new Date(logsResult.rows[i].completed_at.split(" ")[0]);
-        const expectedDate = new Date(today);
-        expectedDate.setDate(expectedDate.getDate() - i);
+        const logDate = logsResult.rows[i].completed_at.split(" ")[0]; // "YYYY-MM-DD" in sgt
+        const expected = new Date(todayStr + "T00:00:00Z");
+        expected.setUTCDate(expected.getUTCDate() - i);
+        const expectedStr = expected.toISOString().split("T")[0];
 
-        const logDateStr = logDate.toISOString().split("T")[0];
-        const expectedDateStr = expectedDate.toISOString().split("T")[0];
-
-        if (logDateStr === expectedDateStr) {
+         if (logDate === expectedStr) {
           newStreak++;
         } else {
           break;
         }
       }
-
-      // Increment totalDays by counting all-time logs (source of truth, prevents drift)
+ 
       const totalDaysResult = await pool.query(
         "SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1",
         [habitId],
       );
       const newTotalDays = parseInt(totalDaysResult.rows[0].total);
-
+ 
       const updatedOn = await pool.query(
         "UPDATE habits SET streak = $1, total_days = $2 WHERE id = $3 RETURNING streak, total_days",
         [newStreak, newTotalDays, habitId],

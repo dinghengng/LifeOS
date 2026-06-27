@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { MoodLog, MoodLevel, StressLevel, Tag, TagsResponse, UpdateMoodLogPayload } from "../../../shared/types";
+import { MoodLog, MoodLevel, StressLevel, Tag, TagsResponse, UpdateMoodLogPayload, MoodLevelConfig } from "../../../shared/types";
 import { updateMoodLog } from "../../../shared/api";
 import TagSelector from "./TagSelector";
 import { useToastContext } from "../notifications/ToastContext";
 
-const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string }[] = [
-  { level: 1, emoji: "😢", label: "Awful" },
-  { level: 2, emoji: "😕", label: "Bad"   },
-  { level: 3, emoji: "😐", label: "Okay"  },
-  { level: 4, emoji: "🙂", label: "Good"  },
-  { level: 5, emoji: "😄", label: "Great" },
+const FALLBACK_MOOD_CONFIG: MoodLevelConfig[] = [
+  { id: 1, level: 1, emoji: "😢", label: "Awful", color: "#ef4444", displayOrder: 0 },
+  { id: 2, level: 2, emoji: "😕", label: "Bad", color: "#f97316", displayOrder: 1 },
+  { id: 3, level: 3, emoji: "😐", label: "Okay", color: "#eab308", displayOrder: 2 },
+  { id: 4, level: 4, emoji: "🙂", label: "Good", color: "#22c55e", displayOrder: 3 },
+  { id: 5, level: 5, emoji: "😄", label: "Great", color: "#6366f1", displayOrder: 4 },
 ];
 
 const STRESS_ANCHORS: Record<number, string> = {
@@ -21,13 +21,14 @@ const STRESS_ANCHORS: Record<number, string> = {
 interface EditMoodLogModalProps {
   log: MoodLog;
   tags: TagsResponse;
+  moodConfig?: MoodLevelConfig[];
   onSaved: () => void;
   onClose: () => void;
   onCustomTagCreated: (tag: Tag) => void;
   onCustomTagDeleted: (tagId: number) => void;
 }
 
-export default function EditMoodLogModal({ log, tags, onSaved, onClose, onCustomTagCreated, onCustomTagDeleted }: EditMoodLogModalProps) {
+export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClose, onCustomTagCreated, onCustomTagDeleted }: EditMoodLogModalProps) {
   const [selectedMood, setSelectedMood] = useState<MoodLevel>(log.moodLevel);
   const [stressLevel, setStressLevel] = useState<StressLevel>(log.stressLevel);
   const [selectedTagKeys, setSelectedTagKeys] = useState<string[]>(
@@ -36,6 +37,8 @@ export default function EditMoodLogModal({ log, tags, onSaved, onClose, onCustom
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useToastContext();
+
+  const resolvedMoodConfig = moodConfig?.length ? moodConfig : FALLBACK_MOOD_CONFIG;
 
   const toggleTag = (tag: Tag) => {
     const key = `${tag.type}:${tag.id}`;
@@ -95,20 +98,25 @@ export default function EditMoodLogModal({ log, tags, onSaved, onClose, onCustom
         <div>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Mood</p>
           <div className="flex gap-2 justify-between">
-            {DEFAULT_MOODS.map((mood) => (
-              <button
-                key={mood.level}
-                onClick={() => setSelectedMood(mood.level)}
-                className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 flex-1 transition-all ${
-                  selectedMood === mood.level
-                    ? "border-indigo-500 bg-indigo-50"
-                    : "border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                <span className="text-2xl">{mood.emoji}</span>
-                <span className="text-[10px] font-medium text-slate-600">{mood.label}</span>
-              </button>
-            ))}
+            {resolvedMoodConfig.map((mood) => {
+              const isSelected = selectedMood === mood.level;
+
+              return (
+                <button
+                  key={mood.level}
+                  onClick={() => setSelectedMood(mood.level)}
+                  className="flex flex-col items-center gap-1 p-2 rounded-xl border-2 flex-1 transition-all"
+                  style={{
+                    borderColor: mood.color,
+                    backgroundColor: isSelected ? `${mood.color}28` : `${mood.color}18`,
+                    boxShadow: isSelected ? `0 0 0 3px ${mood.color}22` : "none",
+                  }}
+                >
+                  <span className="text-2xl">{mood.emoji}</span>
+                  <span className="text-[10px] font-medium text-slate-700">{mood.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

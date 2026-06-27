@@ -5,16 +5,17 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { createJournalEntry } from "../../../shared/api";
-import { CreateJournalEntryPayload, MoodLog, MoodLevel } from "../../../shared/types";
+import { CreateJournalEntryPayload, MoodLog, MoodLevel, MoodLevelConfig } from "../../../shared/types";
 import { useToastContext } from "../notifications/ToastContext";
 
-const MOOD_EMOJI: Record<MoodLevel, string> = {
-  1: "😢", 2: "😕", 3: "😐", 4: "🙂", 5: "😄",
-};
+// const MOOD_EMOJI: Record<MoodLevel, string> = {
+//   1: "😢", 2: "😕", 3: "😐", 4: "🙂", 5: "😄",
+// };
 
 interface JournalEditorProps {
   onSaved: () => void;
   moodLogs?: MoodLog[];
+  moodConfig?: MoodLevelConfig[];
   defaultMoodLogId?: number | null;
   onCancel?: () => void;
   compact?: boolean;
@@ -25,6 +26,7 @@ interface JournalEditorProps {
 export default function JournalEditor({
   onSaved,
   moodLogs = [],
+  moodConfig = [],
   defaultMoodLogId = null,
   onCancel,
   compact = false,
@@ -134,7 +136,8 @@ export default function JournalEditor({
   };
 
   const formatLogOption = (log: MoodLog) => {
-    const emoji = MOOD_EMOJI[log.moodLevel];
+    const mood = moodConfig.find((m) => m.level === log.moodLevel);
+    const emoji = mood?.emoji ?? "🙂";
     const date = new Date(log.loggedAt).toLocaleString(undefined, {
       month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
     });

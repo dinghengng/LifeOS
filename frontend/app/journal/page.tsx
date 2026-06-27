@@ -196,6 +196,7 @@ export default function JournalPage() {
                 setPendingMoodLogId(null);
               }}
               moodLogs={availableMoodLogs}
+              moodConfig={moodConfig}
               defaultMoodLogId={pendingMoodLogId}
               promptText={selectedPrompt?.text ?? null}
               jumpToEditorToken={promptJumpToken}

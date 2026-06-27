@@ -186,6 +186,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
         <EditMoodLogModal
           log={editingLog}
           tags={tags}
+          moodConfig={moodConfig}
           onSaved={onRefresh}
           onClose={() => setEditingLog(null)}
           onCustomTagCreated={onCustomTagCreated}
@@ -298,6 +299,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                       <JournalEditor
                         compact
+                        moodConfig={moodConfig}
                         defaultMoodLogId={log.id}
                         onSaved={() => {
                           onRefresh();

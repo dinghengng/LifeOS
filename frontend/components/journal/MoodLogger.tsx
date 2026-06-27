@@ -95,14 +95,16 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
         .filter((k) => k.startsWith("custom:"))
         .map((k) => Number(k.split(":")[1]));
 
+    const noteText = noteEditor?.getText().trim();
+
     const payload: CreateMoodLogPayload = {
       mood_level: selectedMood,
       stress_level: stressLevel,
       systemTagIds,
       customTagIds,
-      note: noteEditor && !noteEditor.isEmpty ? noteEditor.getHTML() : undefined,
+      note: noteText ? noteText : undefined,
     };
-
+    
     try {
       const newLog = await createMoodLog(payload);
       setStep(1);

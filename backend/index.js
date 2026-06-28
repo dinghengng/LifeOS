@@ -584,21 +584,33 @@ app.patch("/mood/logs/:id", requireAuth, async (req, res) => {
 // Delete mood log
 // Sets mood log to null
 app.delete("/mood/logs/:id", requireAuth, async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
-    const result = await pool.query(
+    await client.query("BEGIN");
+    //delete the journal entry first
+    await client.query(
+      "DELETE FROM journal_entries WHERE mood_log_id = $1 AND user_id = $2",
+      [id, req.user.id],
+    );
+    const result = await client.query(
       "DELETE FROM mood_logs WHERE id = $1 AND user_id = $2 RETURNING *",
       [id, req.user.id],
     );
 
     if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ error: "Mood log not found" });
     }
 
+    await client.query("COMMIT");
     res.json({ message: "Mood log deleted successfully" });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error(err.message);
     res.status(500).send("Server Error");
+  } finally {
+    client.release();
   }
 });
 
@@ -638,18 +650,27 @@ app.post("/journal", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Content is required" });
   }
 
+  const client = await pool.connect();
+
   try {
+    await client.query("BEGIN");
     if (mood_log_id) {
-      const check = await pool.query(
+      const check = await client.query(
         "SELECT id FROM mood_logs WHERE id = $1 AND user_id = $2",
         [mood_log_id, req.user.id],
       );
       if (check.rows.length === 0) {
+        await client.query("ROLLBACK");
         return res.status(403).json({ error: "Invalid mood log reference" });
       }
+      //journal entry replaces note
+      await client.query(
+        "UPDATE mood_logs SET note = NULL WHERE id = $1 AND user_id = $2",
+        [mood_log_id, req.user.id],
+      );
     }
 
-    const result = await pool.query(
+    const result = await client.query(
       `INSERT INTO journal_entries (user_id, mood_log_id, content, prompt_used, title)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
@@ -662,10 +683,14 @@ app.post("/journal", requireAuth, async (req, res) => {
       ],
     );
 
+    await client.query("COMMIT");
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error(err.message);
     res.status(500).send("Server Error");
+  } finally {
+    client.release();
   }
 });
 
@@ -674,26 +699,31 @@ app.patch("/journal/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
   const { content, mood_log_id, title } = req.body;
 
+  const client = await pool.connect();
+
   try {
-    const existing = await pool.query(
+    await client.query("BEGIN");
+    const existing = await client.query(
       "SELECT id FROM journal_entries WHERE id = $1 AND user_id = $2",
       [id, req.user.id],
     );
     if (existing.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ error: "Journal entry not found" });
     }
 
-    if (mood_log_id !== undefined) {
-      const check = await pool.query(
+    if (mood_log_id !== undefined && mood_log_id !== null) {
+      const check = await client.query(
         "SELECT id FROM mood_logs WHERE id = $1 AND user_id = $2",
         [mood_log_id, req.user.id],
       );
       if (check.rows.length === 0) {
+        await client.query("ROLLBACK");
         return res.status(403).json({ error: "Invalid mood log reference" });
       }
     }
 
-    const result = await pool.query(
+    const result = await client.query(
       `UPDATE journal_entries
        SET
          content     = COALESCE($1, content),
@@ -705,10 +735,14 @@ app.patch("/journal/:id", requireAuth, async (req, res) => {
       [content ?? null, mood_log_id ?? null, title ?? null, id, req.user.id],
     );
 
+    await client.query("COMMIT");
     res.json(result.rows[0]);
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error(err.message);
     res.status(500).send("Server Error");
+  } finally {
+    client.release();
   }
 });
 

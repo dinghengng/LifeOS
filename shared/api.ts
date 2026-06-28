@@ -161,14 +161,16 @@ const mapMoodLog = (raw: DBMoodLog): MoodLog => ({
 
 // GET all tags
 export const fetchTags = async (): Promise<TagsResponse> => {
-  const response = await fetch(`${API_URL}/mood/tags`, { credentials: "include" });
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/mood/tags`, { credentials: "include", headers, });
   if (!response.ok) throw new Error("Failed to fetch tags");
   return await response.json();
 };
 
 // GET all mood logs
 export const fetchMoodLogs = async (): Promise<MoodLog[]> => {
-  const response = await fetch(`${API_URL}/mood/logs`, { credentials: "include" });
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/mood/logs`, { credentials: "include", headers, });
   if (!response.ok) throw new Error("Failed to fetch mood logs");
   const data: DBMoodLog[] = await response.json();
   return data.map(mapMoodLog);
@@ -176,9 +178,10 @@ export const fetchMoodLogs = async (): Promise<MoodLog[]> => {
 
 // POST create a new mood log
 export const createMoodLog = async (payload: CreateMoodLogPayload): Promise<MoodLog> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const response = await fetch(`${API_URL}/mood/logs`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify(payload),
   });
@@ -192,9 +195,10 @@ export const createMoodLog = async (payload: CreateMoodLogPayload): Promise<Mood
 
 // PATCH edit mood log
 export const updateMoodLog = async (id: number, payload: UpdateMoodLogPayload): Promise<MoodLog> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const response = await fetch(`${API_URL}/mood/logs/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify(payload),
   });
@@ -208,9 +212,11 @@ export const updateMoodLog = async (id: number, payload: UpdateMoodLogPayload): 
 
 // DELETE mood log
 export const deleteMoodLog = async (id: number): Promise<void> => {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/mood/logs/${id}`, {
     method: "DELETE",
     credentials: "include",
+    headers,
   });
   if (!response.ok) {
     const err = await response.json();
@@ -220,9 +226,10 @@ export const deleteMoodLog = async (id: number): Promise<void> => {
 
 // POST create a custom "Other" tag
 export const createCustomTag = async (name: string): Promise<Tag> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const response = await fetch(`${API_URL}/mood/tags/custom`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify({ name }),
   });
@@ -235,9 +242,11 @@ export const createCustomTag = async (name: string): Promise<Tag> => {
 
 // delete custom tag
 export const deleteCustomTag = async (id: number): Promise<void> => {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/mood/tags/custom/${id}`, {
     method: "DELETE",
     credentials: "include",
+    headers,
   });
 
   if (!response.ok) {
@@ -271,7 +280,8 @@ const mapJournalEntry = (raw: DBJournalEntry): JournalEntry => ({
 
 // GET journal entries
 export const fetchJournalEntries = async (): Promise<JournalEntry[]> => {
-  const response = await fetch(`${API_URL}/journal`, { credentials: "include" });
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/journal`, { credentials: "include", headers, });
   if (!response.ok) throw new Error("Failed to fetch journal entries");
   const data: DBJournalEntry[] = await response.json();
   return data.map(mapJournalEntry);
@@ -279,9 +289,10 @@ export const fetchJournalEntries = async (): Promise<JournalEntry[]> => {
 
 // POST create journal entry
 export const createJournalEntry = async (payload: CreateJournalEntryPayload): Promise<JournalEntry> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const response = await fetch(`${API_URL}/journal`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify(payload),
   });
@@ -295,9 +306,10 @@ export const createJournalEntry = async (payload: CreateJournalEntryPayload): Pr
 
 // PATCH update journal entry
 export const updateJournalEntry = async (id: number, payload: UpdateJournalEntryPayload): Promise<JournalEntry> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const response = await fetch(`${API_URL}/journal/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify(payload),
   });
@@ -311,9 +323,11 @@ export const updateJournalEntry = async (id: number, payload: UpdateJournalEntry
 
 // DELETE journal entry
 export const deleteJournalEntry = async (id: number): Promise<void> => {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/journal/${id}`, {
     method: "DELETE",
     credentials: "include",
+    headers,
   });
   if (!response.ok) {
     const err = await response.json();
@@ -339,7 +353,8 @@ const mapMoodLevelConfig = (raw: {
 });
 
 export const fetchMoodConfig = async (): Promise<MoodLevelConfig[]> => {
-  const response = await fetch(`${API_URL}/mood/config`, { credentials: "include" });
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/mood/config`, { credentials: "include", headers, });
   if (!response.ok) throw new Error("Failed to fetch mood config");
   const data = await response.json();
   return data.map(mapMoodLevelConfig);
@@ -348,9 +363,10 @@ export const fetchMoodConfig = async (): Promise<MoodLevelConfig[]> => {
 export const saveMoodConfig = async (
   payload: SaveMoodConfigPayload
 ): Promise<MoodLevelConfig[]> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const response = await fetch(`${API_URL}/mood/config`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify(payload),
   });
@@ -363,8 +379,10 @@ export const saveMoodConfig = async (
 };
 
 export const fetchEmojiPacks = async (): Promise<EmojiPack[]> => {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/mood/emoji-packs`, {
     credentials: "include",
+    headers,
   });
   if (!response.ok) throw new Error("Failed to fetch emoji packs");
   const data = await response.json();

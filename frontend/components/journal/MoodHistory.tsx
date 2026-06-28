@@ -186,6 +186,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
         <EditMoodLogModal
           log={editingLog}
           tags={tags}
+          moodConfig={moodConfig}
           onSaved={onRefresh}
           onClose={() => setEditingLog(null)}
           onCustomTagCreated={onCustomTagCreated}
@@ -287,8 +288,8 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                 {/*Journal*/}
                 <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/60">
                   {log.note ? (
-                    <p className="text-sm text-slate-600">
-                      {log.note}
+                    <p className="text-sm text-slate-600 whitespace-pre-wrap break-words">
+                      {stripHtml(log.note)}
                     </p>
                   ) : linkedEntry ? (
                     <p className="text-sm text-slate-600 line-clamp-2">
@@ -298,6 +299,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                       <JournalEditor
                         compact
+                        moodConfig={moodConfig}
                         defaultMoodLogId={log.id}
                         onSaved={() => {
                           onRefresh();

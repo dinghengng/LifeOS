@@ -287,13 +287,13 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
 
                 {/*Journal*/}
                 <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/60">
-                  {log.note ? (
-                    <p className="text-sm text-slate-600 whitespace-pre-wrap break-words">
-                      {stripHtml(log.note)}
-                    </p>
-                  ) : linkedEntry ? (
+                  {linkedEntry ? (
                     <p className="text-sm text-slate-600 line-clamp-2">
                       {stripHtml(linkedEntry.content ?? "") || "No journal text yet."}
+                    </p>
+                  ) : log.note ? (
+                    <p className="text-sm text-slate-600 whitespace-pre-wrap break-words">
+                      {stripHtml(log.note)}
                     </p>
                   ) : (
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

@@ -1,6 +1,6 @@
 const pool = require('../db');
-const { notifyInsert } = require('./notifyInsert');
-const { sendTaskReminderEmail } = require('../services/emailService');
+const { sendToUser } = require('../services/notificationService');
+const { sendOverdueTaskEmail } = require('../services/emailService');
 const { isQuietHours } = require('./quietHours');
 
 async function runOverdueTaskAlerts() {
@@ -8,7 +8,8 @@ async function runOverdueTaskAlerts() {
     const today = new Date().toISOString().split('T')[0];
 
     const { rows: tasks } = await pool.query(`
-      SELECT t.id, t.title, t.user_id, u.email, np.quiet_start, np.quiet_end
+      SELECT t.id, t.title, t.due_date, t.user_id, u.email,
+             np.quiet_start, np.quiet_end
       FROM tasks t
       JOIN users u ON u.id = t.user_id
       LEFT JOIN notification_preferences np ON t.user_id = np.user_id
@@ -19,18 +20,35 @@ async function runOverdueTaskAlerts() {
     `);
 
     for (const task of tasks) {
-      await notifyInsert(
-        task.user_id,
-        'task_due',
-        'Overdue Task',
-        `"${task.title}" was due and is still incomplete.`,
-        task.id,
-        today
+      // only alert once per day
+      const { rowCount } = await pool.query(
+        `INSERT INTO notification_log (user_id, type, title, body, ref_id, ref_date, status, sent_at)
+         VALUES ($1, 'task_due', $2, $3, $4, $5, 'unread', NOW())
+         ON CONFLICT (user_id, type, ref_id, ref_date) DO NOTHING`,
+        [
+          task.user_id,
+          'Overdue Task',
+          `"${task.title}" was due and is still incomplete.`,
+          String(task.id),
+          today,
+        ]
       );
 
+      // skip
+      if (rowCount === 0) continue;
+
+      //noti
+      await sendToUser(task.user_id, {
+        title: 'Overdue Task',
+        body: `"${task.title}" was due and is still incomplete.`,
+        type: 'task_due',
+        url: '/tasks',
+      });
+
+      //email
       if (task.email && !isQuietHours(task.quiet_start, task.quiet_end)) {
         try {
-          await sendTaskReminderEmail({
+          await sendOverdueTaskEmail({
             to: task.email,
             taskTitle: task.title,
             dueDate: task.due_date,

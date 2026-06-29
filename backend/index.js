@@ -87,6 +87,8 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
 app.use("/api/notifications", createNotificationRouter(requireAuth));
 
 // REGISTER A NEW USER ACCOUNT

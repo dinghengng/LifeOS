@@ -22,13 +22,20 @@ async function sendToUser(userId, { title, body, type, url = '/' }) {
   );
 
   if (prefs && isQuietHours(prefs.quiet_start, prefs.quiet_end)) return;
+
+  await db.query(
+    `INSERT INTO notification_log (user_id, type, title, body, status)
+     VALUES ($1, $2, $3, $4, 'unread')`,
+    [userId, type, title, body]
+  );
   
   const { rows: tokens } = await db.query(
     'SELECT * FROM device_tokens WHERE user_id = $1 AND is_active = true', [userId]
   );
 
+  if (tokens.length === 0) return;
+
   for (const device of tokens) {
-    let status = 'sent';
     try {
       if (device.platform === 'web') {
         await admin.messaging().send({
@@ -70,12 +77,6 @@ async function sendToUser(userId, { title, body, type, url = '/' }) {
         );
       }
     }
-
-    await db.query(
-      `INSERT INTO notification_log (user_id, token_id, type, title, body, status)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, device.id, type, title, body, status]
-    );
   }
 }
 

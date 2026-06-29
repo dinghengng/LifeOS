@@ -30,6 +30,35 @@ const sendTaskReminderEmail = async ({ to, taskTitle, dueDate }) => {
   });
 };
 
+//task overdue email
+const sendOverdueTaskEmail = async ({ to, taskTitle, dueDate }) => {
+  const formattedDate = new Date(dueDate).toLocaleString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+
+  return resend.emails.send({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject: `Overdue: "${taskTitle}" needs your attention`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f9f8f5;border-radius:12px;">
+        <h2 style="color:#a12c7b;margin-bottom:8px;">Task Overdue</h2>
+        <p style="color:#28251d;font-size:16px;">This task is still incomplete:</p>
+        <div style="background:#fff;border:1px solid #dcd9d5;border-radius:8px;padding:16px;margin:16px 0;">
+          <strong style="font-size:18px;color:#28251d;">${taskTitle}</strong>
+          <p style="color:#a12c7b;margin:8px 0 0;">Was due: ${formattedDate}</p>
+        </div>
+        <p style="color:#7a7974;font-size:14px;">
+          Log in to <a href="${process.env.FRONTEND_URL}" style="color:#01696f;">LifeOS</a> to complete or reschedule it.
+        </p>
+        <hr style="border:none;border-top:1px solid #dcd9d5;margin:24px 0;" />
+        <p style="color:#bab9b4;font-size:12px;">You can change notification preferences in Settings.</p>
+      </div>
+    `,
+  });
+};
+
 const sendGoalDeadlineEmail = async ({ to, goalTitle, daysLeft }) => {
   const dayLabel = daysLeft === 1 ? 'tomorrow' : `in ${daysLeft} days`;
   return resend.emails.send({
@@ -89,4 +118,4 @@ const sendJournalNudgeEmail = async ({ to }) => {
   });
 };
 
-module.exports = { sendTaskReminderEmail, sendGoalDeadlineEmail, sendStreakRiskEmail, sendStreakMilestoneEmail, sendJournalNudgeEmail, };
+module.exports = { sendTaskReminderEmail, sendOverdueTaskEmail, sendGoalDeadlineEmail, sendStreakRiskEmail, sendStreakMilestoneEmail, sendJournalNudgeEmail, };

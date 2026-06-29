@@ -30,7 +30,7 @@ export async function registerWebPush() {
     const { getToken } = await import('firebase/messaging');
 
     const token = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+      vapidKey: 'BFbM_WaZcX-yELfIGnvCUBNCi-TKD7OE7flTER8TSk12goprVOJl2mhQPJGs2Q1hS7tKlLgdYEJ4AWkLng4B37A',
       serviceWorkerRegistration: registration,
     });
 

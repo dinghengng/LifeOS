@@ -9,18 +9,20 @@ export function useNotifications() {
   }, []);
 }
 
-async function registerWebPush() {
+export async function registerWebPush() {
   if (typeof window === 'undefined') return;
   if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return; 
 
   try {
     const registration = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.log('Notification permission denied');
-      return;
-    }
+    // const permission = await Notification.requestPermission();
+    // if (permission !== 'granted') {
+    //   console.log('Notification permission denied');
+    //   return;
+    // }
 
     const messaging = await getFirebaseMessaging();
     if (!messaging) return;
@@ -32,9 +34,12 @@ async function registerWebPush() {
       serviceWorkerRegistration: registration,
     });
 
-    console.log('FCM token:', token); // Test
+    console.log('FCM token obtained:', token ? 'yes' : 'empty'); // test
 
-    if (!token) return;
+    if (!token) {
+      console.warn('Empty FCM token, check VAPID key env var');
+      return;
+    }
 
     await fetch(`${BACKEND_URL}/api/notifications/register`, {
       method: 'POST',

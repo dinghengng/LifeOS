@@ -34,10 +34,15 @@ function createNotificationRouter(requireAuth) {
   router.get('/preferences', requireAuth, async (req, res) => {
     try {
       const { rows: [prefs] } = await pool.query(
-        'SELECT * FROM notification_preferences JOIN users u ON u.id = np.user_id WHERE user_id = $1', [req.user.id]
+        `SELECT np.*, u.email 
+        FROM notification_preferences np 
+        JOIN users u ON u.id = np.user_id 
+        WHERE np.user_id = $1`,
+        [req.user.id]
       );
       res.json(prefs || {});
     } catch (err) {
+      console.error('Fetch preferences error:', err.message);
       res.status(500).json({ error: 'Failed to fetch preferences' });
     }
   });

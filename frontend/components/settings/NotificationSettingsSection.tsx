@@ -62,6 +62,13 @@ export default function NotificationSettingsSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(prefs),
       });
+
+      //reregister push token
+      if (prefs.notifications_enabled) {
+        const { registerWebPush } = await import('../../app/hooks/useNotifications');
+        await registerWebPush();
+      }
+      
       showToast("Settings updated");
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);

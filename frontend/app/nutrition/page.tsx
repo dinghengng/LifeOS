@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { SquarePen, Trash2 } from "lucide-react";
+import { SquarePen, Trash2, AlertCircle, Lightbulb } from "lucide-react";
 import NutritionTracker, {
   Meal,
 } from "../../components/nutrition/NutritionTracker";
@@ -16,7 +16,7 @@ import { UtensilsCrossed, Dumbbell, Target, Sunrise } from "lucide-react";
 import NutritionChart, {
   DayData,
 } from "../../components/nutrition/NutritionChart";
-import { Lightbulb } from "lucide-react";
+import { BsUpcScan } from "react-icons/bs";
 import Navbar from "../../components/Navbar";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
@@ -203,7 +203,9 @@ export default function NutritionPage() {
   const [error, setError] = useState<string | null>(null);
   const [showSuppModal, setShowSuppModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"meals" | "supplements">("meals");
-  const [activeRightTab, setActiveRightTab] = useState<"quests" | "progress">("quests");
+  const [activeRightTab, setActiveRightTab] = useState<"quests" | "progress">(
+    "quests",
+  );
 
   // Macro optimization depends on like the user height and weight + goals
   const [targets, setTargets] = useState({ calories: 2300, protein: 140 });
@@ -228,6 +230,8 @@ export default function NutritionPage() {
   const [mealCarbs, setMealCarbs] = useState("");
   const [mealFats, setMealFats] = useState("");
   const [saveToFavorites, setSaveToFavorites] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   // Supplements
   const [supplements, setSupplements] = useState<Supplement[]>([]);
@@ -463,6 +467,8 @@ export default function NutritionPage() {
     setMealFats("");
     setSaveToFavorites(false);
     setShowMealModal(true);
+    setScanning(false); // reset scan state upon open
+    setScanError(null);
   };
 
   const openEditLogModal = (meal: Meal) => {
@@ -499,6 +505,55 @@ export default function NutritionPage() {
     setSaveToFavorites(false);
   };
 
+  // new Barcode scanner that opens device camera, decodes barcode, looks up nutrition via OpenFoodFacts
+  // will be only available in create new meal log since editing an existing log doesn't need a new scan
+  const handleBarcodeScan = async () => {
+    setScanError(null);
+    setScanning(true);
+    try {
+      const { BrowserMultiFormatReader } = await import("@zxing/browser");
+      const reader = new BrowserMultiFormatReader();
+      // decodeOnceFromVideoDevice uses the default camera (rear on mobile, front on desktop for mine(mac)). then the second arg is the vid element id rendered below the meal name input
+      const result = await reader.decodeOnceFromVideoDevice(
+        undefined,
+        "barcode-video",
+      );
+      const barcode = result.getText();
+      // OpenFoodFacts free API that returns product nutrition per 100g
+      const res = await fetch(
+        `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`,
+      );
+      const data = await res.json();
+
+      if (data.status === 1) {
+        const n = data.product.nutriments;
+        // serving_size in grams if available, otherwise fall back to 100g
+        const servingG = parseFloat(data.product.serving_size) || 100;
+        const factor = servingG / 100;
+
+        setMealName(data.product.product_name || "");
+        setMealCalories(
+          Math.round((n["energy-kcal_100g"] || 0) * factor).toString(),
+        );
+        setMealProtein(
+          Math.round((n["proteins_100g"] || 0) * factor).toString(),
+        );
+        setMealCarbs(
+          Math.round((n["carbohydrates_100g"] || 0) * factor).toString(),
+        );
+        setMealFats(Math.round((n["fat_100g"] || 0) * factor).toString());
+      } else {
+        // let user fill manually
+        setScanError("Product not found. Please enter nutrition manually.");
+      }
+    } catch (err) {
+      console.error("Barcode scan failed:", err);
+      setScanError("Scan failed or cancelled. Please enter manually.");
+    } finally {
+      setScanning(false);
+    }
+  };
+
   // Delete Daily Log
   const handleDeleteLog = async (id: string) => {
     if (!confirm("Are you sure you want to delete this meal log?")) return;
@@ -518,13 +573,15 @@ export default function NutritionPage() {
           const todayEntry = {
             date: todayStr,
             calories: nextMeals.reduce((s, m) => s + m.calories, 0),
-            protein:  nextMeals.reduce((s, m) => s + m.protein,  0),
-            carbs:    nextMeals.reduce((s, m) => s + m.carbs,    0),
-            fats:     nextMeals.reduce((s, m) => s + m.fats,     0),
+            protein: nextMeals.reduce((s, m) => s + m.protein, 0),
+            carbs: nextMeals.reduce((s, m) => s + m.carbs, 0),
+            fats: nextMeals.reduce((s, m) => s + m.fats, 0),
             meal_count: nextMeals.length,
           };
           const without = prev.filter((d) => d.date !== todayStr);
-          return [...without, todayEntry].sort((a, b) => a.date.localeCompare(b.date));
+          return [...without, todayEntry].sort((a, b) =>
+            a.date.localeCompare(b.date),
+          );
         });
       }
     } catch (err) {
@@ -614,13 +671,15 @@ export default function NutritionPage() {
             const todayEntry = {
               date: todayStr,
               calories: nextMeals.reduce((s, m) => s + m.calories, 0),
-              protein:  nextMeals.reduce((s, m) => s + m.protein,  0),
-              carbs:    nextMeals.reduce((s, m) => s + m.carbs,    0),
-              fats:     nextMeals.reduce((s, m) => s + m.fats,     0),
+              protein: nextMeals.reduce((s, m) => s + m.protein, 0),
+              carbs: nextMeals.reduce((s, m) => s + m.carbs, 0),
+              fats: nextMeals.reduce((s, m) => s + m.fats, 0),
               meal_count: nextMeals.length,
             };
             const without = prev.filter((d) => d.date !== todayStr);
-            return [...without, todayEntry].sort((a, b) => a.date.localeCompare(b.date));
+            return [...without, todayEntry].sort((a, b) =>
+              a.date.localeCompare(b.date),
+            );
           });
         }
 
@@ -935,7 +994,13 @@ export default function NutritionPage() {
               {activeRightTab === "quests" ? (
                 <QuestPanel quests={quests} totalXP={totalXP} />
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1.5rem",
+                  }}
+                >
                   <NutritionChart
                     history={history}
                     calorieTarget={targets.calories}
@@ -972,7 +1037,6 @@ export default function NutritionPage() {
               )}
             </div>
           </div>
-
 
           <style jsx>{`
             .nutrition-grid {
@@ -1299,14 +1363,75 @@ export default function NutritionPage() {
               </div>
             )}
 
-            <input
-              type="text"
-              placeholder="Meal Name (e.g., Chicken Rice)"
-              value={mealName}
-              onChange={(e) => setMealName(e.target.value)}
-              style={inputStyle}
-              required
-            />
+            {/* Meal name scan button only shown in create mode */}
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="Meal Name (e.g., Chicken Rice)"
+                value={mealName}
+                onChange={(e) => {
+                  setMealName(e.target.value);
+                  setScanError(null);
+                }}
+                style={{ ...inputStyle, flex: 1 }}
+                required
+              />
+              {/* Barcode scan only relevant when logging a new meal */}
+              {modalMode === "create" && (
+                <button
+                  type="button"
+                  onClick={handleBarcodeScan}
+                  disabled={scanning}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid #cbd5e1",
+                    backgroundColor: scanning ? "#f1f5f9" : "white",
+                    color: "#475569",
+                    cursor: scanning ? "not-allowed" : "pointer",
+                    fontSize: "13px",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <BsUpcScan size={16} />
+                  {scanning ? "Scanning…" : "Scan"}
+                </button>
+              )}
+            </div>
+
+            {/* Camera preview only when scan active */}
+            {scanning && (
+              <video
+                id="barcode-video"
+                style={{
+                  width: "100%",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  backgroundColor: "#000",
+                }}
+                muted
+                playsInline
+              />
+            )}
+
+            {/* Scan error feedback,it clears when user starts typing manually */}
+            {scanError && (
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                <AlertCircle
+                  size={14}
+                  style={{ color: "#ef4444", flexShrink: 0 }}
+                />
+                <p style={{ margin: 0, fontSize: "12px", color: "#ef4444" }}>
+                  {scanError}
+                </p>
+              </div>
+            )}
             <select
               value={mealType}
               onChange={(e) => setMealType(e.target.value)}

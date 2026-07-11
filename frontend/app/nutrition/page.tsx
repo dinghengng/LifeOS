@@ -443,7 +443,7 @@ export default function NutritionPage() {
     }
   };
 
-  const handleAddSupp = async (s: Omit<Supplement, "id">) => {
+  const handleAddSupp = async (s: Omit<Supplement, "id">): Promise<boolean> => {
     setSuppError(null);
     try {
       const res = await fetch(`${API_BASE}/api/supplements`, {
@@ -455,18 +455,21 @@ export default function NutritionPage() {
       if (res.ok) {
         const created = normalizeSupplement(await res.json());
         setSupplements((prev) => [...prev, created]);
+        return true; // Return true on success
       } else {
         const err = await res.json().catch(() => ({}));
         console.error("Failed to add supplement:", err);
         setSuppError(
           err.error || "Failed to add supplement. Please try again.",
         );
+        return false; // Return false on failure
       }
     } catch (err) {
       console.error("Network error adding supplement:", err);
       setSuppError(
         "Network error, please check your connection and try again.",
       );
+      return false; // Return false on failure
     }
   };
 

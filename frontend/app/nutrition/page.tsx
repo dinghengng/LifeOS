@@ -10,7 +10,6 @@ import QuestPanel, { Quest } from "../../components/nutrition/QuestPanel";
 import SupplementTracker, {
   Supplement,
 } from "../../components/nutrition/SupplementTracker";
-import { User } from "../../../shared/types";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
 import { UtensilsCrossed, Dumbbell, Target, Sunrise } from "lucide-react";
 import NutritionChart, {
@@ -81,6 +80,15 @@ function getDailyQuote() {
   const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
 
   return NUTRITION_QUOTES[dayOfYear % NUTRITION_QUOTES.length];
+}
+// Backend returns snake_case columns, then frontend Supplement type expects camelCase. Normalize once here so every call site gets a consistent shape.
+function normalizeSupplement(raw: any): Supplement {
+  return {
+    ...raw,
+    supplyCount: raw.supply_count ?? raw.supplyCount,
+    dailyDose: raw.daily_dose ?? raw.dailyDose,
+    supplyUnit: raw.supply_unit ?? raw.supplyUnit,
+  };
 }
 
 type SavedMeal = {
@@ -195,13 +203,11 @@ function generateInsight(
 
 export default function NutritionPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showSuppModal, setShowSuppModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"meals" | "supplements">("meals");
   const [activeRightTab, setActiveRightTab] = useState<"quests" | "progress">(
     "quests",
@@ -236,6 +242,7 @@ export default function NutritionPage() {
   // Supplements
   const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [checkedSupps, setCheckedSupps] = useState<Set<string>>(new Set());
+  const [suppError, setSuppError] = useState<string | null>(null);
 
   //Quests n Xp
   const [totalXP, setTotalXP] = useState(0);
@@ -318,7 +325,6 @@ export default function NutritionPage() {
         router.push("/");
         return;
       }
-      setUser(currentUser);
       setAuthLoading(false);
     };
     init();
@@ -367,7 +373,23 @@ export default function NutritionPage() {
         }
       }
       // Supplements are optional so we won't throw if it fails, just log the error and continue
-      if (suppsRes.ok) setSupplements(await suppsRes.json());
+      if (suppsRes.ok) {
+        const suppsData = (await suppsRes.json()).map(normalizeSupplement);
+        setSupplements(suppsData);
+        setCheckedSupps((prev) => {
+          const next = new Set(prev);
+          suppsData.forEach((s: any) => {
+            if (s.takenToday) {
+              if (s.timing === "AM" || s.timing === "Both")
+                next.add(`AM-${s.id}`);
+              if (s.timing === "PM" || s.timing === "Both")
+                next.add(`PM-${s.id}`);
+            }
+          });
+          return next;
+        });
+      }
+
       if (xpRes.ok) {
         const xpData = await xpRes.json();
         setTotalXP(xpData.total_xp ?? 0);
@@ -385,15 +407,44 @@ export default function NutritionPage() {
     if (!authLoading) fetchNutritionData();
   }, [authLoading, fetchNutritionData]);
 
-  const handleToggleSupp = (key: string) => {
+  const handleToggleSupp = async (key: string) => {
     setCheckedSupps((prev) => {
       const next = new Set(prev);
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
+
+    // Extract the supplement id from the key so like from "AM-12" to "12")
+    const [, rawId] = key.split("-");
+
+    try {
+      const res = await fetch(`${API_BASE}/api/supplements/${rawId}/toggle`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const updated = normalizeSupplement(await res.json());
+        // Sync streak, supply, and unit back from backend into local state
+        setSupplements((prev) =>
+          prev.map((s) =>
+            String(s.id) === rawId
+              ? {
+                  ...s,
+                  streak: updated.streak,
+                  supplyCount: updated.supplyCount,
+                  dailyDose: updated.dailyDose,
+                }
+              : s,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error("Toggle supplement sync failed:", err);
+    }
   };
 
   const handleAddSupp = async (s: Omit<Supplement, "id">) => {
+    setSuppError(null);
     try {
       const res = await fetch(`${API_BASE}/api/supplements`, {
         method: "POST",
@@ -402,13 +453,20 @@ export default function NutritionPage() {
         body: JSON.stringify(s),
       });
       if (res.ok) {
-        const created = await res.json();
+        const created = normalizeSupplement(await res.json());
         setSupplements((prev) => [...prev, created]);
       } else {
-        setSupplements((prev) => [...prev, { ...s, id: `temp-${Date.now()}` }]);
+        const err = await res.json().catch(() => ({}));
+        console.error("Failed to add supplement:", err);
+        setSuppError(
+          err.error || "Failed to add supplement. Please try again.",
+        );
       }
-    } catch {
-      setSupplements((prev) => [...prev, { ...s, id: `temp-${Date.now()}` }]);
+    } catch (err) {
+      console.error("Network error adding supplement:", err);
+      setSuppError(
+        "Network error, please check your connection and try again.",
+      );
     }
   };
 
@@ -427,6 +485,23 @@ export default function NutritionPage() {
       });
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Refill a supplement's supply count, called when the low-supply badge is clicked
+  const handleRefill = async (id: string | number, newSupply: number) => {
+    setSupplements((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, supplyCount: newSupply } : s)),
+    );
+    try {
+      await fetch(`${API_BASE}/api/supplements/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ supplyCount: newSupply }),
+      });
+    } catch (err) {
+      console.error("Refill sync failed:", err);
     }
   };
 
@@ -845,6 +920,23 @@ export default function NutritionPage() {
           </span>
         </div>
       </div>
+      {error && (
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: "0 auto 1.5rem",
+            padding: "10px 14px",
+            borderRadius: 8,
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            color: "#b91c1c",
+            fontSize: 13,
+            textAlign: "center",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       {dataLoading ? (
         <p style={{ textAlign: "center", color: "#64748b" }}>
@@ -928,6 +1020,9 @@ export default function NutritionPage() {
                   onToggle={handleToggleSupp}
                   onAdd={handleAddSupp}
                   onDelete={handleDeleteSupp}
+                  onRefill={handleRefill}
+                  addError={suppError}
+                  onClearError={() => setSuppError(null)}
                 />
               )}
             </div>

@@ -87,7 +87,7 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 app.use("/api/notifications", createNotificationRouter(requireAuth));
 
@@ -139,14 +139,12 @@ app.post("/auth/register", async (req, res) => {
     });
 
     // Mobile apps look inside the JSON response body payload directly for authentication parameters
-    res
-      .status(201)
-      .json({
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-        token: sessionId,
-      });
+    res.status(201).json({
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name,
+      token: sessionId,
+    });
   } catch (err) {
     console.error("Register error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -387,30 +385,30 @@ app.post("/mood/tags/custom", requireAuth, async (req, res) => {
 });
 
 // DELETE a custom tag
-app.delete('/mood/tags/custom/:id', requireAuth, async (req, res) => {
+app.delete("/mood/tags/custom/:id", requireAuth, async (req, res) => {
   const { id } = req.params;
 
   try {
     const existing = await pool.query(
-      'SELECT id FROM user_tags WHERE id = $1 AND user_id = $2',
-      [id, req.user.id]
+      "SELECT id FROM user_tags WHERE id = $1 AND user_id = $2",
+      [id, req.user.id],
     );
 
     if (existing.rows.length === 0) {
-      return res.status(404).json({ error: 'Custom tag not found' });
+      return res.status(404).json({ error: "Custom tag not found" });
     }
 
-    await pool.query('DELETE FROM mood_log_tags WHERE user_tag_id = $1', [id]);
+    await pool.query("DELETE FROM mood_log_tags WHERE user_tag_id = $1", [id]);
 
-    await pool.query('DELETE FROM user_tags WHERE id = $1 AND user_id = $2', [
+    await pool.query("DELETE FROM user_tags WHERE id = $1 AND user_id = $2", [
       id,
       req.user.id,
     ]);
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Delete custom tag error:', err.message);
-    res.status(500).json({ error: 'Failed to delete custom tag' });
+    console.error("Delete custom tag error:", err.message);
+    res.status(500).json({ error: "Failed to delete custom tag" });
   }
 });
 
@@ -887,7 +885,7 @@ app.get("/api/habits", requireAuth, async (req, res) => {
       const completedDays = [];
       const habitDatesSet = completionMap[habit.id] || new Set();
 
-      // Build Mon(0) → Sun(6) for the current SGT week
+      // Build Mon(0) to Sun(6) for the current SGT week
       for (let i = 0; i < 7; i++) {
         const d = new Date(monday);
         d.setDate(monday.getDate() + i);
@@ -917,7 +915,9 @@ app.get("/api/habits", requireAuth, async (req, res) => {
 // TOGGLE completion status for id
 app.post("/api/habits/:id/toggle", requireAuth, async (req, res) => {
   const habitId = req.params.id;
-  const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Singapore",}).format(new Date()); //chg to SGT
+  const todayStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Singapore",
+  }).format(new Date()); //chg to SGT
 
   try {
     const verifyOwnership = await pool.query(
@@ -927,12 +927,12 @@ app.post("/api/habits/:id/toggle", requireAuth, async (req, res) => {
     if (verifyOwnership.rows.length === 0) {
       return res.status(404).json({ error: "Habit configuration not found" });
     }
- 
+
     const checkLog = await pool.query(
       "SELECT id FROM habit_logs WHERE habit_id = $1 AND completed_at = $2",
       [habitId, todayStr],
     );
-    
+
     if (checkLog.rows.length > 0) {
       // Done then Untoggle (Delete the log entry, decrement streak, don't touch totalDays)
       await pool.query(
@@ -977,19 +977,19 @@ app.post("/api/habits/:id/toggle", requireAuth, async (req, res) => {
         expected.setUTCDate(expected.getUTCDate() - i);
         const expectedStr = expected.toISOString().split("T")[0];
 
-         if (logDate === expectedStr) {
+        if (logDate === expectedStr) {
           newStreak++;
         } else {
           break;
         }
       }
- 
+
       const totalDaysResult = await pool.query(
         "SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1",
         [habitId],
       );
       const newTotalDays = parseInt(totalDaysResult.rows[0].total);
- 
+
       const updatedOn = await pool.query(
         "UPDATE habits SET streak = $1, total_days = $2 WHERE id = $3 RETURNING streak, total_days",
         [newStreak, newTotalDays, habitId],
@@ -1529,7 +1529,21 @@ app.get("/api/supplements", requireAuth, async (req, res) => {
       "SELECT * FROM supplements WHERE user_id = $1 ORDER BY timing, name",
       [req.user.id],
     );
-    res.json(result.rows);
+    const todayStr = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Singapore",
+    }).format(new Date());
+
+    const withStatus = await Promise.all(
+      result.rows.map(async (s) => {
+        const streak = await computeStreak(s.id, todayStr);
+        const takenToday = await pool.query(
+          "SELECT 1 FROM supplement_logs WHERE supplement_id = $1 AND taken_at = $2",
+          [s.id, todayStr],
+        );
+        return { ...s, streak, takenToday: takenToday.rows.length > 0 };
+      }),
+    );
+    res.json(withStatus);
   } catch (err) {
     console.error("Fetch supplements error:", err.message);
     res.status(500).send("Server Error");
@@ -1538,16 +1552,24 @@ app.get("/api/supplements", requireAuth, async (req, res) => {
 
 // POST: ADD A NEW SUPPLEMENT
 app.post("/api/supplements", requireAuth, async (req, res) => {
-  const { name, dose, timing } = req.body;
-  if (!name || !dose || !timing) {
-    return res
-      .status(400)
-      .json({ error: "Name, dose, and timing are required" });
+  const { name, dose, timing, supplyCount, dailyDose, supplyUnit } = req.body;
+  // dose is now optional
+  if (!name || !timing) {
+    return res.status(400).json({ error: "Name and timing are required" });
   }
   try {
     const result = await pool.query(
-      "INSERT INTO supplements (user_id, name, dose, timing) VALUES ($1, $2, $3, $4) RETURNING *",
-      [req.user.id, name, dose, timing],
+      `INSERT INTO supplements (user_id, name, dose, timing, supply_count, daily_dose, supply_unit)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [
+        req.user.id,
+        name,
+        dose ?? null,
+        timing,
+        supplyCount ?? null,
+        dailyDose ?? 1,
+        supplyUnit ?? "pills",
+      ],
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -1611,6 +1633,135 @@ app.post("/api/user/xp", requireAuth, async (req, res) => {
   }
 });
 
+// PATCH: UPDATE the supply count for supps (called from frontend when user edits supply manually)
+app.patch("/api/supplements/:id", requireAuth, async (req, res) => {
+  const { supplyCount, dailyDose } = req.body;
+  try {
+    const result = await pool.query(
+      `UPDATE supplements
+       SET supply_count = COALESCE($1, supply_count),
+           daily_dose   = COALESCE($2, daily_dose)
+       WHERE id = $3 AND user_id = $4
+       RETURNING *`,
+      [supplyCount ?? null, dailyDose ?? null, req.params.id, req.user.id],
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Supplement not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Update supplement error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// POST: TOGGLE SUPPLEMENT TAKEN: mirrors habits toggle: log table is the source of truth
+app.post("/api/supplements/:id/toggle", requireAuth, async (req, res) => {
+  const suppId = req.params.id;
+  const todayStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Singapore",
+  }).format(new Date());
+
+  try {
+    const verifyOwnership = await pool.query(
+      "SELECT id, supply_count, daily_dose FROM supplements WHERE id = $1 AND user_id = $2",
+      [suppId, req.user.id],
+    );
+    if (verifyOwnership.rows.length === 0) {
+      return res.status(404).json({ error: "Supplement not found" });
+    }
+    const supp = verifyOwnership.rows[0];
+
+    const checkLog = await pool.query(
+      "SELECT id FROM supplement_logs WHERE supplement_id = $1 AND taken_at = $2",
+      [suppId, todayStr],
+    );
+
+    if (checkLog.rows.length > 0) {
+      // Already taken today means untoggle: delete log, restore supply
+      await pool.query(
+        "DELETE FROM supplement_logs WHERE supplement_id = $1 AND taken_at = $2",
+        [suppId, todayStr],
+      );
+
+      const newSupply =
+        supp.supply_count !== null
+          ? supp.supply_count + (supp.daily_dose ?? 1)
+          : null;
+
+      const updated = await pool.query(
+        "UPDATE supplements SET supply_count = $2 WHERE id = $1 RETURNING *",
+        [suppId, newSupply],
+      );
+      return res.json({
+        ...updated.rows[0],
+        streak: await computeStreak(suppId, todayStr),
+      });
+    }
+
+    // Not taken today means toggle on: insert log, decrement supply
+    await pool.query(
+      "INSERT INTO supplement_logs (supplement_id, taken_at) VALUES ($1, $2)",
+      [suppId, todayStr],
+    );
+
+    const newSupply =
+      supp.supply_count !== null
+        ? Math.max(0, supp.supply_count - (supp.daily_dose ?? 1))
+        : null;
+
+    const updated = await pool.query(
+      "UPDATE supplements SET supply_count = $2 WHERE id = $1 RETURNING *",
+      [suppId, newSupply],
+    );
+    res.json({
+      ...updated.rows[0],
+      streak: await computeStreak(suppId, todayStr),
+    });
+  } catch (err) {
+    console.error("Toggle supplement error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
+// Helper: recompute streak by counting consecutive days backwards from today
+// Identical pattern to the habits streak calc, logs are the only source of truth
+async function computeStreak(suppId, todayStr) {
+  const logsResult = await pool.query(
+    `SELECT taken_at::text FROM supplement_logs
+     WHERE supplement_id = $1
+     ORDER BY taken_at DESC`,
+    [suppId],
+  );
+  if (logsResult.rows.length === 0) return 0;
+
+  const mostRecent = logsResult.rows[0].taken_at.split(" ")[0];
+
+  const todayDate = new Date(todayStr + "T00:00:00Z");
+  const yesterday = new Date(todayDate);
+  yesterday.setUTCDate(todayDate.getUTCDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+  // If the most recent log isn't today or yesterday, the streak is genuinely broken
+  if (mostRecent !== todayStr && mostRecent !== yesterdayStr) return 0;
+  // Anchor from the most recent log (today if taken, otherwise yesterday): this way untoggling today doesn't wipe out yesterday's still-valid streak
+  const anchor = new Date(mostRecent + "T00:00:00Z");
+  let streak = 0;
+  for (let i = 0; i < logsResult.rows.length; i++) {
+    const logDate = logsResult.rows[i].taken_at.split(" ")[0];
+    const expected = new Date(anchor);
+    expected.setUTCDate(anchor.getUTCDate() - i);
+    const expectedStr = expected.toISOString().split("T")[0];
+
+    if (logDate === expectedStr) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 // GET: FETCH WEEKLY NUTRITION HISTORY (for insights/chart) fix for sgt alignment
 app.get("/api/nutrition/history", requireAuth, async (req, res) => {
   const days = Math.min(parseInt(req.query.days) || 7, 30);
@@ -1636,9 +1787,9 @@ app.get("/api/nutrition/history", requireAuth, async (req, res) => {
     const filled = [];
 
     for (let i = days - 1; i >= 0; i--) {
-      // Date.now() is always UTC milliseconds — safe on any server timezone
+      // Date.now() is always UTC milliseconds, safe on any server timezone
       const sgtNowMs = Date.now() + SGT_OFFSET_MS;
-      const sgtDate  = new Date(sgtNowMs);
+      const sgtDate = new Date(sgtNowMs);
       sgtDate.setUTCDate(sgtDate.getUTCDate() - i);
       const dateStr = sgtDate.toISOString().split("T")[0]; // "YYYY-MM-DD"
 
@@ -1651,11 +1802,11 @@ app.get("/api/nutrition/history", requireAuth, async (req, res) => {
       });
 
       filled.push({
-        date:       dateStr,
-        calories:   parseInt(row?.calories)   || 0,
-        protein:    parseInt(row?.protein)    || 0,
-        carbs:      parseInt(row?.carbs)      || 0,
-        fats:       parseInt(row?.fats)       || 0,
+        date: dateStr,
+        calories: parseInt(row?.calories) || 0,
+        protein: parseInt(row?.protein) || 0,
+        carbs: parseInt(row?.carbs) || 0,
+        fats: parseInt(row?.fats) || 0,
         meal_count: parseInt(row?.meal_count) || 0,
       });
     }

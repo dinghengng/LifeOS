@@ -295,6 +295,37 @@ function createSupplementsRouter(requireAuth) {
     }
   });
 
+  // Get history for the Insights trend chart
+  router.get("/history", requireAuth, async (req, res) => {
+    const days = Math.min(parseInt(req.query.days, 10) || 30, 90);
+
+    try {
+      const result = await pool.query(
+        `SELECT
+           sl.taken_at::text AS date,
+           COUNT(DISTINCT sl.supplement_id) AS taken_count,
+           (SELECT COUNT(*) FROM supplements WHERE user_id = $1) AS total_supplements
+         FROM supplement_logs sl
+         JOIN supplements s ON s.id = sl.supplement_id
+         WHERE s.user_id = $1
+           AND sl.taken_at >= (NOW() AT TIME ZONE 'Asia/Singapore')::date - $2::int * INTERVAL '1 day'
+         GROUP BY sl.taken_at
+         ORDER BY sl.taken_at ASC`,
+        [req.user.id, days],
+      );
+      res.json(
+        result.rows.map((r) => ({
+          date: r.date,
+          takenCount: parseInt(r.taken_count) || 0,
+          totalSupplements: parseInt(r.total_supplements) || 0,
+        })),
+      );
+    } catch (err) {
+      console.error("Supplements aggregate history error:", err.message);
+      res.status(500).send("Server Error");
+    }
+  });
+
   // POST: ADD A NEW SUPPLEMENT
   router.post("/", requireAuth, async (req, res) => {
     const { name, dose, timing, supplyCount, dailyDose, supplyUnit } =

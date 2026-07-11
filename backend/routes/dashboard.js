@@ -261,6 +261,37 @@ function createHabitsRouter(requireAuth) {
     }
   });
 
+// history of habit logs for the Insights trend chart
+router.get("/history", requireAuth, async (req, res) => {
+  const days = Math.min(parseInt(req.query.days, 10) || 30, 90);
+
+  try {
+    const result = await pool.query(
+      `SELECT
+         hl.completed_at::text AS date,
+         COUNT(DISTINCT hl.habit_id) FILTER (WHERE hl.status = 'done') AS completed_count,
+         (SELECT COUNT(*) FROM habits WHERE user_id = $1) AS total_habits
+       FROM habit_logs hl
+       JOIN habits h ON h.id = hl.habit_id
+       WHERE h.user_id = $1
+         AND hl.completed_at >= (NOW() AT TIME ZONE 'Asia/Singapore')::date - $2::int * INTERVAL '1 day'
+       GROUP BY hl.completed_at
+       ORDER BY hl.completed_at ASC`,
+      [req.user.id, days],
+    );
+    res.json(
+      result.rows.map((r) => ({
+        date: r.date,
+        completedCount: parseInt(r.completed_count) || 0,
+        totalHabits: parseInt(r.total_habits) || 0,
+      })),
+    );
+  } catch (err) {
+    console.error("Habits aggregate history error:", err.message);
+    res.status(500).send("Server Error");
+  }
+});
+
 // GET HISTORY (heatmap data) FOR A HABIT
 router.get("/:id/history", requireAuth, async (req, res) => {
   const habitId = req.params.id;
@@ -466,6 +497,33 @@ function createGoalsRouter(requireAuth) {
     }
   });
 
+  // Get progress history for the Insights trend chart
+  router.get("/history", requireAuth, async (req, res) => {
+    const days = Math.min(parseInt(req.query.days, 10) || 30, 90);
+
+    try {
+      const result = await pool.query(
+        `SELECT gpl.logged_at::text AS date, AVG(gpl.progress) AS avg_progress
+         FROM goal_progress_logs gpl
+         JOIN goals g ON g.id = gpl.goal_id
+         WHERE g.user_id = $1
+           AND gpl.logged_at >= (NOW() AT TIME ZONE 'Asia/Singapore')::date - $2::int * INTERVAL '1 day'
+         GROUP BY gpl.logged_at
+         ORDER BY gpl.logged_at ASC`,
+        [req.user.id, days],
+      );
+      res.json(
+        result.rows.map((r) => ({
+          date: r.date,
+          avgProgress: Math.round(parseFloat(r.avg_progress)) || 0,
+        })),
+      );
+    } catch (err) {
+      console.error("Goals aggregate history error:", err.message);
+      res.status(500).send("Server Error");
+    }
+  });
+
   // CREATE A NEW GOAL
   router.post("/", requireAuth, async (req, res) => {
     const { title, category, color, dueDate, milestones = [] } = req.body;
@@ -549,6 +607,14 @@ function createGoalsRouter(requireAuth) {
           goal_id,
         ]);
 
+        // Snapshot today's progress for the Insights trend chart 
+        await pool.query(
+          `INSERT INTO goal_progress_logs (goal_id, progress, logged_at)
+           VALUES ($1, $2, (NOW() AT TIME ZONE 'Asia/Singapore')::date)
+           ON CONFLICT (goal_id, logged_at) DO UPDATE SET progress = $2`,
+          [goal_id, newProgress],
+        );
+
         res.json({
           goalId: String(goal_id),
           index: milestoneIndex,
@@ -621,6 +687,15 @@ function createGoalsRouter(requireAuth) {
         progress,
         goalId,
       ]);
+
+      // Snapshot today's progress for the Insights trend chart, same as the
+      // milestone-toggle route above.
+      await pool.query(
+        `INSERT INTO goal_progress_logs (goal_id, progress, logged_at)
+         VALUES ($1, $2, (NOW() AT TIME ZONE 'Asia/Singapore')::date)
+         ON CONFLICT (goal_id, logged_at) DO UPDATE SET progress = $2`,
+        [goalId, progress],
+      );
 
       res.json({
         ...updatedGoal,

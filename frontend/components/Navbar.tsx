@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { label: "Dashboard", path: "/dashboard" },
   { label: "Journal", path: "/journal" },
   { label: "Nutrition", path: "/nutrition" },
+  { label: "Insights", path: "/insights" },
 ];
 
 export default function AppNavbar({ onLogout }: AppNavbarProps) {

@@ -50,7 +50,7 @@ app.use(
   }),
 );
 
-// Hybrid Middleware: Checks browser cookies OR Mobile Authorization headers
+// Checks browser cookies or Mobile Authorization headers
 const requireAuth = async (req, res, next) => {
   let sessionId = req.cookies?.sessionId;
 
@@ -111,11 +111,11 @@ app.use("/journal", createJournalRouter(requireAuth));
 app.use("/api/habits", createHabitsRouter(requireAuth));
 app.use("/api/goals", createGoalsRouter(requireAuth));
 
-// Feature 4: Nutrition + Supplements
+// Feature 4: Nutrition 
 app.use("/api/nutrition", createNutritionRouter(requireAuth));
 app.use("/api/supplements", createSupplementsRouter(requireAuth));
 
-// User profile (body metrics, XP) — standalone, not tied to a numbered feature
+// User profile 
 app.use("/api/user", createUserProfileRouter(requireAuth));
 
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections

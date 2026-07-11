@@ -1,7 +1,7 @@
 const express = require("express");
 const pool = require("../db");
 
-// Mounted at "/api/nutrition" from index.js (Feature 4: Nutrition)
+// Feature 4: Nutrition
 function createNutritionRouter(requireAuth) {
   const router = express.Router();
 

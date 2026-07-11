@@ -1,18 +1,18 @@
 const express = require("express");
 const pool = require("../db");
 
-//Feature 3 Dashboard: Habits + goals
+//Feature 3 Dashboard
 function computeStreakFromLogs(logMap, todayStr) {
   let streak = 0;
   const cursor = new Date(todayStr + "T00:00:00Z");
-  // Cap the walk so a habit with no gaps ever doesn't loop forever / scan all time.
+  // Cap the walk so a habit with no gaps ever doesn't loop forever
   for (let i = 0; i < 3650; i++) {
     const dateStr = cursor.toISOString().split("T")[0];
     const status = logMap.get(dateStr);
     if (status === "done") {
       streak++;
     } else if (status === "skipped") {
-      // rest day — don't increment, don't break, keep walking back
+      // rest day: don't increment streak but continue counting backwards
     } else {
       break;
     }
@@ -27,7 +27,7 @@ function getSGTTodayStr() {
   }).format(new Date());
 }
 
-// Mounted at "/api/habits" from index.js
+//GET HABITS 
 function createHabitsRouter(requireAuth) {
   const router = express.Router();
 
@@ -419,11 +419,6 @@ router.get("/:id/history", requireAuth, async (req, res) => {
 
   return router;
 }
-
-
-
-
-// Mounted at "/api/goals" from index.js
 function createGoalsRouter(requireAuth) {
   const router = express.Router();
 

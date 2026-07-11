@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const pool = require("../db");
 
-// Mounted at both "/auth" and "/api/user" from index.js (see createUserRouter usage)
+
 function createAuthRouter(requireAuth) {
   const router = express.Router();
 
@@ -157,7 +157,6 @@ function createAuthRouter(requireAuth) {
   return router;
 }
 
-// Mounted at "/api/user" from index.js
 function createUserProfileRouter(requireAuth) {
   const router = express.Router();
 

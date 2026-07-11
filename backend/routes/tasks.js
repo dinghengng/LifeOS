@@ -1,7 +1,6 @@
 const express = require("express");
 const pool = require("../db");
 
-// Mounted at "/tasks" from index.js
 function createTasksRouter(requireAuth) {
   const router = express.Router();
 

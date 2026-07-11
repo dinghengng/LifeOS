@@ -8,7 +8,10 @@ import { SETTINGS_SECTIONS } from "../../../shared/settingsSection";
 import MoodSettingsSection from "../../components/settings/MoodSettingsSection";
 import NotificationSettingsSection from "../../components/settings/NotificationSettingsSection";
 import NutritionGoalsSection from "../../components/settings/NutritionGoalsSection";
-import Navbar from "../../components/Navbar";
+//import Navbar from "../../components/Navbar";
+import AppShell from "../../components/layout/AppShell";
+import AppHeader from "../../components/layout/AppHeader";
+import PageHeader from "../../components/layout/PageHeader";
 
 const SECTION_COMPONENTS: Record<
   string,
@@ -25,6 +28,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState(SETTINGS_SECTIONS[0].id);
   const [moodConfig, setMoodConfig] = useState<MoodLevelConfig[]>([]);
+  
 
   useEffect(() => {
     const init = async () => {
@@ -59,77 +63,81 @@ export default function SettingsPage() {
   const ActiveComponent = SECTION_COMPONENTS[activeSectionId] ?? null;
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#f8fafc", fontFamily: "inherit" }}>
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "16px 32px 12px",
-        borderBottom: "1px solid #e2e8f0",
-        backgroundColor: "white",
-      }}>
-        <div>
-          <div style={{ fontSize: 13, color: "#94a3b8" }}>
-            {new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" })}
+    <AppShell>
+      <AppHeader
+        rightActions={
+          <button
+            onClick={handleLogout}
+            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+          >
+            Logout
+          </button>
+        }
+      />
+
+      <PageHeader
+        eyebrow={new Date().toLocaleDateString("en-SG", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        })}
+        title="Settings"
+        description="Manage your preferences, mood customisation, and notification behaviour across LifeOS."
+      />
+
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <aside className="lg:w-56 lg:flex-shrink-0">
+          <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+            {SETTINGS_SECTIONS.map((section) => {
+              const isActive = activeSectionId === section.id;
+
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSectionId(section.id)}
+                  className={[
+                    "w-full rounded-2xl px-4 py-3 text-left text-sm transition-colors",
+                    isActive
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                  ].join(" ")}
+                >
+                  <div className="font-medium">{section.title}</div>
+                  <div
+                    className={[
+                      "mt-1 text-xs",
+                      isActive ? "text-slate-300" : "text-slate-400",
+                    ].join(" ")}
+                  >
+                    {section.description}
+                  </div>
+                </button>
+              );
+            })}
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#1e293b" }}>Settings</div>
-        </div>
-        <Navbar onLogout={handleLogout} />
-      </div>
+        </aside>
 
-      <div style={{ display: "flex", maxWidth: 900, margin: "0 auto", padding: "32px 24px", gap: 32 }}>
-        <div style={{ width: 200, flexShrink: 0 }}>
-          {SETTINGS_SECTIONS.map((section) => (
-            <button
-              key={section.id}
-              onClick={() => setActiveSectionId(section.id)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "10px 14px",
-                borderRadius: 8,
-                border: "none",
-                backgroundColor: activeSectionId === section.id ? "#ede9fe" : "transparent",
-                color: activeSectionId === section.id ? "#4f46e5" : "#475569",
-                fontWeight: activeSectionId === section.id ? 700 : 500,
-                fontSize: 14,
-                cursor: "pointer",
-                marginBottom: 4,
-                transition: "all 0.15s ease",
-              }}
-            >
-              {section.title}
-            </button>
-          ))}
-        </div>
-
-        <div style={{
-          flex: 1,
-          backgroundColor: "white",
-          borderRadius: 12,
-          padding: "28px 32px",
-          border: "1px solid #e2e8f0",
-        }}>
-          {activeSection && (
-            <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", margin: 0 }}>
+        <section className="flex-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          {activeSection ? (
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-slate-900">
                 {activeSection.title}
               </h2>
-              <p style={{ fontSize: 13, color: "#64748b", marginTop: 4, marginBottom: 0 }}>
+              <p className="mt-1 text-sm text-slate-500">
                 {activeSection.description}
               </p>
             </div>
-          )}
+          ) : null}
+
           {ActiveComponent ? (
             <ActiveComponent
               initialConfig={activeSectionId === "mood" ? moodConfig : undefined}
             />
           ) : (
-            <p style={{ color: "#94a3b8", fontSize: 14 }}>Section not found.</p>
+            <p className="text-sm text-slate-400">Section not found.</p>
           )}
-        </div>
+        </section>
       </div>
-    </div>
+    </AppShell>
   );
 }

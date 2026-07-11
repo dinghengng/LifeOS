@@ -848,6 +848,31 @@ app.put("/mood/config", requireAuth, async (req, res) => {
 });
 
 //Feature 3 Dashboard: Habits + goals
+function computeStreakFromLogs(logMap, todayStr) {
+  let streak = 0;
+  const cursor = new Date(todayStr + "T00:00:00Z");
+  // Cap the walk so a habit with no gaps ever doesn't loop forever / scan all time.
+  for (let i = 0; i < 3650; i++) {
+    const dateStr = cursor.toISOString().split("T")[0];
+    const status = logMap.get(dateStr);
+    if (status === "done") {
+      streak++;
+    } else if (status === "skipped") {
+      // rest day — don't increment, don't break, keep walking back
+    } else {
+      break;
+    }
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return streak;
+}
+
+function getSGTTodayStr() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Singapore",
+  }).format(new Date());
+}
+
 app.get("/api/habits", requireAuth, async (req, res) => {
   try {
     const habitsResult = await pool.query(
@@ -855,7 +880,7 @@ app.get("/api/habits", requireAuth, async (req, res) => {
       [req.user.id],
     );
     const logsResult = await pool.query(
-      `SELECT habit_id, completed_at::text FROM habit_logs 
+      `SELECT habit_id, completed_at::text, status FROM habit_logs
        WHERE habit_id IN (SELECT id FROM habits WHERE user_id = $1)
        AND completed_at >= date_trunc('week', CURRENT_DATE AT TIME ZONE 'Asia/Singapore') AT TIME ZONE 'Asia/Singapore'`,
       [req.user.id],
@@ -865,15 +890,13 @@ app.get("/api/habits", requireAuth, async (req, res) => {
     logsResult.rows.forEach((log) => {
       const dateStr = log.completed_at.split(" ")[0];
       if (!completionMap[log.habit_id]) {
-        completionMap[log.habit_id] = new Set();
+        completionMap[log.habit_id] = new Map();
       }
-      completionMap[log.habit_id].add(dateStr);
+      completionMap[log.habit_id].set(dateStr, log.status);
     });
 
     // Determine current week's Monday in SGT
-    const sgtDateStr = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Singapore",
-    }).format(new Date());
+    const sgtDateStr = getSGTTodayStr();
     const sgtToday = new Date(sgtDateStr);
     const jsDayOfWeek = sgtToday.getDay(); // 0=Sun n 6=Sat
     const todayIndexMon = (jsDayOfWeek + 6) % 7; // 0=Mon n 6=Sun
@@ -883,14 +906,17 @@ app.get("/api/habits", requireAuth, async (req, res) => {
     // Widen the log fetch window to cover full week (Mon to Sun)
     const habits = habitsResult.rows.map((habit) => {
       const completedDays = [];
-      const habitDatesSet = completionMap[habit.id] || new Set();
+      const skippedDays = [];
+      const habitDatesSet = completionMap[habit.id] || new Map();
 
       // Build Mon(0) to Sun(6) for the current SGT week
       for (let i = 0; i < 7; i++) {
         const d = new Date(monday);
         d.setDate(monday.getDate() + i);
         const dateStr = d.toISOString().split("T")[0]; // YYYY-MM-DD
-        completedDays.push(habitDatesSet.has(dateStr));
+        const status = habitDatesSet.get(dateStr);
+        completedDays.push(status === "done");
+        skippedDays.push(status === "skipped");
       }
 
       return {
@@ -902,6 +928,7 @@ app.get("/api/habits", requireAuth, async (req, res) => {
         streak: habit.streak,
         totalDays: habit.total_days || 0,
         completedDays,
+        skippedDays,
       };
     });
 
@@ -915,10 +942,7 @@ app.get("/api/habits", requireAuth, async (req, res) => {
 // TOGGLE completion status for id
 app.post("/api/habits/:id/toggle", requireAuth, async (req, res) => {
   const habitId = req.params.id;
-  const todayStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Singapore",
-  }).format(new Date()); //chg to SGT
-
+  const todayStr = getSGTTodayStr(); //chg to SGT
   try {
     const verifyOwnership = await pool.query(
       "SELECT id, streak, total_days FROM habits WHERE id = $1 AND user_id = $2",
@@ -929,77 +953,62 @@ app.post("/api/habits/:id/toggle", requireAuth, async (req, res) => {
     }
 
     const checkLog = await pool.query(
-      "SELECT id FROM habit_logs WHERE habit_id = $1 AND completed_at = $2",
+      "SELECT id, status FROM habit_logs WHERE habit_id = $1 AND completed_at = $2",
       [habitId, todayStr],
     );
-
-    if (checkLog.rows.length > 0) {
-      // Done then Untoggle (Delete the log entry, decrement streak, don't touch totalDays)
+    if (checkLog.rows.length > 0 && checkLog.rows[0].status === "done") {
+      // Done then Untoggle (Delete the log entry)
       await pool.query(
         "DELETE FROM habit_logs WHERE habit_id = $1 AND completed_at = $2",
         [habitId, todayStr],
       );
-      // Recalculate totalDays from log count after deletion (source of truth)
-      const totalDaysOff = await pool.query(
-        "SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1",
-        [habitId],
-      );
-      const newTotalDaysOff = parseInt(totalDaysOff.rows[0].total);
-      const updatedOff = await pool.query(
-        "UPDATE habits SET streak = GREATEST(0, streak - 1), total_days = $2 WHERE id = $1 RETURNING streak, total_days",
-        [habitId, newTotalDaysOff],
-      );
-      res.json({
-        completed: false,
-        streak: updatedOff.rows[0].streak,
-        totalDays: updatedOff.rows[0].total_days,
-      });
-    } else {
-      // Not done then Toggle (Insert log entry, calculate new streak, increment totalDays only once)
+    } else if (
+      checkLog.rows.length > 0 &&
+      checkLog.rows[0].status === "skipped"
+    ) {
+      // Was skipped then mark as done
       await pool.query(
-        "INSERT INTO habit_logs (habit_id, completed_at) VALUES ($1, $2)",
+        "UPDATE habit_logs SET status = 'done' WHERE habit_id = $1 AND completed_at = $2",
         [habitId, todayStr],
       );
-
-      // Get all logs for this habit to calculate proper streak
-      const logsResult = await pool.query(
-        `SELECT completed_at::text FROM habit_logs 
-         WHERE habit_id = $1 
-         ORDER BY completed_at DESC`,
-        [habitId],
+    } else {
+      // Not done then Toggle
+      await pool.query(
+        "INSERT INTO habit_logs (habit_id, completed_at, status) VALUES ($1, $2, 'done')",
+        [habitId, todayStr],
       );
-
-      // Calculate streak: count consecutive days backwards from today (Diff logic from total days)
-      let newStreak = 0;
-      for (let i = 0; i < logsResult.rows.length; i++) {
-        const logDate = logsResult.rows[i].completed_at.split(" ")[0]; // "YYYY-MM-DD" in sgt
-        const expected = new Date(todayStr + "T00:00:00Z");
-        expected.setUTCDate(expected.getUTCDate() - i);
-        const expectedStr = expected.toISOString().split("T")[0];
-
-        if (logDate === expectedStr) {
-          newStreak++;
-        } else {
-          break;
-        }
-      }
-
-      const totalDaysResult = await pool.query(
-        "SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1",
-        [habitId],
-      );
-      const newTotalDays = parseInt(totalDaysResult.rows[0].total);
-
-      const updatedOn = await pool.query(
-        "UPDATE habits SET streak = $1, total_days = $2 WHERE id = $3 RETURNING streak, total_days",
-        [newStreak, newTotalDays, habitId],
-      );
-      res.json({
-        completed: true,
-        streak: updatedOn.rows[0].streak,
-        totalDays: updatedOn.rows[0].total_days,
-      });
     }
+
+    // Get all logs for this habit to calculate proper streak
+    const logsResult = await pool.query(
+      `SELECT completed_at::text, status FROM habit_logs
+   WHERE habit_id = $1`,
+      [habitId],
+    );
+
+    const logMap = new Map(
+      logsResult.rows.map((r) => [r.completed_at.split(" ")[0], r.status]),
+    );
+
+    const newStreak = computeStreakFromLogs(logMap, todayStr);
+
+    const totalDaysResult = await pool.query(
+      "SELECT COUNT(*) AS total FROM habit_logs WHERE habit_id = $1 AND status = 'done'",
+      [habitId],
+    );
+    const newTotalDays = parseInt(totalDaysResult.rows[0].total);
+
+    const updatedOn = await pool.query(
+      "UPDATE habits SET streak = $1, total_days = $2 WHERE id = $3 RETURNING streak, total_days",
+      [newStreak, newTotalDays, habitId],
+    );
+    res.json({
+      completed: !(
+        checkLog.rows.length > 0 && checkLog.rows[0].status === "done"
+      ),
+      streak: updatedOn.rows[0].streak,
+      totalDays: updatedOn.rows[0].total_days,
+    });
   } catch (err) {
     console.error("Toggle habit error:", err.message);
     res.status(500).send("Server Error");

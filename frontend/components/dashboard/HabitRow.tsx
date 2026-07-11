@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Moon } from "lucide-react";
 
 export type Habit = {
   id: string;
@@ -11,9 +11,10 @@ export type Habit = {
   streak: number;
   totalDays?: number;
   completedDays: boolean[]; // index 0 = Monday ... index 6 = Sunday, current week using SGT
+  skippedDays?: boolean[]; // parallel to completedDays; true = rest day (streak preserved, not counted as done)
 };
 
-export const HABIT_GRID_COLUMNS = "28px 1fr repeat(7, 18px) 28px 50px";
+export const HABIT_GRID_COLUMNS = "28px 1fr repeat(7, 18px) 28px 28px 50px";
 export const HABIT_GRID_GAP = 6;
 
 export function getSGTDate(): Date {
@@ -34,23 +35,56 @@ export function getTodayIndexSGT(): number {
   return (jsDay + 6) % 7;
 }
 
+// Walks backward from `fromIndex` through this week's arrays. A rest day (skipped)
+// doesn't add to the streak but doesn't break it either — only an actually-missed
+// day (neither done nor skipped) breaks it. NOTE: this only reasons about the
+// current 7-day window; the authoritative cross-week streak still comes from the
+// server response after toggle/skip calls.
+export function computeStreak(
+  completedDays: boolean[],
+  skippedDays: boolean[] | undefined,
+  fromIndex: number,
+): number {
+  let streak = 0;
+  for (let i = fromIndex; i >= 0; i--) {
+    if (completedDays[i]) {
+      streak++;
+    } else if (skippedDays?.[i]) {
+      continue; // rest day — preserve streak, keep walking back
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 export default function HabitRow({
   habit,
   onToggleToday,
+  onToggleSkip,
   onEdit,
   onDelete,
 }: {
   habit: Habit;
   onToggleToday: (id: string) => void;
+  onToggleSkip: (id: string) => void;
   onEdit: (habit: Habit) => void;
   onDelete: (id: string) => void;
 }) {
   const todayIndex = getTodayIndexSGT();
+  const skippedDays = habit.skippedDays ?? Array(7).fill(false);
   const todayDone = habit.completedDays[todayIndex];
+  const todaySkipped = skippedDays[todayIndex];
   const sgtToday = getSGTDate();
   const daysSoFar = todayIndex + 1; // only count days up to and including today
-  const completedSoFar = habit.completedDays.slice(0, daysSoFar).filter(Boolean).length;
-  const weeklyPct = daysSoFar > 0 ? Math.round((completedSoFar / daysSoFar) * 100) : 0;
+
+  // Rest days are excused from the weekly ratio — they neither help nor hurt it.
+  const consideredSoFar = Array.from({ length: daysSoFar }, (_, i) => i).filter(
+    (i) => !skippedDays[i],
+  );
+  const completedSoFar = consideredSoFar.filter((i) => habit.completedDays[i]).length;
+  const weeklyDenominator = consideredSoFar.length;
+  const weeklyPct = weeklyDenominator > 0 ? Math.round((completedSoFar / weeklyDenominator) * 100) : 0;
 
   return (
     <div
@@ -79,7 +113,7 @@ export default function HabitRow({
         >
           {habit.name}
         </p>
-       
+
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "3px" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
             <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Streak</span>
@@ -120,10 +154,10 @@ export default function HabitRow({
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
             <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>This wk</span>
             <span
-              title={`${completedSoFar} of ${daysSoFar} day${daysSoFar === 1 ? "" : "s"} completed so far this week (Mon–today)`}
+              title={`${completedSoFar} of ${weeklyDenominator} day${weeklyDenominator === 1 ? "" : "s"} completed so far this week (rest days excluded)`}
               style={{ fontSize: 11, fontWeight: 600, color: weeklyPct >= 70 ? "#1D9E75" : weeklyPct >= 40 ? "#eab308" : "var(--color-text-secondary)" }}
             >
-              {completedSoFar}/{daysSoFar}
+              {completedSoFar}/{weeklyDenominator}
             </span>
           </div>
         </div>
@@ -131,6 +165,7 @@ export default function HabitRow({
 
       {/* 7 day cells for the current week */}
       {habit.completedDays.map((done, i) => {
+        const skipped = skippedDays[i];
         const targetDate = new Date(sgtToday);
         targetDate.setDate(targetDate.getDate() + (i - todayIndex));
         const dayLabel = targetDate.toLocaleDateString("en-SG", {
@@ -140,19 +175,23 @@ export default function HabitRow({
         return (
           <div
             key={i}
-            title={dayLabel}
+            title={skipped ? `${dayLabel} · rest day` : dayLabel}
             style={{
               width: 18,
               height: 18,
               borderRadius: 4,
               backgroundColor: done
                 ? habit.color
-                : "var(--color-background-secondary)",
+                : skipped
+                  ? "transparent"
+                  : "var(--color-background-secondary)",
               border: done
                 ? "none"
-                : i === todayIndex
-                  ? "1.5px solid #94a3b8"
-                  : "0.5px solid var(--color-border-secondary)",
+                : skipped
+                  ? "1.5px dashed #94a3b8"
+                  : i === todayIndex
+                    ? "1.5px solid #94a3b8"
+                    : "0.5px solid var(--color-border-secondary)",
               opacity: i === todayIndex ? 1 : 0.8,
             }}
           />
@@ -189,6 +228,25 @@ export default function HabitRow({
         aria-label={todayDone ? "Mark incomplete" : "Mark complete"}
       >
         {todayDone ? "✓" : ""}
+      </button>
+      <button
+        onClick={() => onToggleSkip(habit.id)}
+        title={todaySkipped ? "Undo rest day" : "Mark today as a rest day (streak-safe skip)"}
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: "50%",
+          border: todaySkipped ? "2px dashed #64748b" : "1.5px dashed #cbd5e1",
+          backgroundColor: todaySkipped ? "#f1f5f9" : "transparent",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: todaySkipped ? "#475569" : "#94a3b8",
+        }}
+        aria-label={todaySkipped ? "Undo rest day" : "Mark as rest day"}
+      >
+        <Moon size={13} />
       </button>
       {/* Edit / Delete actions */}
       <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>

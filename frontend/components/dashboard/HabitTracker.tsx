@@ -1,25 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import HabitRow, { Habit, getTodayIndexSGT, HABIT_GRID_COLUMNS, HABIT_GRID_GAP } from "./HabitRow";
+import HabitHeatmap, { HeatmapDay } from "./HabitHeatmap";
 
 const DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 export default function HabitTracker({
   habits,
   onToggleToday,
+  onToggleSkip,
   onAddClick,
   onEditHabit,
   onDeleteHabit,
+  getHabitHistory,
 }: {
   habits: Habit[];
   onToggleToday: (id: string) => void;
+  onToggleSkip: (id: string) => void;
   onAddClick: () => void;
   onEditHabit: (habit: Habit) => void;
   onDeleteHabit: (id: string) => void;
+  // Lazily fetches (and caches) up to ~90 days of history for a habit; returns [] if unavailable.
+  getHabitHistory: (id: string) => Promise<HeatmapDay[]>;
 }) {
   const todayIndex = getTodayIndexSGT();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [historyCache, setHistoryCache] = useState<Record<string, HeatmapDay[]>>({});
+  const [historyLoading, setHistoryLoading] = useState<string | null>(null);
 
   const categories = Array.from(
     new Set(habits.map((h) => h.category).filter((c): c is string => Boolean(c))),
@@ -27,6 +37,20 @@ export default function HabitTracker({
   const visibleHabits = activeCategory
     ? habits.filter((h) => h.category === activeCategory)
     : habits;
+
+  async function handleToggleExpand(id: string) {
+    if (expandedId === id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(id);
+    if (!historyCache[id]) {
+      setHistoryLoading(id);
+      const data = await getHabitHistory(id);
+      setHistoryCache((prev) => ({ ...prev, [id]: data }));
+      setHistoryLoading(null);
+    }
+  }
 
   return (
     <div
@@ -132,6 +156,7 @@ export default function HabitTracker({
           </span>
         ))}
         <span style={{ textAlign: "center", fontSize: 10, color: "var(--color-text-secondary)" }}>✓</span>
+        <span style={{ textAlign: "center", fontSize: 10, color: "var(--color-text-secondary)" }}>💤</span>
         <div />
       </div>
 
@@ -166,13 +191,46 @@ export default function HabitTracker({
         </div>
       ) : (
         visibleHabits.map((habit) => (
-          <HabitRow
-            key={habit.id}
-            habit={habit}
-            onToggleToday={onToggleToday}
-            onEdit={onEditHabit}
-            onDelete={onDeleteHabit}
-          />
+          <div key={habit.id}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <button
+                onClick={() => handleToggleExpand(habit.id)}
+                aria-label={expandedId === habit.id ? "Collapse heatmap" : "Show 3-month heatmap"}
+                title="3-month history"
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  color: "var(--color-text-secondary)",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                {expandedId === habit.id ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              </button>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <HabitRow
+                  habit={habit}
+                  onToggleToday={onToggleToday}
+                  onToggleSkip={onToggleSkip}
+                  onEdit={onEditHabit}
+                  onDelete={onDeleteHabit}
+                />
+              </div>
+            </div>
+            {expandedId === habit.id && (
+              <div style={{ padding: "4px 0 12px 20px" }}>
+                {historyLoading === habit.id ? (
+                  <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: 0 }}>Loading history…</p>
+                ) : (historyCache[habit.id]?.length ?? 0) > 0 ? (
+                  <HabitHeatmap data={historyCache[habit.id]} habitColor={habit.color} />
+                ) : (
+                  <p style={{ fontSize: 11, color: "var(--color-text-secondary)", margin: 0 }}>No history yet.</p>
+                )}
+              </div>
+            )}
+          </div>
         ))
       )}
 

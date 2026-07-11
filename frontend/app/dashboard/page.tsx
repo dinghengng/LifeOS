@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import StatsSummary from "../../components/dashboard/StatsSummary";
 import HabitTracker from "../../components/dashboard/HabitTracker";
 import GoalTracker from "../../components/dashboard/GoalTracker";
-import { Habit, getTodayIndexSGT } from "../../components/dashboard/HabitRow";
+import { Habit, getTodayIndexSGT, computeStreak } from "../../components/dashboard/HabitRow";
+import { HeatmapDay } from "../../components/dashboard/HabitHeatmap";
 import { Goal } from "../../components/dashboard/GoalCard";
 import { User } from "../../../shared/types";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
@@ -128,13 +129,11 @@ export default function DashboardPage() {
     const wasOn = days[todayIndex];
     days[todayIndex] = !days[todayIndex];
 
-    let newStreak = 0;
-    if (days[todayIndex]) {
-      for (let i = todayIndex; i >= 0; i--) {
-        if (days[i]) newStreak++;
-        else break;
-      }
-    }
+    // Turning a day "done" clears any rest-day flag on it — a habit can't be both.
+    const skips = [...(targetHabit.skippedDays ?? Array(7).fill(false))];
+    if (days[todayIndex]) skips[todayIndex] = false;
+
+    const newStreak = computeStreak(days, skips, todayIndex);
 
     // Trigger the toast immediately if a milestone is hit
     if (newStreak > targetHabit.streak && STREAK_MILESTONES.includes(newStreak)) {
@@ -148,7 +147,7 @@ export default function DashboardPage() {
     setHabits((prev) =>
       prev.map((h) =>
         h.id === id
-          ? { ...h, completedDays: days, streak: newStreak, totalDays: newTotalDays }
+          ? { ...h, completedDays: days, skippedDays: skips, streak: newStreak, totalDays: newTotalDays }
           : h
       )
     );
@@ -176,6 +175,61 @@ export default function DashboardPage() {
     } catch (err) {
       console.error(err);
       setHabits(fallbackHabits); // Roll back if network breaks
+    }
+  }
+
+  // habit rest-day toggle — marks/unmarks today as a streak-safe skip
+  async function toggleSkipToday(id: string) {
+    const todayIndex = getTodayIndexSGT();
+    const targetHabit = habits.find((h) => h.id === id);
+    if (!targetHabit) return;
+
+    const skips = [...(targetHabit.skippedDays ?? Array(7).fill(false))];
+    const days = [...targetHabit.completedDays];
+
+    skips[todayIndex] = !skips[todayIndex];
+    // A rest day can't also be marked done.
+    if (skips[todayIndex]) days[todayIndex] = false;
+
+    const newStreak = computeStreak(days, skips, todayIndex);
+
+    const fallbackHabits = [...habits];
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === id ? { ...h, completedDays: days, skippedDays: skips, streak: newStreak } : h
+      )
+    );
+
+    try {
+      const res = await fetch(`${API_BASE}/api/habits/${id}/skip`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Skip sync failed");
+
+      const data = await res.json();
+      setHabits((prev) =>
+        prev.map((h) => (h.id !== id ? h : { ...h, streak: data.streak ?? h.streak }))
+      );
+    } catch (err) {
+      console.error(err);
+      setHabits(fallbackHabits);
+    }
+  }
+
+  // Lazily fetches ~90 days of history for the heatmap. Expects the backend to return
+  // an ascending array of { date: "YYYY-MM-DD", status: "done"|"skipped"|"missed" }.
+  // Falls back to [] (heatmap just won't render) if the endpoint isn't there yet.
+  async function getHabitHistory(id: string): Promise<HeatmapDay[]> {
+    try {
+      const res = await fetch(`${API_BASE}/api/habits/${id}/history?days=90`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("History fetch failed");
+      return await res.json();
+    } catch (err) {
+      console.error(err);
+      return [];
     }
   }
 
@@ -610,6 +664,8 @@ export default function DashboardPage() {
               <HabitTracker
                 habits={habits}
                 onToggleToday={toggleToday}
+                onToggleSkip={toggleSkipToday}
+                getHabitHistory={getHabitHistory}
                 onAddClick={() => {
                   setEditingHabitId(null);
                   setHabitName("");

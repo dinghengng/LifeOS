@@ -19,6 +19,13 @@ function calculateTargets(weight: number, goal: string) {
   return { calories, protein };
 }
 
+// transparent border
+const selectStyle =
+  "w-full rounded-xl border-r-8 border-transparent bg-white pl-3 pr-4 py-2.5 text-sm text-slate-700 outline outline-1 outline-slate-300 focus:outline-2 focus:outline-indigo-400 transition";
+
+const inputStyle =
+  "w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition";
+
 export default function NutritionGoalsSection() {
   const [form, setForm] = useState<MetricsForm>({ weight: "", height: "", goal: "muscle_gain" });
   const [loading, setLoading] = useState(true);
@@ -79,122 +86,120 @@ export default function NutritionGoalsSection() {
     }
   };
 
-  if (loading) return <div style={{ color: "#94a3b8", fontSize: 14 }}>Loading…</div>;
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    boxSizing: "border-box",
-    padding: "8px 12px",
-    borderRadius: 8,
-    border: "1px solid #cbd5e1",
-    fontSize: 14,
-    color: "#1e293b",
-  };
-
-  const rowStyle: React.CSSProperties = {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-  };
+  if (loading) return <div className="text-sm text-slate-400">Loading…</div>;
 
   return (
-    <form onSubmit={handleSave} style={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: 20 }}>
-
-      <div style={rowStyle}>
-        <label style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>
-          Weight (kg)
-        </label>
-        <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>
-          Used to calculate your calorie and protein targets
-        </p>
-        <input
-          type="number"
-          min="20"
-          max="400"
-          step="0.1"
-          placeholder="e.g. 75"
-          value={form.weight}
-          onChange={(e) => setForm({ ...form, weight: e.target.value })}
-          style={inputStyle}
-        />
-      </div>
-
-      <div style={rowStyle}>
-        <label style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>
-          Height (cm) <span style={{ fontWeight: 400, color: "#94a3b8" }}>(optional)</span>
-        </label>
-        <input
-          type="number"
-          min="50"
-          max="270"
-          step="1"
-          placeholder="e.g. 175"
-          value={form.height}
-          onChange={(e) => setForm({ ...form, height: e.target.value })}
-          style={inputStyle}
-        />
-      </div>
-
-      <div style={rowStyle}>
-        <label style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Primary Goal</label>
-        <select
-          value={form.goal}
-          onChange={(e) => setForm({ ...form, goal: e.target.value })}
-          style={inputStyle}
-        >
-          <option value="maintain">Maintain Current Weight</option>
-          <option value="muscle_gain">Build Muscle (Caloric Surplus)</option>
-          <option value="fat_loss">Lose Fat (Caloric Deficit)</option>
-        </select>
-      </div>
-
-      {preview && (
-        <div style={{
-          backgroundColor: "#f0fdf4",
-          border: "1px solid #bbf7d0",
-          borderRadius: 10,
-          padding: "14px 16px",
-          display: "flex",
-          gap: 32,
-        }}>
-          <div>
-            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Daily Calories
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#16a34a", marginTop: 2 }}>
-              {preview.calories} <span style={{ fontSize: 13, fontWeight: 500, color: "#64748b" }}>kcal</span>
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Protein Target
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#16a34a", marginTop: 2 }}>
-              {preview.protein} <span style={{ fontSize: 13, fontWeight: 500, color: "#64748b" }}>g</span>
-            </div>
-          </div>
+    <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Nutrition</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Set your body metrics to personalise your goals
+          </p>
         </div>
-      )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: "8px 20px",
-            borderRadius: 8,
-            border: "none",
-            backgroundColor: "#4f46e5",
-            color: "white",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.7 : 1,
-          }}
-        >
-          {saving ? "Saving…" : "Save Goals"}
-        </button>
+        <form onSubmit={handleSave} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-semibold text-slate-800">Weight (kg)</label>
+            <p className="text-xs text-slate-500">
+              Used to calculate your calorie and protein targets
+            </p>
+            <input
+              type="number"
+              min="20"
+              max="400"
+              step="0.1"
+              placeholder="e.g. 75"
+              value={form.weight}
+              onChange={(e) => setForm({ ...form, weight: e.target.value })}
+              className={inputStyle}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-semibold text-slate-800">
+              Height (cm) <span className="font-normal text-slate-400">(optional)</span>
+            </label>
+            <input
+              type="number"
+              min="50"
+              max="270"
+              step="1"
+              placeholder="e.g. 175"
+              value={form.height}
+              onChange={(e) => setForm({ ...form, height: e.target.value })}
+              className={inputStyle}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-semibold text-slate-800">Primary Goal</label>
+            <select
+              value={form.goal}
+              onChange={(e) => setForm({ ...form, goal: e.target.value })}
+              className={selectStyle}
+            >
+              <option value="maintain">Maintain Current Weight</option>
+              <option value="muscle_gain">Build Muscle (Caloric Surplus)</option>
+              <option value="fat_loss">Lose Fat (Caloric Deficit)</option>
+            </select>
+          </div>
+
+          {preview && (
+            <div className="flex gap-8 rounded-xl border border-green-200 bg-green-50 px-4 py-3.5">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Daily Calories
+                </div>
+                <div className="mt-0.5 text-xl font-bold text-green-600">
+                  {preview.calories}{" "}
+                  <span className="text-sm font-medium text-slate-500">kcal</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Protein Target
+                </div>
+                <div className="mt-0.5 text-xl font-bold text-green-600">
+                  {preview.protein} <span className="text-sm font-medium text-slate-500">g</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className={`rounded-xl px-5 py-2 text-sm font-semibold text-white transition-colors ${
+                saving ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
+            >
+              {saving ? "Saving…" : "Save Goals"}
+            </button>
+            {saved && <span className="text-sm text-green-600">Saved</span>}
+          </div>
+        </form>
+      </section>
+
+      <div className="flex flex-col gap-4">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">How targets are calculated</h2>
+          <ul className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
+            <li>Base: weight (kg) × 24 × 1.2 activity factor</li>
+            <li>Build muscle: +300 kcal surplus</li>
+            <li>Lose fat: −300 kcal deficit</li>
+            <li>Protein target: 1.5g per kg of body weight</li>
+          </ul>
+        </section>
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Tip</h2>
+          <p className="mt-3 text-sm text-slate-600">
+            Update your weight every 1–2 weeks so your calorie and protein targets stay accurate
+            as your body changes.
+          </p>
+        </section>
       </div>
-    </form>
+    </div>
   );
 }

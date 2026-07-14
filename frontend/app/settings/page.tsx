@@ -12,6 +12,7 @@ import NutritionGoalsSection from "../../components/settings/NutritionGoalsSecti
 import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
+import LocalTabs from "../../components/layout/LocalTabs";
 
 const SECTION_COMPONENTS: Record<
   string,
@@ -62,6 +63,8 @@ export default function SettingsPage() {
   const activeSection = SETTINGS_SECTIONS.find((s) => s.id === activeSectionId);
   const ActiveComponent = SECTION_COMPONENTS[activeSectionId] ?? null;
 
+  const tabItems = SETTINGS_SECTIONS.map((s) => ({ id: s.id, label: s.title }));
+
   return (
     <AppShell>
       <AppHeader
@@ -82,61 +85,25 @@ export default function SettingsPage() {
           month: "long",
         })}
         title="Settings"
-        description="Manage your preferences, mood customisation, and notification behaviour across LifeOS."
+        description="Manage your Mood customisation, Notification preferences and Nutrition goals"
       />
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <aside className="lg:w-56 lg:flex-shrink-0">
-          <div className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
-            {SETTINGS_SECTIONS.map((section) => {
-              const isActive = activeSectionId === section.id;
-
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSectionId(section.id)}
-                  className={[
-                    "w-full rounded-2xl px-4 py-3 text-left text-sm transition-colors",
-                    isActive
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                  ].join(" ")}
-                >
-                  <div className="font-medium">{section.title}</div>
-                  <div
-                    className={[
-                      "mt-1 text-xs",
-                      isActive ? "text-slate-300" : "text-slate-400",
-                    ].join(" ")}
-                  >
-                    {section.description}
-                  </div>
-                </button>
-              );
-            })}
+      <LocalTabs items={tabItems} activeId={activeSectionId} onChange={setActiveSectionId} />
+      <div>
+        {activeSection && activeSectionId !== "nutrition_goals" ? (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-slate-900">{activeSection.title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{activeSection.description}</p>
           </div>
-        </aside>
+        ) : null}
 
-        <section className="flex-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          {activeSection ? (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-slate-900">
-                {activeSection.title}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {activeSection.description}
-              </p>
-            </div>
-          ) : null}
-
-          {ActiveComponent ? (
-            <ActiveComponent
-              initialConfig={activeSectionId === "mood" ? moodConfig : undefined}
-            />
-          ) : (
-            <p className="text-sm text-slate-400">Section not found.</p>
-          )}
-        </section>
+        {ActiveComponent ? (
+          <ActiveComponent
+            initialConfig={activeSectionId === "mood" ? moodConfig : undefined}
+          />
+        ) : (
+          <p className="text-sm text-slate-400">Section not found.</p>
+        )}
       </div>
     </AppShell>
   );

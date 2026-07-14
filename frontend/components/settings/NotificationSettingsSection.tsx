@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useToastContext } from "../../components/notifications/ToastContext";
+import SettingsSectionCard from "./SettingsSectionCard";
+import SettingsRow from "./SettingsRow";
+import SettingsToggle from "./SettingsToggle";
+import SettingsGroupLabel from "./SettingsGroupLabel";
+import SettingsActionFooter from "./SettingsActionFooter";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -39,7 +44,7 @@ export default function NotificationSettingsSection() {
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  // const [saved, setSaved] = useState(false);
   const { showToast } = useToastContext();
 
   useEffect(() => {
@@ -54,7 +59,7 @@ export default function NotificationSettingsSection() {
 
   const handleSave = async () => {
     setSaving(true);
-    setSaved(false);
+    // setSaved(false);
     try {
       await fetch(`${API_BASE}/api/notifications/preferences`, {
         method: "PUT",
@@ -70,8 +75,8 @@ export default function NotificationSettingsSection() {
       }
       
       showToast("Settings updated");
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      // setSaved(true);
+      // setTimeout(() => setSaved(false), 2500);
     } catch (err) {
       console.error(err);
       showToast("Failed to save settings. Try again.", "error");
@@ -80,183 +85,109 @@ export default function NotificationSettingsSection() {
     }
   };
 
-  if (loading) return <div style={{ color: "#94a3b8", fontSize: 14 }}>Loading preferences…</div>;
+  // shared toggle function
+  const toggle = (field: keyof NotificationPrefs) => (checked: boolean) =>
+    setPrefs({ ...prefs, [field]: checked });
 
-  const rowStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "14px 0",
-    borderBottom: "1px solid #f1f5f9",
-  };
-
-  const sectionLabelStyle: React.CSSProperties = {
-    fontSize: 11,
-    fontWeight: 700,
-    color: "#94a3b8",
-    textTransform: "uppercase",
-    letterSpacing: "0.07em",
-    padding: "18px 0 4px",
-  };
-
-  const CronToggle = ({
-    label,
-    description,
-    field,
-  }: {
-    label: string;
-    description: string;
-    field: keyof NotificationPrefs;
-  }) => (
-    <div style={rowStyle}>
-      <div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>{label}</div>
-        <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{description}</div>
-      </div>
-      <input
-        type="checkbox"
-        checked={prefs[field] as boolean}
-        onChange={(e) => setPrefs({ ...prefs, [field]: e.target.checked })}
-        style={{ width: 18, height: 18, accentColor: "#4f46e5", cursor: "pointer" }}
-      />
-    </div>
-  );
+  if (loading) return <p className="text-sm text-slate-400">Loading preferences…</p>;
 
   return (
-    <div style={{ maxWidth: 520 }}>
-      <CronToggle
-        label="Email notifications"
-        description="Receive email reminders from LifeOS"
-        field="notifications_enabled"
-      />
+    <div className="space-y-6">
+      <SettingsSectionCard title="General">
+        <SettingsRow label="Email notifications" hint="Receive email reminders from LifeOS" noBorder>
+          <SettingsToggle
+            checked={prefs.notifications_enabled}
+            onChange={toggle("notifications_enabled")}
+            label="Email notifications"
+          />
+        </SettingsRow>
+      </SettingsSectionCard>
 
-      <div style={rowStyle}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Task due reminders</div>
-          <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Get notified before a task is due</div>
-        </div>
-        <input
-          type="checkbox"
-          checked={prefs.task_reminders}
-          onChange={(e) => setPrefs({ ...prefs, task_reminders: e.target.checked })}
-          style={{ width: 18, height: 18, accentColor: "#4f46e5", cursor: "pointer" }}
-        />
-      </div>
+      <SettingsSectionCard title="Reminders">
+        <SettingsRow label="Task due reminders" hint="Get notified before a task is due">
+          <SettingsToggle
+            checked={prefs.task_reminders}
+            onChange={toggle("task_reminders")}
+            label="Task due reminders"
+          />
+        </SettingsRow>
 
-      {prefs.task_reminders && (
-        <div style={{ ...rowStyle, paddingLeft: 16, backgroundColor: "#fafaf9", borderRadius: 8, marginBottom: 4 }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#475569" }}>Remind me</div>
-            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>How far in advance to notify you</div>
-          </div>
-          <select
-            value={prefs.lead_time_mins}
-            onChange={(e) => setPrefs({ ...prefs, lead_time_mins: parseInt(e.target.value) })}
-            style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, color: "#1e293b", cursor: "pointer" }}
-          >
-            <option value={5}>5 minutes before</option>
-            <option value={15}>15 minutes before</option>
-            <option value={30}>30 minutes before</option>
-            <option value={60}>1 hour before</option>
-            <option value={120}>2 hours before</option>
-            <option value={1440}>1 day before</option>
-          </select>
-        </div>
-      )}
+        {prefs.task_reminders && (
+          <SettingsRow label="Remind me" hint="How far in advance to notify you" emphasis noBorder>
+            <select
+              value={prefs.lead_time_mins}
+              onChange={(e) => setPrefs({ ...prefs, lead_time_mins: parseInt(e.target.value) })}
+              className="rounded-xl border-r-8 border-transparent bg-white pl-3 pr-4 py-1.5 text-sm text-slate-700 outline outline-1 outline-slate-300 focus:outline-2 focus:outline-indigo-400 transition cursor-pointer"
+            >
+              <option value="5">5 minutes before</option>
+              <option value="15">15 minutes before</option>
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+              <option value="120">2 hours before</option>
+              <option value="1440">1 day before</option>
+            </select>
+          </SettingsRow>
+        )}
 
-      {/*Habit checkin*/}
-      <div style={rowStyle}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Daily habit check-in</div>
-          <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Morning nudge to log your habits (8am)</div>
-        </div>
-        <input
-          type="checkbox"
-          checked={prefs.habit_checkins}
-          onChange={(e) => setPrefs({ ...prefs, habit_checkins: e.target.checked })}
-          style={{ width: 18, height: 18, accentColor: "#4f46e5", cursor: "pointer" }}
-        />
-      </div>
+        {/*Habit checkin*/}
+        <SettingsRow label="Daily habit check-in" hint="Morning nudge to log your habits (8am)" noBorder>
+          <SettingsToggle
+            checked={prefs.habit_checkins}
+            onChange={toggle("habit_checkins")}
+            label="Daily habit check-in"
+          />
+        </SettingsRow>
+      </SettingsSectionCard>
 
-      <div style={{ ...rowStyle, flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#1e293b" }}>Silent hours</div>
-          <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>No notifications will be sent during this window</div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>From</label>
+      <SettingsSectionCard title="Quiet hours" description="No notifications will be sent during this window">
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">From</label>
             <input
               type="time"
               value={prefs.quiet_start}
               onChange={(e) => setPrefs({ ...prefs, quiet_start: e.target.value })}
-              style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, color: "#1e293b" }}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
             />
           </div>
-          <div style={{ paddingTop: 18, color: "#94a3b8", fontSize: 13 }}>to</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <label style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Until</label>
+          <span className="pt-5 text-sm text-slate-400">to</span>
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Until</label>
             <input
               type="time"
               value={prefs.quiet_end}
               onChange={(e) => setPrefs({ ...prefs, quiet_end: e.target.value })}
-              style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, color: "#1e293b" }}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
             />
           </div>
         </div>
-      </div>
+      </SettingsSectionCard>
 
       {/*notification toggles*/}
-      <div style={sectionLabelStyle}>Tasks &amp; Goals</div>
-      <CronToggle
-        label="Overdue task alerts"
-        description="Notified once per task that passes its due date incomplete"
-        field="overdue_tasks"
-      />
-      <CronToggle
-        label="Goal deadline warnings"
-        description="Alerts at 7, 3, and 1 day before a goal is due"
-        field="goal_deadlines"
-      />
+      <SettingsSectionCard>
+        <SettingsGroupLabel>Tasks &amp; Goals</SettingsGroupLabel>
+        <SettingsRow label="Overdue task alerts" hint="Notified once per task that passes its due date incomplete">
+          <SettingsToggle checked={prefs.overdue_tasks} onChange={toggle("overdue_tasks")} label="Overdue task alerts" />
+        </SettingsRow>
+        <SettingsRow label="Goal deadline warnings" hint="Alerts at 7, 3, and 1 day before a goal is due" noBorder>
+          <SettingsToggle checked={prefs.goal_deadlines} onChange={toggle("goal_deadlines")} label="Goal deadline warnings" />
+        </SettingsRow>
 
-      <div style={sectionLabelStyle}>Habits</div>
-      <CronToggle
-        label="Streak at risk"
-        description="9pm reminder if you haven't logged a habit with an active streak"
-        field="streak_risk"
-      />
-      <CronToggle
-        label="Streak milestones"
-        description="Celebrate hitting 7, 14, 30, 60, and 100-day streaks"
-        field="streak_milestone"
-      />
+        <SettingsGroupLabel>Habits</SettingsGroupLabel>
+        <SettingsRow label="Streak at risk" hint="9pm reminder if you haven't logged a habit with an active streak">
+          <SettingsToggle checked={prefs.streak_risk} onChange={toggle("streak_risk")} label="Streak at risk" />
+        </SettingsRow>
+        <SettingsRow label="Streak milestones" hint="Celebrate hitting 7, 14, 30, 60, and 100-day streaks" noBorder>
+          <SettingsToggle checked={prefs.streak_milestone} onChange={toggle("streak_milestone")} label="Streak milestones" />
+        </SettingsRow>
 
-      <div style={sectionLabelStyle}>Journal</div>
-      <CronToggle
-        label="Daily journal nudge"
-        description="8pm reminder on days you haven't written an entry"
-        field="journal_nudge"
-      />
+        <SettingsGroupLabel>Journal</SettingsGroupLabel>
+        <SettingsRow label="Daily journal nudge" hint="8pm reminder on days you haven't written an entry" noBorder>
+          <SettingsToggle checked={prefs.journal_nudge} onChange={toggle("journal_nudge")} label="Daily journal nudge" />
+        </SettingsRow>
+      </SettingsSectionCard>
 
-      <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 12 }}>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            padding: "8px 20px",
-            borderRadius: 8,
-            border: "none",
-            backgroundColor: "#4f46e5",
-            color: "white",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.7 : 1,
-          }}
-        >
-          {saving ? "Saving…" : "Save preferences"}
-        </button>
-      </div>
+      <SettingsActionFooter onSave={handleSave} saving={saving} label="Save preferences" />
     </div>
   );
 }

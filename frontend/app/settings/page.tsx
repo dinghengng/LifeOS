@@ -8,7 +8,6 @@ import { SETTINGS_SECTIONS } from "../../../shared/settingsSection";
 import MoodSettingsSection from "../../components/settings/MoodSettingsSection";
 import NotificationSettingsSection from "../../components/settings/NotificationSettingsSection";
 import NutritionGoalsSection from "../../components/settings/NutritionGoalsSection";
-//import Navbar from "../../components/Navbar";
 import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
@@ -69,12 +68,12 @@ export default function SettingsPage() {
     <AppShell>
       <AppHeader
         rightActions={
-          <button
-            onClick={handleLogout}
-            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-          >
-            Logout
-          </button>
+            <button
+              onClick={handleLogout}
+              className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+            >
+              Logout
+            </button>
         }
       />
 

@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Journal", href: "/journal" },
   { label: "Nutrition", href: "/nutrition" },
-  { label: "Settings", href: "/settings" },
+  { label: "Insights", href: "/insights" },
 ];
 
 export default function GlobalNav() {

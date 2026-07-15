@@ -756,7 +756,7 @@ export default function NutritionPage() {
       <PageHeader
         eyebrow={today}
         title="Health & Nutrition"
-        description="Track meals, supplements, quests and progress"
+        description="Track meals and supplements, complete quests to progress"
         actions={<DailyQuoteCard />}
       />
 
@@ -775,8 +775,8 @@ export default function NutritionPage() {
         <>
           <LocalTabs
             items={[
-              { id: "tracker", label: "Meals & Supplements" },
-              { id: "insights", label: "Quests & Progress" },
+              { id: "tracker", label: "Track" },
+              { id: "insights", label: "Progress" },
             ]}
             activeId={activeSection}
             onChange={(id) => setActiveSection(id as "tracker" | "insights")}

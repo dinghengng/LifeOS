@@ -84,16 +84,13 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
     setIsSubmitting(false);
   };
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mb-6 rounded-2xl border border-white/40 bg-white/40 backdrop-blur-md p-3 shadow-sm transition-all duration-300 focus-within:bg-white/60 focus-within:shadow-md"
-    >
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
       {/* Main Flex Row: Stacks on mobile, forms a single row on large screens */}
       <div className="flex flex-col lg:flex-row gap-2 items-center">
         <input
           type="text"
           autoFocus
-          placeholder="What needs to be done?"
+          placeholder="What to do?"
           value={taskTitle}
           onChange={handleTitleChange}
           maxLength={150}

@@ -107,7 +107,7 @@ const tourSteps = [
   },
   {
     target: '#tour-navbar',
-    content: 'Navigate to Dashboard, Journal, and Nutrition from here. Each section has its own tour when you get there!',
+    content: 'Seamlessly navigate to the other pages from here. Hope you enjoy your stay!',
     title: 'Navigation',
     disableBeacon: true,
     disableScrolling: true,

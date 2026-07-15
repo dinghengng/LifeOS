@@ -105,22 +105,19 @@ export default function EditTaskForm({
 };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+  <div className="mb-1 flex items-center justify-between gap-2">
+    <p className="text-xs text-slate-500">
+      Editing: <span className="font-semibold text-slate-700">{task.title}</span>
+    </p>
+    <button
+      type="button"
+      onClick={onCancel}
+      className="text-xs text-slate-500 hover:text-slate-700"
     >
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-slate-700">
-          Editing: <span className="font-bold">{task.title}</span>
-        </h2>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="text-xs text-slate-500 hover:text-slate-700"
-        >
-          Cancel
-        </button>
-      </div>
+      Cancel
+    </button>
+  </div>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <input
@@ -172,7 +169,7 @@ export default function EditTaskForm({
       : "bg-indigo-600 hover:bg-indigo-700"
   }`}
 >
-  {isSubmitting ? "Saving..." : "Save changes"}
+  {isSubmitting ? "Saving..." : "Save"}
 </button>
       </div>
       {titleError && (

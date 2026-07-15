@@ -23,12 +23,10 @@ export function MoodLinkTip() {
   return (
     <div>
       <h2 className="text-lg font-semibold text-slate-900 mb-3">Tip</h2>
-      <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3.5">
-        <p className="text-sm text-green-700">
+        <p className="mt-3 text-sm text-slate-600">
           Link a mood log to a journal entry (or a journal entry to a mood log) using the
           &quot;Link mood&quot; button to connect how you felt to what you wrote.
         </p>
-      </div>
     </div>
   );
 }

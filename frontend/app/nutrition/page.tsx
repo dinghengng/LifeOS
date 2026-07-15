@@ -16,71 +16,14 @@ import NutritionChart, {
   DayData,
 } from "../../components/nutrition/NutritionChart";
 import { BsUpcScan } from "react-icons/bs";
-import Navbar from "../../components/Navbar";
+import AppShell from "../../components/layout/AppShell";
+import AppHeader from "../../components/layout/AppHeader";
+import PageHeader from "../../components/layout/PageHeader";
+import DailyQuoteCard from "../../components/nutrition/DailyQuoteCard";
+import LocalTabs from "../../components/layout/LocalTabs";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
-const NUTRITION_QUOTES = [
-  "Eat for the body you want, not the body you have.",
-  "You can't out-train a bad diet.",
-  "Food is fuel, not therapy.",
-  "Strive for progress, not perfection.",
-  "Your diet is a bank account. Good food choices are good investments.",
-  "A year from now, you will wish you had started today.",
-  "It's not a short-term diet. It's a long-term lifestyle change.",
-  "Focus on how far you've come, not how far you have to go.",
-  "Consistency beats intensity every single time.",
-  "Your body is a reflection of your effort.",
-  "Nutrition is the foundation of wellness.",
-  "Small changes today, big results tomorrow.",
-  "Fuel your body like you love it.",
-  "Healthy habits create healthy lives.",
-  "Every meal is a chance to nourish your body.",
-  "Good nutrition is self-respect in action.",
-  "What you eat today shapes your tomorrow.",
-  "Discipline is choosing what you want most over what you want now.",
-  "Strong bodies are built in the kitchen.",
-  "Make food your ally, not your enemy.",
-  "The best project you'll ever work on is yourself.",
-  "Healthy eating is a form of self-care.",
-  "Your future self is watching your choices today.",
-  "Success starts with one healthy decision.",
-  "A balanced diet fuels a balanced life.",
-  "Take care of your body; it's the only place you have to live.",
-  "Every healthy choice counts.",
-  "Don't count calories, make calories count.",
-  "Eat with purpose, live with energy.",
-  "Wellness begins with what's on your plate.",
-  "Healthy eating isn't a punishment, it's a privilege.",
-  "Nourish your body and your mind will follow.",
-  "Small improvements compound into big transformations.",
-  "Choose foods that love you back.",
-  "The secret ingredient is consistency.",
-  "Good nutrition is the ultimate performance enhancer.",
-  "Healthy eating is an investment, not an expense.",
-  "Eat better, feel better, perform better.",
-  "Your habits shape your health.",
-  "Every bite is a vote for your future.",
-  "The goal is progress, not perfection.",
-  "Healthy choices become healthy habits.",
-  "Feed your goals, not your cravings.",
-  "Energy starts with nutrition.",
-  "Results come from repeated healthy actions.",
-  "Your body keeps score of your choices.",
-  "Eat smart today, thrive tomorrow.",
-  "Wellness is built one meal at a time.",
-  "Healthy living starts with healthy eating.",
-  "The strongest form of self-love is taking care of your health.",
-]; //Quotes that randomly generate
-
-function getDailyQuote() {
-  const date = new Date();
-  const start = new Date(date.getFullYear(), 0, 0);
-  const diff = date.getTime() - start.getTime();
-  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-  return NUTRITION_QUOTES[dayOfYear % NUTRITION_QUOTES.length];
-}
 // Backend returns snake_case columns, then frontend Supplement type expects camelCase. Normalize once here so every call site gets a consistent shape.
 function normalizeSupplement(raw: any): Supplement {
   return {
@@ -208,10 +151,7 @@ export default function NutritionPage() {
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"meals" | "supplements">("meals");
-  const [activeRightTab, setActiveRightTab] = useState<"quests" | "progress">(
-    "quests",
-  );
+  const [activeSection, setActiveSection] = useState<"tracker" | "insights">("tracker");
 
   // Macro optimization depends on like the user height and weight + goals
   const [targets, setTargets] = useState({ calories: 2300, protein: 140 });
@@ -799,214 +739,52 @@ export default function NutritionPage() {
     border: "1px solid #cbd5e1",
     color: "#1e293b",
   };
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--color-background-tertiary, #f5f5f2)",
-        fontFamily: "var(--font-sans)",
-        padding: "2rem",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          marginBottom: "2rem",
-        }}
-      >
-        <div>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 13,
-              color: "var(--color-text-secondary)",
-            }}
+    <AppShell>
+      <AppHeader
+        rightActions={
+          <button
+            onClick={handleLogout}
+            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
           >
-            {today}
-          </p>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 28,
-              fontWeight: 500,
-              color: "var(--color-text-primary)",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Health & Nutrition
-          </h1>
-        </div>
+            Logout
+          </button>
+        }
+      />
 
-        <div style={{ display: "flex", gap: "8px" }}>
-          <Navbar onLogout={handleLogout} />
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={today}
+        title="Health & Nutrition"
+        description="Track meals, supplements, quests and progress"
+        actions={<DailyQuoteCard />}
+      />
 
-      {/* Daily Motivation Quote */}
-      <div
-        style={{
-          maxWidth: 1280,
-          margin: "0 auto 1.5rem",
-          background: "var(--color-background-primary)",
-          border: "0.5px solid var(--color-border-tertiary)",
-          borderRadius: "var(--border-radius-lg)",
-          padding: "2.5rem 2rem",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <span
-          style={{
-            fontSize: "12px",
-            fontWeight: 600,
-            color: "#64748b",
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            marginBottom: "1.5rem",
-          }}
-        >
-          Quote of the Day
-        </span>
-
-        <div
-          style={{
-            position: "relative",
-            padding: "0 1.5rem",
-            textAlign: "center",
-          }}
-        >
-          <span
-            style={{
-              position: "absolute",
-              top: "-25px",
-              left: "-15px",
-              fontSize: "64px",
-              color: "#e2e8f0",
-              fontFamily: "Georgia, serif",
-              lineHeight: 1,
-            }}
-          >
-            &ldquo;
-          </span>
-
-          <p
-            style={{
-              margin: 0,
-              fontSize: "22px",
-              fontWeight: 700,
-              color: "#0f172a",
-              lineHeight: 1.4,
-              letterSpacing: "-0.5px",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            {getDailyQuote()}
-          </p>
-
-          <span
-            style={{
-              position: "absolute",
-              bottom: "-45px",
-              right: "-15px",
-              fontSize: "64px",
-              color: "#e2e8f0",
-              fontFamily: "Georgia, serif",
-              lineHeight: 1,
-            }}
-          >
-            &rdquo;
-          </span>
-        </div>
-      </div>
       {error && (
-        <div
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto 1.5rem",
-            padding: "10px 14px",
-            borderRadius: 8,
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            color: "#b91c1c",
-            fontSize: 13,
-            textAlign: "center",
-          }}
-        >
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <AlertCircle size={14} />
           {error}
         </div>
       )}
 
       {dataLoading ? (
-        <p style={{ textAlign: "center", color: "#64748b" }}>
+        <p className="text-center text-sm text-slate-400">
           Loading nutrition panel...
         </p>
       ) : (
-        <div className="nutrition-grid">
-          {/* Left column consisting of Meal Logging & Supplements */}
-          <div className="nutrition-col">
-            {/* Meals / Supplements tabbed card */}
-            <div className="tracker-wrapper">
-              <div
-                style={{
-                  display: "flex",
-                  gap: 4,
-                  marginBottom: "1.25rem",
-                  borderBottom: "1px solid var(--color-border-tertiary)",
-                }}
-              >
-                <button
-                  onClick={() => setActiveTab("meals")}
-                  style={{
-                    padding: "8px 4px",
-                    marginRight: 20,
-                    background: "none",
-                    border: "none",
-                    borderBottom:
-                      activeTab === "meals"
-                        ? "2px solid #1D9E75"
-                        : "2px solid transparent",
-                    color:
-                      activeTab === "meals"
-                        ? "var(--color-text-primary)"
-                        : "#94a3b8",
-                    fontWeight: 600,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    marginBottom: -1,
-                  }}
-                >
-                  Meals
-                </button>
-                <button
-                  onClick={() => setActiveTab("supplements")}
-                  style={{
-                    padding: "8px 4px",
-                    background: "none",
-                    border: "none",
-                    borderBottom:
-                      activeTab === "supplements"
-                        ? "2px solid #1D9E75"
-                        : "2px solid transparent",
-                    color:
-                      activeTab === "supplements"
-                        ? "var(--color-text-primary)"
-                        : "#94a3b8",
-                    fontWeight: 600,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    marginBottom: -1,
-                  }}
-                >
-                  Supplements
-                </button>
-              </div>
+        <>
+          <LocalTabs
+            items={[
+              { id: "tracker", label: "Meals & Supplements" },
+              { id: "insights", label: "Quests & Progress" },
+            ]}
+            activeId={activeSection}
+            onChange={(id) => setActiveSection(id as "tracker" | "insights")}
+          />
 
-              {activeTab === "meals" ? (
+          {activeSection === "tracker" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <NutritionTracker
                   meals={meals}
                   onAddMealClick={openCreateModal}
@@ -1016,7 +794,8 @@ export default function NutritionPage() {
                   proteinTarget={targets.protein}
                   fitnessGoal={metricsForm.goal}
                 />
-              ) : (
+              </section>
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <SupplementTracker
                   supplements={supplements}
                   checkedIds={checkedSupps}
@@ -1027,143 +806,24 @@ export default function NutritionPage() {
                   addError={suppError}
                   onClearError={() => setSuppError(null)}
                 />
-              )}
+              </section>
             </div>
-          </div>
+          )}
 
-          {/* Right column - Quests & Progress */}
-          <div className="nutrition-col">
-            <div className="tracker-wrapper">
-              <div
-                style={{
-                  display: "flex",
-                  gap: 4,
-                  marginBottom: "1.25rem",
-                  borderBottom: "1px solid var(--color-border-tertiary)",
-                }}
-              >
-                <button
-                  onClick={() => setActiveRightTab("quests")}
-                  style={{
-                    padding: "8px 4px",
-                    marginRight: 20,
-                    background: "none",
-                    border: "none",
-                    borderBottom:
-                      activeRightTab === "quests"
-                        ? "2px solid #1D9E75"
-                        : "2px solid transparent",
-                    color:
-                      activeRightTab === "quests"
-                        ? "var(--color-text-primary)"
-                        : "#94a3b8",
-                    fontWeight: 600,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    marginBottom: -1,
-                  }}
-                >
-                  Quests
-                </button>
-                <button
-                  onClick={() => setActiveRightTab("progress")}
-                  style={{
-                    padding: "8px 4px",
-                    background: "none",
-                    border: "none",
-                    borderBottom:
-                      activeRightTab === "progress"
-                        ? "2px solid #1D9E75"
-                        : "2px solid transparent",
-                    color:
-                      activeRightTab === "progress"
-                        ? "var(--color-text-primary)"
-                        : "#94a3b8",
-                    fontWeight: 600,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    marginBottom: -1,
-                  }}
-                >
-                  Progress
-                </button>
-              </div>
-
-              {activeRightTab === "quests" ? (
+          {activeSection === "insights" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <QuestPanel quests={quests} totalXP={totalXP} />
-              ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "1.5rem",
-                  }}
-                >
-                  <NutritionChart
-                    history={history}
-                    calorieTarget={targets.calories}
-                    proteinTarget={targets.protein}
-                  />
-                  {/* Insight section */}
-                  <div
-                    style={{
-                      background: "var(--color-background-primary)",
-                      border: "0.5px solid var(--color-border-tertiary)",
-                      borderRadius: "var(--border-radius-lg)",
-                      padding: "1rem 1.25rem",
-                      display: "flex",
-                      gap: 12,
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <Lightbulb
-                      size={18}
-                      style={{ color: "#f59e0b", flexShrink: 0, marginTop: 1 }}
-                    />
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: 13,
-                        color: "var(--color-text-primary)",
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {insight}
-                    </p>
-                  </div>
+              </section>
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-4">
+                <NutritionChart history={history} calorieTarget={targets.calories} proteinTarget={targets.protein} />
+                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3.5">
+                  <p className="text-sm text-green-700">{insight}</p>
                 </div>
-              )}
+              </section>
             </div>
-          </div>
-
-          <style jsx>{`
-            .nutrition-grid {
-              max-width: 1280px;
-              margin: 0 auto;
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 1.5rem;
-              align-items: start;
-            }
-            .nutrition-col {
-              display: flex;
-              flex-direction: column;
-              gap: 1.5rem;
-            }
-            .tracker-wrapper {
-              background: var(--color-background-primary);
-              border: 0.5px solid var(--color-border-tertiary);
-              border-radius: var(--border-radius-lg);
-              padding: 1.5rem;
-            }
-
-            @media (max-width: 900px) {
-              .nutrition-grid {
-                grid-template-columns: 1fr;
-              }
-            }
-          `}</style>
-        </div>
+          )}
+        </>
       )}
 
       {/* Pop-up Profile Metrics */}
@@ -1640,6 +1300,6 @@ export default function NutritionPage() {
           </form>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

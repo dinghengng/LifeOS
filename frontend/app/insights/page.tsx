@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Download, TrendingUp, Maximize2, X } from "lucide-react";
 import Navbar from "../../components/Navbar";
@@ -15,14 +16,16 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
 const ENDPOINTS = {
   habits: `${API_BASE}/api/habits`,
-  habitsHistory: `${API_BASE}/api/habits/history?days=30`,
+  habitsHistory: (days: number) => `${API_BASE}/api/habits/history?days=${days}`,
   goals: `${API_BASE}/api/goals`,
-  goalsHistory: `${API_BASE}/api/goals/history?days=30`,
-  nutritionHistory: `${API_BASE}/api/nutrition/history?days=30`,
+  goalsHistory: (days: number) => `${API_BASE}/api/goals/history?days=${days}`,
+  nutritionHistory: (days: number) => `${API_BASE}/api/nutrition/history?days=${days}`,
   supplements: `${API_BASE}/api/supplements`,
-  supplementsHistory: `${API_BASE}/api/supplements/history?days=30`,
+  supplementsHistory: (days: number) => `${API_BASE}/api/supplements/history?days=${days}`,
   metrics: `${API_BASE}/api/user/metrics`,
 };
+
+const RANGE_OPTIONS = [7, 14, 30, 90] as const;
 
 const CATEGORY_COLORS: Record<keyof Omit<WellnessBreakdown, "overall">, string> = {
   habits: "#1D9E75",
@@ -31,8 +34,14 @@ const CATEGORY_COLORS: Record<keyof Omit<WellnessBreakdown, "overall">, string> 
   supplements: "#dc2626",
 };
 
+// Returns color based on score
+function getScoreStyle(score: number): { color: string; label: string } {
+  if (score >= 75) return { color: "#16a34a", label: "Keep going" };
+  if (score >= 50) return { color: "#d97706", label: "On track" };
+  return { color: "#dc2626", label: "Needs a push" };
+}
+
 // Converts an array of flat objects into a downloadable CSV file.
-// Kept generic so the same helper serves all 4 export buttons.
 function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
   if (rows.length === 0) {
     alert("Nothing to export yet — no data logged for this category.");
@@ -73,6 +82,22 @@ export default function InsightsPage() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [targets, setTargets] = useState({ calories: 2300, protein: 140 });
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
+  const [rangeDays, setRangeDays] = useState<number>(30);
+  const [mounted, setMounted] = useState(false);
+
+
+  useEffect(() => setMounted(true), []);
+
+  // Prevent the page behind the modal from scrolling while it's open.
+  useEffect(() => {
+    if (expandedChart) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [expandedChart]);
 
 
   const [habitsHistory, setHabitsHistory] = useState<{ date: string; completedCount: number; totalHabits: number }[]>([]);
@@ -97,12 +122,12 @@ export default function InsightsPage() {
       const [habitsRes, goalsRes, historyRes, suppsRes, metricsRes, habitsHistRes, goalsHistRes, suppsHistRes] = await Promise.all([
         fetch(ENDPOINTS.habits, { credentials: "include" }),
         fetch(ENDPOINTS.goals, { credentials: "include" }),
-        fetch(ENDPOINTS.nutritionHistory, { credentials: "include" }),
+        fetch(ENDPOINTS.nutritionHistory(rangeDays), { credentials: "include" }),
         fetch(ENDPOINTS.supplements, { credentials: "include" }),
         fetch(ENDPOINTS.metrics, { credentials: "include" }),
-        fetch(ENDPOINTS.habitsHistory, { credentials: "include" }),
-        fetch(ENDPOINTS.goalsHistory, { credentials: "include" }),
-        fetch(ENDPOINTS.supplementsHistory, { credentials: "include" }),
+        fetch(ENDPOINTS.habitsHistory(rangeDays), { credentials: "include" }),
+        fetch(ENDPOINTS.goalsHistory(rangeDays), { credentials: "include" }),
+        fetch(ENDPOINTS.supplementsHistory(rangeDays), { credentials: "include" }),
       ]);
       if (habitsHistRes.ok) setHabitsHistory(await habitsHistRes.json());
       if (goalsHistRes.ok) setGoalsHistory(await goalsHistRes.json());
@@ -139,7 +164,7 @@ export default function InsightsPage() {
     } finally {
       setDataLoading(false);
     }
-  }, []);
+  }, [rangeDays]);
 
   useEffect(() => {
     if (!authLoading) fetchInsightsData();
@@ -152,6 +177,12 @@ export default function InsightsPage() {
       console.error(err);
     }
     router.push("/");
+  };
+
+
+  const goToDayDetail = (category: "habits" | "goals" | "nutrition" | "supplements", date: string) => {
+    const target = category === "habits" || category === "goals" ? "/dashboard" : "/nutrition";
+    router.push(`${target}?date=${date}`);
   };
 
   const score: WellnessBreakdown = computeWellnessScore({
@@ -255,8 +286,12 @@ export default function InsightsPage() {
               <p style={{ margin: 0, fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 Overall
               </p>
-              <p style={{ margin: "4px 0 0", fontSize: 42, fontWeight: 600, color: "var(--color-text-primary)" }}>
+              <p style={{ margin: "4px 0 0", fontSize: 42, fontWeight: 600, color: getScoreStyle(score.overall).color }}>
                 {score.overall}
+                <span style={{ fontSize: 18, fontWeight: 500, color: "#94a3b8" }}>/100</span>
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 600, color: getScoreStyle(score.overall).color }}>
+                {getScoreStyle(score.overall).label}
               </p>
             </div>
 
@@ -267,8 +302,9 @@ export default function InsightsPage() {
                     <span style={{ fontSize: 12, textTransform: "capitalize", color: "var(--color-text-primary)" }}>
                       {key}
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)" }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: getScoreStyle(score[key]).color }}>
                       {score[key]}
+                      <span style={{ color: "#94a3b8", fontWeight: 500 }}>/100</span>
                     </span>
                   </div>
                   <div style={{ height: 6, background: "#f1f5f9", borderRadius: 99, overflow: "hidden" }}>
@@ -287,11 +323,46 @@ export default function InsightsPage() {
             </div>
           </div>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem" }}>
-              <TrendingUp size={16} style={{ color: "var(--color-text-primary)" }} />
-              <h2 style={{ margin: 0, fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>
-                30-day trends
-              </h2>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 8,
+                marginBottom: "1rem",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <TrendingUp size={16} style={{ color: "var(--color-text-primary)" }} />
+                <h2 style={{ margin: 0, fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>
+                  {rangeDays}-day trends
+                </h2>
+              </div>
+
+              {/* Shared date range — applies to all 4 charts at once */}
+              <div style={{ display: "flex", gap: 2, background: "#eef0f2", borderRadius: 8, padding: 3 }}>
+                {RANGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => setRangeDays(opt)}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: rangeDays === opt ? "#ffffff" : "transparent",
+                      color: rangeDays === opt ? "#0f172a" : "#64748b",
+                      fontSize: 12,
+                      fontWeight: rangeDays === opt ? 600 : 500,
+                      boxShadow: rangeDays === opt ? "0 1px 3px rgba(15, 23, 42, 0.12)" : "none",
+                      cursor: "pointer",
+                      transition: "background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease",
+                    }}
+                  >
+                    {opt}d
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div
@@ -306,8 +377,9 @@ export default function InsightsPage() {
                 label="Habits"
                 color={CATEGORY_COLORS.habits}
                 data={habitsTrend}
-                emptyMessage="No habit logs yet in the last 30 days — this fills in as you check off habits."
+                emptyMessage={`No habit logs yet in the last ${rangeDays} days — this fills in as you check off habits.`}
                 onExpand={setExpandedChart}
+                onPointClick={(date) => goToDayDetail("habits", date)}
                 onExport={() =>
                   downloadCsv(
                     "habits_trend.csv",
@@ -322,6 +394,7 @@ export default function InsightsPage() {
                 data={goalsTrend}
                 emptyMessage="No goal progress recorded yet — this fills in as milestones are checked off."
                 onExpand={setExpandedChart}
+                onPointClick={(date) => goToDayDetail("goals", date)}
                 onExport={() =>
                   downloadCsv(
                     "goals_trend.csv",
@@ -334,8 +407,9 @@ export default function InsightsPage() {
                 label="Nutrition"
                 color={CATEGORY_COLORS.nutrition}
                 data={nutritionTrend}
-                emptyMessage="No logged nutrition days yet in the last 30 days — this fills in as you log meals."
+                emptyMessage={`No logged nutrition days yet in the last ${rangeDays} days — this fills in as you log meals.`}
                 onExpand={setExpandedChart}
+                onPointClick={(date) => goToDayDetail("nutrition", date)}
                 onExport={() =>
                   downloadCsv(
                     "nutrition_trend.csv",
@@ -348,8 +422,9 @@ export default function InsightsPage() {
                 label="Supplements"
                 color={CATEGORY_COLORS.supplements}
                 data={supplementsTrend}
-                emptyMessage="No supplement logs yet in the last 30 days — this fills in as you check them off."
+                emptyMessage={`No supplement logs yet in the last ${rangeDays} days — this fills in as you check them off.`}
                 onExpand={setExpandedChart}
+                onPointClick={(date) => goToDayDetail("supplements", date)}
                 onExport={() =>
                   downloadCsv(
                     "supplements_trend.csv",
@@ -360,93 +435,115 @@ export default function InsightsPage() {
             </div>
           </div>
 
-          {/* Fullscreen modal for whichever chart was expanded */}
-          {expandedChart &&
-            (() => {
-              const chartMap: Record<string, { label: string; color: string; data: { date: string; score: number }[]; emptyMessage: string }> = {
-                habits: {
-                  label: "Habits",
-                  color: CATEGORY_COLORS.habits,
-                  data: habitsTrend,
-                  emptyMessage: "No habit logs yet in the last 30 days. This fills in as you check off habits.",
-                },
-                goals: {
-                  label: "Goals",
-                  color: CATEGORY_COLORS.goals,
-                  data: goalsTrend,
-                  emptyMessage: "No goal progress recorded yet. This fills in as milestones are checked off.",
-                },
-                nutrition: {
-                  label: "Nutrition",
-                  color: CATEGORY_COLORS.nutrition,
-                  data: nutritionTrend,
-                  emptyMessage: "No logged nutrition days yet in the last 30 days. This fills in as you log meals.",
-                },
-                supplements: {
-                  label: "Supplements",
-                  color: CATEGORY_COLORS.supplements,
-                  data: supplementsTrend,
-                  emptyMessage: "No supplement logs yet in the last 30 days. This fills in as you check them off.",
-                },
-              };
-              const chart = chartMap[expandedChart];
-              if (!chart) return null;
-              return (
-                <div
-                  onClick={() => setExpandedChart(null)}
-                  style={{
-                    position: "fixed",
-                    inset: 0,
-                    background: "rgba(15, 23, 42, 0.45)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 100,
-                    padding: "2rem",
-                  }}
-                >
+          {mounted &&
+            expandedChart &&
+            createPortal(
+              (() => {
+                const chartMap: Record<
+                  string,
+                  { category: "habits" | "goals" | "nutrition" | "supplements"; label: string; color: string; data: { date: string; score: number }[]; emptyMessage: string }
+                > = {
+                  habits: {
+                    category: "habits",
+                    label: "Habits",
+                    color: CATEGORY_COLORS.habits,
+                    data: habitsTrend,
+                    emptyMessage: `No habit logs yet in the last ${rangeDays} days — this fills in as you check off habits.`,
+                  },
+                  goals: {
+                    category: "goals",
+                    label: "Goals",
+                    color: CATEGORY_COLORS.goals,
+                    data: goalsTrend,
+                    emptyMessage: "No goal progress recorded yet — this fills in as milestones are checked off.",
+                  },
+                  nutrition: {
+                    category: "nutrition",
+                    label: "Nutrition",
+                    color: CATEGORY_COLORS.nutrition,
+                    data: nutritionTrend,
+                    emptyMessage: `No logged nutrition days yet in the last ${rangeDays} days — this fills in as you log meals.`,
+                  },
+                  supplements: {
+                    category: "supplements",
+                    label: "Supplements",
+                    color: CATEGORY_COLORS.supplements,
+                    data: supplementsTrend,
+                    emptyMessage: `No supplement logs yet in the last ${rangeDays} days — this fills in as you check them off.`,
+                  },
+                };
+                const chart = chartMap[expandedChart];
+                if (!chart) return null;
+                return (
                   <div
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={() => setExpandedChart(null)}
                     style={{
-                      background: "var(--color-background-primary)",
-                      borderRadius: "var(--border-radius-lg)",
-                      padding: "1.75rem",
-                      width: "100%",
-                      maxWidth: 900,
-                      boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+                      position: "fixed",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: "rgba(15, 23, 42, 0.55)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 9999,
+                      padding: "2rem",
+                      isolation: "isolate",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                      <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--color-text-primary)" }}>
-                        {chart.label} — 30-day trend
-                      </h3>
-                      <button
-                        onClick={() => setExpandedChart(null)}
-                        style={{
-                          border: "none",
-                          background: "transparent",
-                          cursor: "pointer",
-                          padding: 6,
-                          borderRadius: 6,
-                          color: "#64748b",
-                        }}
-                        aria-label="Close"
-                      >
-                        <X size={18} />
-                      </button>
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        background: "var(--color-background-primary, #ffffff)",
+                        borderRadius: "var(--border-radius-lg, 16px)",
+                        padding: "1.75rem",
+                        width: "100%",
+                        maxWidth: 900,
+                        maxHeight: "90vh",
+                        overflowY: "auto",
+                        boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--color-text-primary, #0f172a)" }}>
+                          {chart.label} — {rangeDays}-day trend
+                        </h3>
+                        <button
+                          onClick={() => setExpandedChart(null)}
+                          style={{
+                            border: "none",
+                            background: "transparent",
+                            cursor: "pointer",
+                            padding: 6,
+                            borderRadius: 6,
+                            color: "#64748b",
+                            flexShrink: 0,
+                          }}
+                          aria-label="Close"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                      <div style={{ width: "100%" }}>
+                        <TrendChart
+                          label={chart.label}
+                          color={chart.color}
+                          data={chart.data}
+                          emptyMessage={chart.emptyMessage}
+                          height={340}
+                          showLabel={false}
+                          onPointClick={(date) => goToDayDetail(chart.category, date)}
+                          fullWidth
+                        />
+                      </div>
+                      <ChartInsights data={chart.data} />
                     </div>
-                    <TrendChart
-                      label={chart.label}
-                      color={chart.color}
-                      data={chart.data}
-                      emptyMessage={chart.emptyMessage}
-                      height={340}
-                      showLabel={false}
-                    />
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })(),
+              document.body,
+            )}
 
           {/* Per-category CSV export */}
           <div
@@ -462,34 +559,32 @@ export default function InsightsPage() {
             </h2>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <ExportButton
-                label="Habits"
+                label={`Habits (${rangeDays}d)`}
                 onClick={() =>
                   downloadCsv(
-                    "habits.csv",
-                    habits.map((h) => ({
-                      name: h.name,
-                      category: h.category ?? "",
-                      streak: h.streak,
-                      total_days: h.totalDays ?? 0,
-                      this_week_completed: h.completedDays.filter(Boolean).length,
+                    "habits_history.csv",
+                    habitsHistory.map((d) => ({
+                      date: d.date,
+                      completed: d.completedCount,
+                      total_habits: d.totalHabits,
                     })),
                   )
                 }
               />
               <ExportButton
-                label="Goals"
+                label={`Goals (${rangeDays}d)`}
                 onClick={() =>
                   downloadCsv(
-                    "goals.csv",
-                    goals.map((g) => ({
-                      title: g.title,
-                      progress: g.progress,
+                    "goals_history.csv",
+                    goalsHistory.map((d) => ({
+                      date: d.date,
+                      avg_progress: d.avgProgress,
                     })),
                   )
                 }
               />
               <ExportButton
-                label="Nutrition (30d)"
+                label={`Nutrition (${rangeDays}d)`}
                 onClick={() =>
                   downloadCsv(
                     "nutrition_history.csv",
@@ -505,17 +600,14 @@ export default function InsightsPage() {
                 }
               />
               <ExportButton
-                label="Supplements"
+                label={`Supplements (${rangeDays}d)`}
                 onClick={() =>
                   downloadCsv(
-                    "supplements.csv",
-                    supplements.map((s) => ({
-                      name: s.name,
-                      dose: s.dose ?? "",
-                      timing: s.timing,
-                      streak: s.streak ?? 0,
-                      supply_count: s.supplyCount ?? "",
-                      daily_dose: s.dailyDose ?? "",
+                    "supplements_history.csv",
+                    supplementsHistory.map((d) => ({
+                      date: d.date,
+                      taken: d.takenCount,
+                      total_supplements: d.totalSupplements,
                     })),
                   )
                 }
@@ -528,7 +620,6 @@ export default function InsightsPage() {
   );
 }
 
-// Builds a smooth curve through points using quadratic bezier midpoints 
 function buildSmoothPath(points: { x: number; y: number }[]): string {
   if (points.length === 0) return "";
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
@@ -551,6 +642,8 @@ function TrendChart({
   emptyMessage,
   height = 100,
   showLabel = true,
+  onPointClick,
+  fullWidth = false,
 }: {
   label: string;
   color: string;
@@ -558,13 +651,29 @@ function TrendChart({
   emptyMessage: string;
   height?: number;
   showLabel?: boolean;
+  onPointClick?: (date: string) => void;
+  fullWidth?: boolean;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [measuredWidth, setMeasuredWidth] = useState(840);
+
+  useEffect(() => {
+    if (!fullWidth || !containerRef.current) return;
+    const el = containerRef.current;
+    const observer = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setMeasuredWidth(w);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fullWidth]);
+
   const chartHeight = height;
   const padLeft = 26; // room for the y-axis value labels (0/50/100)
   const padRight = 12;
   const padTop = 10;
   const padBottom = 24; // room for date labels below the plot area
-  const chartWidth = Math.max(280, data.length * 32);
+  const chartWidth = fullWidth ? measuredWidth : Math.max(280, data.length * 32);
   const plotHeight = chartHeight - padTop - padBottom;
 
   const points = data.map((d, i) => ({
@@ -581,7 +690,7 @@ function TrendChart({
   const labelEvery = Math.max(1, Math.ceil(data.length / 6));
 
   return (
-    <div>
+    <div ref={containerRef}>
       {showLabel && (
         <p style={{ margin: "0 0 6px", fontSize: 12, fontWeight: 600, color: "var(--color-text-primary)" }}>
           {label}
@@ -593,7 +702,7 @@ function TrendChart({
         <svg
           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
           preserveAspectRatio="none"
-          style={{ width: "100%", maxWidth: chartWidth, height: chartHeight, display: "block" }}
+          style={{ width: "100%", maxWidth: fullWidth ? "none" : chartWidth, height: chartHeight, display: "block" }}
         >
           {/* Horizontal gridlines at 0/50/100, with their value printed on the left */}
           {[0, 50, 100].map((y) => {
@@ -613,13 +722,30 @@ function TrendChart({
           {points.length > 0 && (
             <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r={4} fill={color} stroke="white" strokeWidth={1.5} />
           )}
-          {points.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r={6} fill="transparent">
-              <title>{`${data[i].date}: ${data[i].score}`}</title>
+          {/* Hover targets brings to the section*/}
+          :{points.map((p, i) => (
+            <circle
+              key={i}
+              cx={p.x}
+              cy={p.y}
+              r={6}
+              fill="transparent"
+              onClick={onPointClick ? () => onPointClick(data[i].date) : undefined}
+              style={onPointClick ? { cursor: "pointer" } : undefined}
+              role={onPointClick ? "button" : undefined}
+              tabIndex={onPointClick ? 0 : undefined}
+              onKeyDown={
+                onPointClick
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") onPointClick(data[i].date);
+                    }
+                  : undefined
+              }
+            >
+              <title>{`${data[i].date}: ${data[i].score}${onPointClick ? " — click to view day" : ""}`}</title>
             </circle>
           ))}
 
-          {/* Sparse date labels along the bottom, short month/day format */}
           {data.map((d, i) =>
             i % labelEvery === 0 || i === data.length - 1 ? (
               <text
@@ -640,6 +766,49 @@ function TrendChart({
   );
 }
 
+// Short per-chart summary 
+const STREAK_THRESHOLD = 70;
+
+function getChartInsights(data: { date: string; score: number }[]) {
+  if (data.length === 0) return null;
+  let best = data[0];
+  let worst = data[0];
+  for (const d of data) {
+    if (d.score > best.score) best = d;
+    if (d.score < worst.score) worst = d;
+  }
+  let streak = 0;
+  for (let i = data.length - 1; i >= 0; i--) {
+    if (data[i].score >= STREAK_THRESHOLD) streak++;
+    else break;
+  }
+  return { best, worst, streak };
+}
+
+function formatShortDate(date: string) {
+  return new Date(date + "T00:00:00Z").toLocaleDateString("en-SG", { day: "numeric", month: "short" });
+}
+
+function ChartInsights({ data }: { data: { date: string; score: number }[] }) {
+  const insights = getChartInsights(data);
+  if (!insights) return null;
+  return (
+    <ul style={{ margin: "4px 0 0", padding: "0 0 0 16px", fontSize: 11.5, color: "#64748b", lineHeight: 1.6 }}>
+      <li>
+        Best day: {formatShortDate(insights.best.date)} ({insights.best.score}%)
+      </li>
+      <li>
+        Lowest day: {formatShortDate(insights.worst.date)} ({insights.worst.score}%)
+      </li>
+      <li>
+        {insights.streak > 0
+          ? `Current streak: ${insights.streak} day${insights.streak === 1 ? "" : "s"} at ${STREAK_THRESHOLD}%+`
+          : `No active streak: last day was below ${STREAK_THRESHOLD}%`}
+      </li>
+    </ul>
+  );
+}
+
 function TrendChartCard({
   chartKey,
   label,
@@ -648,6 +817,7 @@ function TrendChartCard({
   emptyMessage,
   onExpand,
   onExport,
+  onPointClick,
 }: {
   chartKey: string;
   label: string;
@@ -656,6 +826,7 @@ function TrendChartCard({
   emptyMessage: string;
   onExpand: (key: string) => void;
   onExport: () => void;
+  onPointClick?: (date: string) => void;
 }) {
   return (
     <div
@@ -712,7 +883,8 @@ function TrendChartCard({
           </button>
         </div>
       </div>
-      <TrendChart label={label} color={color} data={data} emptyMessage={emptyMessage} showLabel={false} />
+      <TrendChart label={label} color={color} data={data} emptyMessage={emptyMessage} showLabel={false} onPointClick={onPointClick} />
+      <ChartInsights data={data} />
     </div>
   );
 }

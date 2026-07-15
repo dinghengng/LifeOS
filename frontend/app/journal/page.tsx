@@ -5,14 +5,25 @@ import { useRouter } from "next/navigation";
 import MoodLogger from "../../components/journal/MoodLogger";
 import MoodHistory from "../../components/journal/MoodHistory";
 import JournalEditor from "../../components/journal/JournalEditor";
+import PromptSection from "../../components/journal/PromptSection";
+import { MoodScienceCard, MoodLinkTip } from "../../components/journal/MoodInsightPanel";
 import OnboardingWizard from "../../components/OnboardingWizard";
 import { MoodLog, User, TagsResponse, JournalEntry, MoodLevelConfig, Tag } from "../../../shared/types";
 import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries, logoutUser, fetchMoodConfig } from "../../../shared/api";
-import PromptSection from "../../components/journal/PromptSection";
 import { Prompt } from "../../../shared/prompts";
-import Navbar from "../../components/Navbar";
 
-type Tab = "mood" | "write" | "history"; 
+import AppShell from "../../components/layout/AppShell";
+import AppHeader from "../../components/layout/AppHeader";
+import PageHeader from "../../components/layout/PageHeader";
+import LocalTabs from "../../components/layout/LocalTabs";
+
+type Tab = "mood" | "write" | "history";
+
+const JOURNAL_TABS: { id: Tab; label: string }[] = [
+  { id: "mood", label: "Mood" },
+  { id: "write", label: "Write" },
+  { id: "history", label: "History" },
+];
 
 export default function JournalPage() {
   const [logs, setLogs] = useState<MoodLog[]>([]);
@@ -21,7 +32,7 @@ export default function JournalPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("mood"); 
+  const [activeTab, setActiveTab] = useState<Tab>("mood");
   const [pendingMoodLogId, setPendingMoodLogId] = useState<number | null>(null);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [promptJumpToken, setPromptJumpToken] = useState(0);
@@ -37,10 +48,9 @@ export default function JournalPage() {
       }
       setUser(currentUser);
 
-      // show wizard on first login
-      const moodConfig = await fetchMoodConfig();
-      if (moodConfig.length === 0) setShowOnboarding(true);
-      else setMoodConfig(moodConfig);
+      const config = await fetchMoodConfig();
+      if (config.length === 0) setShowOnboarding(true);
+      else setMoodConfig(config);
 
       await loadData();
       setLoading(false);
@@ -61,7 +71,7 @@ export default function JournalPage() {
     }
   };
 
-  const handleMoodSaved = async (newLogId: number) => {
+  const handleMoodSaved = async () => {
     await loadData();
     setActiveTab("history");
   };
@@ -83,43 +93,41 @@ export default function JournalPage() {
   };
 
   const handleCustomTagCreated = (newTag: Tag) => {
-    setTags((prev) => ({
-      ...prev,
-      custom: [...prev.custom, newTag],
-    }));
+    setTags((prev) => ({ ...prev, custom: [...prev.custom, newTag] }));
   };
 
   const handleCustomTagDeleted = (tagId: number) => {
-    setTags((prev) => ({
-      ...prev,
-      custom: prev.custom.filter((tag) => tag.id !== tagId),
-    }));
+    setTags((prev) => ({ ...prev, custom: prev.custom.filter((t) => t.id !== tagId) }));
   };
 
   const usedMoodLogIds = new Set(
-    entries
-      .filter((entry) => entry.moodLogId !== null)
-      .map((entry) => entry.moodLogId as number)
+    entries.filter((e) => e.moodLogId !== null).map((e) => e.moodLogId as number)
   );
-
   const availableMoodLogs = logs.filter(
     (log) => !usedMoodLogIds.has(log.id) || log.id === pendingMoodLogId
   );
 
-  const today = new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" });
-
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary, #f5f5f2)", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "var(--color-text-secondary)" }}>Loading...</p>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-sm text-slate-400">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary, #f5f5f2)", fontFamily: "var(--font-sans)", padding: "2rem" }}>
-      
-      {/*Wizard shown on first login*/}
+    <AppShell>
+      <AppHeader
+        rightActions={
+          <button
+            onClick={handleLogout}
+            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+          >
+            Logout
+          </button>
+        }
+      />
+
       {showOnboarding && user && (
         <OnboardingWizard
           userName={user.name}
@@ -128,64 +136,37 @@ export default function JournalPage() {
             const config = await fetchMoodConfig();
             setMoodConfig(config);
             loadData();
-      }}
+          }}
         />
       )}
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
-        <div>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{today}</p>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 500, color: "var(--color-text-primary)", letterSpacing: "-0.01em" }}>
-            Life Journal
-          </h1>
-        </div>
+      <PageHeader
+        eyebrow={new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" })}
+        title="Life Journal"
+        description="Log your mood, reflect your thoughts, and look back on your history"
+      />
 
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <Navbar onLogout={handleLogout} />
-        </div>
-      </div>
+      <LocalTabs
+        items={JOURNAL_TABS}
+        activeId={activeTab}
+        onChange={(id) => setActiveTab(id as Tab)}
+      />
 
-      <div style={{ maxWidth: "48rem", margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        
-        {/*Tabs*/}
-        <div className="w-full mb-6">
-          <div className="flex gap-1 bg-white/80 backdrop-blur-md rounded-2xl border border-white/20 shadow p-1.5">
-            {(["mood", "write", "history"] as Tab[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition capitalize ${
-                  activeTab === tab
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                {tab === "mood" && "Mood"}
-                {tab === "write" && "Write"}
-                {tab === "history" && "History"}
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Mood tab: single pill card, MoodLogger handles its own internal step layout */}
+      {activeTab === "mood" && (
+        <MoodLogger
+          onSaved={handleMoodSaved}
+          tags={tags}
+          onCustomTagCreated={handleCustomTagCreated}
+          onCustomTagDeleted={handleCustomTagDeleted}
+          moodConfig={moodConfig}
+          userName={user?.name}
+        />
+      )}
 
-        {/*Mood*/}
-        {activeTab === "mood" && (
-          <div className="w-full">
-            <MoodLogger
-              onSaved={handleMoodSaved}
-              tags={tags}
-              onCustomTagCreated={handleCustomTagCreated}
-              onCustomTagDeleted={handleCustomTagDeleted}
-              moodConfig={moodConfig}
-              userName = {user?.name}
-            />
-          </div>
-        )}
-
-        {/*Write*/}
-        {activeTab === "write" && (
-          <div className="w-full flex flex-col gap-0">
-            <PromptSection onSelectPrompt={handleSelectPrompt} />
+      {activeTab === "write" && (
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 items-start">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <JournalEditor
               onSaved={() => {
                 setSelectedPrompt(null);
@@ -201,12 +182,16 @@ export default function JournalPage() {
               promptText={selectedPrompt?.text ?? null}
               jumpToEditorToken={promptJumpToken}
             />
-          </div>
-        )}
+          </section>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+            <PromptSection onSelectPrompt={handleSelectPrompt} />
+          </section>
+        </div>
+      )}
 
-        {/*History*/}
-        {activeTab === "history" && (
-          <div className="w-full">
+      {activeTab === "history" && (
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6 items-start">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <MoodHistory
               logs={logs}
               tags={tags}
@@ -216,10 +201,18 @@ export default function JournalPage() {
               onCustomTagCreated={handleCustomTagCreated}
               onCustomTagDeleted={handleCustomTagDeleted}
             />
-          </div>
-        )}
+          </section>
 
-      </div>
-    </div>
+          <div className="flex flex-col gap-6">
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <MoodScienceCard />
+            </section>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <MoodLinkTip />
+            </section>
+          </div>
+        </div>
+      )}
+    </AppShell>
   );
 }

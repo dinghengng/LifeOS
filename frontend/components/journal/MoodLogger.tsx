@@ -123,7 +123,7 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-6 w-full max-w-3xl">
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-5">
       {/*Headers for each step*/}
       <h2 className="text-xl font-bold text-slate-800 mb-1 text-center">
         {step === 1 && `Hey, ${greetingName}. How are you today?`}
@@ -361,6 +361,6 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

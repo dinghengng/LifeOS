@@ -10,8 +10,13 @@ import { HeatmapDay } from "../../components/dashboard/HabitHeatmap";
 import { Goal } from "../../components/dashboard/GoalCard";
 import { User } from "../../../shared/types";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
-import Navbar from "../../components/Navbar";
+
 import { useToastContext } from "../../components/notifications/ToastContext";
+
+import AppShell from "../../components/layout/AppShell";
+import AppHeader from "../../components/layout/AppHeader";
+import PageHeader from "../../components/layout/PageHeader";
+import LocalTabs from "../../components/layout/LocalTabs";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -53,6 +58,8 @@ export default function DashboardPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<"habit" | "goal">("habit");
 
   // Modal display toggles
   const [showHabitModal, setShowHabitModal] = useState(false);
@@ -537,131 +544,60 @@ export default function DashboardPage() {
 
   if (authLoading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-(--color-background-tertiary,#f5f5f2)]">
-        <p className="text-slate-500">Loading...</p>
-      </main>
+      <AppShell>
+        <p className="text-sm text-slate-500">Loading…</p>
+      </AppShell>
     );
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--color-background-tertiary, #f5f5f2)",
-        fontFamily: "var(--font-sans)",
-        padding: "2rem",
-      }}
-    >
-      {/* Header bar layout */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          marginBottom: "2rem",
-        }}
-      >
-        <div>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 13,
-              color: "var(--color-text-secondary)",
-            }}
+    <AppShell>
+      <AppHeader
+        rightActions={
+          <button
+            onClick={handleLogout}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
-            {today}
-          </p>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 28,
-              fontWeight: 500,
-              color: "var(--color-text-primary)",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            {user?.name ? `${user.name}'s dashboard` : "Your dashboard"}
-          </h1>
-        </div>
+            Logout
+          </button>
+        }
+      />
 
-        <div style={{ display: "flex", gap: "8px" }}>
-          <Navbar onLogout={handleLogout} />
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={today}
+        title={user?.name ? `${user.name}'s dashboard` : "Your dashboard"}
+        description="Log your habits and goals, track your completion and streak"
+      />
+
       {/* error msg */}
       {error && (
         <div
-          style={{
-            padding: "12px",
-            backgroundColor: "#fee2e2",
-            color: "#b91c1c",
-            borderRadius: "8px",
-            marginBottom: "1.5rem",
-            textAlign: "center",
-            border: "1px solid #fca5a5",
-            fontSize: "14px",
-          }}
+          className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"
         >
           ⚠️ {error}
         </div>
       )}
 
       {dataLoading ? (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: "1.75rem" }}>
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="skeleton-pulse"
-                style={{ height: 64, borderRadius: "var(--border-radius-md)", background: "var(--color-background-secondary)" }}
-              />
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: "1.5rem", width: "100%", alignItems: "flex-start" }}>
-            {[0, 1].map((i) => (
-              <div
-                key={i}
-                className="skeleton-pulse"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  height: 320,
-                  borderRadius: "var(--border-radius-lg)",
-                  background: "var(--color-background-primary)",
-                  border: "0.5px solid var(--color-border-tertiary)",
-                }}
-              />
-            ))}
-          </div>
-          <style jsx>{`
-            .skeleton-pulse {
-              animation: pulse 1.5s ease-in-out infinite;
-            }
-            @keyframes pulse {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.5; }
-            }
-          `}</style>
-        </>
+        <div className="flex gap-6 w-full items-start">
+          <div className="flex-1 min-w-0 h-[380px] rounded-3xl border border-slate-200 bg-white shadow-sm animate-pulse" />
+            <div className="w-[180px] flex-shrink-0 h-[380px] rounded-3xl border border-slate-200 bg-white shadow-sm animate-pulse" />
+        </div>
       ) : (
-        <>
-          <StatsSummary
-            completedToday={completedToday}
-            totalHabits={habits.length}
-            totalStreak={totalStreak}
-            avgGoalProgress={avgGoalProgress}
-          />
+        <div className="flex gap-6 w-full items-start">
+          <section className="flex-1 min-w-0 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <LocalTabs
+              items={[
+                { id: "habit", label: "Habit", count: habits.length },
+                { id: "goal", label: "Goal", count: goals.length },
+              ]}
+              activeId={activeTab}
+              onChange={(id) => setActiveTab(id as "habit" | "goal")}
+            />
 
-          <div
-            style={{
-              display: "flex",
-              gap: "1.5rem",
-              width: "100%",
-              alignItems: "flex-start",
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
+            {activeTab === "habit" ? (
               <HabitTracker
+                bare
                 habits={habits}
                 onToggleToday={toggleToday}
                 onToggleSkip={toggleSkipToday}
@@ -676,10 +612,9 @@ export default function DashboardPage() {
                 onEditHabit={handleEditHabitClick}
                 onDeleteHabit={deleteHabit}
               />
-            </div>
-
-            <div style={{ flex: 1, minWidth: 0 }}>
+            ) : (
               <GoalTracker
+                bare
                 goals={goals}
                 onAddClick={() => {
                   resetGoalForm();
@@ -689,10 +624,18 @@ export default function DashboardPage() {
                 onEditGoal={handleEditGoalClick}
                 onDeleteGoal={deleteGoal}
               />
-            </div>
-          </div>
-        </>
+            )}
+          </section>
+
+          <StatsSummary
+            completedToday={completedToday}
+            totalHabits={habits.length}
+            totalStreak={totalStreak}
+            avgGoalProgress={avgGoalProgress}
+          />
+        </div>
       )}
+
 
       {/* HABIT FORM pending changes for the categories */}
       {showHabitModal && (
@@ -1043,6 +986,6 @@ export default function DashboardPage() {
           </form>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

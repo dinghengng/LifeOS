@@ -9,12 +9,14 @@ export default function GoalTracker({
   onMilestoneToggle,
   onEditGoal,
   onDeleteGoal,
+  bare = false,
 }: {
   goals: Goal[];
   onAddClick: () => void;
   onMilestoneToggle: (goalId: string, milestoneIndex: number) => void;
   onEditGoal: (goal: Goal) => void;
   onDeleteGoal: (goalId: string) => void;
+  bare?: boolean;
 }) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
@@ -23,37 +25,41 @@ export default function GoalTracker({
     ? goals.filter((g) => g.category === activeCategory)
     : goals;
 
-  return (
-    <div
-      style={{
+  const outerStyle = bare
+    ? {}
+    : {
         background: "var(--color-background-primary)",
         border: "0.5px solid var(--color-border-tertiary)",
         borderRadius: "var(--border-radius-lg)",
         padding: "1.25rem",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1rem",
-        }}
-      >
-        <h2
+      };
+
+  return (
+    <div style={outerStyle}>
+      {!bare && (
+        <div
           style={{
-            margin: 0,
-            fontSize: 15,
-            fontWeight: 500,
-            color: "var(--color-text-primary)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "1rem",
           }}
         >
-          Goal tracker
-        </h2>
-        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-          {visibleGoals.length} {activeCategory ? `in ${activeCategory}` : "active"}
-        </span>
-      </div>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 15,
+              fontWeight: 500,
+              color: "var(--color-text-primary)",
+            }}
+          >
+            Goal tracker
+          </h2>
+          <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+            {visibleGoals.length} {activeCategory ? `in ${activeCategory}` : "active"}
+          </span>
+        </div>
+      )}
 
       {categories.length > 1 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: "1rem" }}>

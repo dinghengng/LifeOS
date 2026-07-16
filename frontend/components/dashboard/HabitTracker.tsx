@@ -15,6 +15,7 @@ export default function HabitTracker({
   onEditHabit,
   onDeleteHabit,
   getHabitHistory,
+  bare = false,
 }: {
   habits: Habit[];
   onToggleToday: (id: string) => void;
@@ -24,6 +25,7 @@ export default function HabitTracker({
   onDeleteHabit: (id: string) => void;
   // Lazily fetches (and caches) up to ~90 days of history for a habit; returns [] if unavailable.
   getHabitHistory: (id: string) => Promise<HeatmapDay[]>;
+  bare?: boolean;
 }) {
   const todayIndex = getTodayIndexSGT();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -52,37 +54,41 @@ export default function HabitTracker({
     }
   }
 
-  return (
-    <div
-      style={{
+  const outerStyle = bare
+    ? {}
+    : {
         background: "var(--color-background-primary)",
         border: "0.5px solid var(--color-border-tertiary)",
         borderRadius: "var(--border-radius-lg)",
         padding: "1.25rem",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "0.75rem",
-        }}
-      >
-        <h2
+      };
+
+  return (
+    <div style={outerStyle}>
+      {!bare && (
+        <div
           style={{
-            margin: 0,
-            fontSize: 15,
-            fontWeight: 500,
-            color: "var(--color-text-primary)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "0.75rem",
           }}
         >
-          Habit tracker
-        </h2>
-        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-          {visibleHabits.length} {activeCategory ? `in ${activeCategory}` : "active"}
-        </span>
-      </div>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 15,
+              fontWeight: 500,
+              color: "var(--color-text-primary)",
+            }}
+          >
+            Habit tracker
+          </h2>
+          <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+            {visibleHabits.length} {activeCategory ? `in ${activeCategory}` : "active"}
+          </span>
+        </div>
+      )}
 
       {categories.length > 1 && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: "1rem" }}>

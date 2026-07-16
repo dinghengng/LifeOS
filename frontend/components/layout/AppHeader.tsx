@@ -15,7 +15,7 @@ export default function AppHeader({ rightActions }: AppHeaderProps) {
   const isSettingsActive = pathname === "/settings";
 
   return (
-    <header className="sticky top-0 z-20 mb-6">
+    <header id="tour-navbar" className="sticky top-0 z-20 mb-6">
       <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-sm font-semibold text-white">
@@ -23,7 +23,7 @@ export default function AppHeader({ rightActions }: AppHeaderProps) {
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">LifeOS</p>
-            <p className="text-xs text-slate-500">Productivity and lifestyle hub</p>
+            <p className="text-xs text-slate-500">Your smart life hub</p>
           </div>
         </div>
 

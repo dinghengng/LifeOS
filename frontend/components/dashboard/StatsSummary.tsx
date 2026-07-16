@@ -16,17 +16,17 @@ export default function StatsSummary({
   ];
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: "1.75rem" }}>
+    <aside className="w-[180px] flex-shrink-0 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-6">
       {stats.map((s) => (
-        <div key={s.label} style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-md)", padding: "1rem" }}>
-          <p style={{ margin: "0 0 4px", fontSize: 11, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+        <div key={s.label}>
+          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-500">
             {s.label}
           </p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 500, color: s.color }}>
+          <p className="m-0 text-2xl font-medium" style={{ color: s.color }}>
             {s.value}
           </p>
         </div>
       ))}
-    </div>
+    </aside>
   );
 }

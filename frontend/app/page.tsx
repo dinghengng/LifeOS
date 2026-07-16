@@ -7,8 +7,11 @@ import EditTaskForm from "../components/EditTaskForm";
 import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import { useRouter } from "next/navigation";
-import Navbar from "../components/Navbar";
 import HelpCentre from "../components/GuidedTour";
+
+import AppShell from "../components/layout/AppShell";
+import AppHeader from "../components/layout/AppHeader";
+import PageHeader from "../components/layout/PageHeader";
 
 // Import types and unified API functions from the shared folder
 import { Task, Priority, User } from "../../shared/types";
@@ -269,92 +272,95 @@ export default function Page() {
   }
 // Display Core App Dashboard Interface
  return (
-    <> 
-      <main
-        className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col items-center py-10 px-4 transition-all duration-1000 ease-in-out"
-        style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
-      >
-        {/* Dynamic Identity & Action Header Line Layout */}
-        <div className="w-full max-w-3xl flex justify-between items-center mb-4 px-2">
-          <span className="text-white/90 text-sm font-medium bg-slate-900/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10 shadow-sm">
-            Welcome back!{" "}
-            <span className="font-semibold">
-              {currentUser.name || currentUser.email}
-            </span>
-          </span>
+    <AppShell>
+      <AppHeader
+        rightActions={
+          <button
+            onClick={handleLogout}
+            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+          >
+            Logout
+          </button>
+        }
+      />
 
-          <div className="flex gap-2">
-            <Navbar onLogout={handleLogout} />
-          </div>
-        </div>
-        
-       <div id="tour-tasks" className="bg-white/80 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-3xl border border-white/20 max-h-[85vh] overflow-y-auto">
-          <h1 className="text-3xl font-bold text-slate-800 mb-4 text-center">
-            LifeOS Tasks
-          </h1>
-          {error && (
-            <p className="mb-4 text-sm text-red-600 text-center">{error}</p>
-          )}
+      <HelpCentre />
 
-          {loading ? (
-            <p className="text-slate-500 text-center mt-4">Loading tasks...</p>
-          ) : (
-            <>
-              <div id="tour-add-task"><NewTaskForm onAddTask={handleAddTask} /></div>
+      <PageHeader
+        eyebrow={`Welcome back, ${currentUser.name || currentUser.email}`}
+        title="LifeOS Tasks"
+        description="Add, prioritise, and track what needs to be done"
+      />
 
-              {/* Filter controls */}
-              <div id="tour-priority-filter" className="flex gap-2 mb-6 flex-wrap justify-center">
-                {(["all", "critical", "high", "low", "none"] as const).map(
-                  (level) => {
-                    const count =
-                      level === "all"
-                        ? tasks.length
-                        : tasks.filter((t) => t.priority === level).length;
-                    const isActive = priorityFilter === level;
+      {error && (
+        <p className="mb-4 text-sm text-red-600 text-center">{error}</p>
+      )}
 
-                    return (
-                      <button
-                        key={level}
-                        onClick={() => setPriorityFilter(level)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 ${
-                          isActive
-                            ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-300 ring-offset-1"
-                            : "bg-white/80 backdrop-blur-sm text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                        }`}
-                      >
-                        <span className="uppercase tracking-wider">
-                          {level === "all" ? "All" : level}
-                        </span>
-                        <span
-                          className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}
-                        >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  },
-                )}
-              </div>
+      {loading ? (
+        <p className="text-slate-500 text-center mt-4">Loading tasks...</p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <section id="tour-tasks" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div id="tour-priority-filter" className="flex gap-2 mb-6 flex-wrap">
+              {(["all", "critical", "high", "low", "none"] as const).map((level) => {
+                const count =
+                  level === "all"
+                    ? tasks.length
+                    : tasks.filter((t) => t.priority === level).length;
+                const isActive = priorityFilter === level;
 
-              {editingTask && (
+                return (
+                  <button
+                    key={level}
+                    onClick={() => setPriorityFilter(level)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 flex items-center gap-1.5 capitalize ${
+                      isActive
+                        ? "bg-slate-800 text-white border-slate-800 shadow-md ring-2 ring-slate-300 ring-offset-1"
+                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                  >
+                    <span className="uppercase tracking-wider">
+                      {level === "all" ? "All" : level}
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                        isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <TaskList
+              tasks={visibleTasks}
+              onToggleTask={handleToggleTask}
+              onDeleteTask={handleDeleteTask}
+              onEditTask={setEditingTask}
+            />
+          </section>
+
+          <div className="flex flex-col gap-6">
+            <section id="tour-add-task" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-base font-semibold text-slate-900 mb-3">Add a task</h2>
+              <NewTaskForm onAddTask={handleAddTask} />
+            </section>
+
+            {editingTask && (
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-slate-900 mb-3">Edit task</h2>
                 <EditTaskForm
                   task={editingTask}
                   onSave={(updates) => saveTaskEdits(editingTask.id, updates)}
                   onCancel={() => setEditingTask(null)}
                 />
-              )}
-
-              <TaskList
-                tasks={visibleTasks}
-                onToggleTask={handleToggleTask}
-                onDeleteTask={handleDeleteTask}
-                onEditTask={setEditingTask}
-              />
-            </>
-          )}
+              </section>
+            )}
+          </div>
         </div>
-      </main>
-      <HelpCentre />
-    </> 
+      )}
+    </AppShell>
   );
 }

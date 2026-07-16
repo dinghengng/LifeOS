@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { X, Rocket, CheckSquare, Trophy, BookOpen, Salad } from 'lucide-react';
+import { X, Rocket, BookOpen, ChevronRight, ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface JoyrideTooltipProps {
   index: number;
@@ -26,7 +26,8 @@ const Joyride = dynamic(
   { ssr: false }
 ) as React.ElementType;
 
-// Changing to dark theme but might check against preferences
+const TOUR_DONE_KEY = 'lifeos-tour-done';
+
 const CustomTooltip = ({
   index,
   step,
@@ -77,87 +78,162 @@ const CustomTooltip = ({
 const tourSteps = [
   {
     target: 'body',
-    content: 'LifeOS helps you track tasks, goals, journaling, and nutrition — all in one place. Let\'s take a quick look at the Tasks page!',
-    title: 'Welcome to LifeOS 🚀',
     placement: 'center',
+    content: "LifeOS is your all-in-one personal OS! Tasks, goals, journaling, nutrition, supplements, and insights. Let's take a quick tour.",
+    title: 'Welcome to LifeOS 🚀',
+    disableBeacon: true,
+    disableScrolling: true,
+  },
+  {
+    target: '#tour-navbar',
+    placement: 'bottom',
+    content: 'The navigation bar gives you access to every section of LifeOS.',
+    title: 'Navigation',
+    disableBeacon: true,
+    disableScrolling: true,
+  },
+  {
+    target: '#tour-nav-tasks',
+    placement: 'bottom',
+    content: 'Manage everything you need to do. Create tasks, set priorities and due dates, and check them off as you go.',
+    title: 'Tasks',
     disableBeacon: true,
     disableScrolling: true,
   },
   {
     target: '#tour-tasks',
-    content: 'This is your task board. Add new tasks, set priorities, and check them off as you go.',
-    title: 'Your Tasks',
+    placement: 'left',
+    content: 'Your task board. Tasks are sortable by priority, due date, or status.',
+    title: 'Task Board',
     disableBeacon: true,
     disableScrolling: true,
-    placement: 'left',
   },
   {
     target: '#tour-add-task',
-    content: 'Use this form to quickly add a new task. You can set a due date and priority level.',
+    placement: 'top',
+    content: 'Quickly add a task: set a title, due date, and priority level in seconds.',
     title: 'Add a Task',
     disableBeacon: true,
     disableScrolling: true,
   },
   {
     target: '#tour-priority-filter',
-    content: 'Filter your tasks by priority — Critical, High, Low, or view all at once.',
+    placement: 'bottom',
+    content: 'Filter your list by priority: Critical, High, Low, or view all at once.',
     title: 'Filter by Priority',
     disableBeacon: true,
     disableScrolling: true,
   },
   {
-    target: '#tour-navbar',
-    content: 'Navigate to Dashboard, Journal, and Nutrition from here. Each section has its own tour when you get there!',
-    title: 'Navigation',
+    target: '#tour-nav-dashboard',
+    placement: 'bottom',
+    content: "Your Dashboard shows today's habit streaks, goals and their milestones.",
+    title: 'Dashboard & Goals',
+    disableBeacon: true,
+    disableScrolling: true,
+  },
+  {
+    target: '#tour-nav-journal',
+    placement: 'bottom',
+    content: 'Log your daily mood and write journal entries. LifeOS tracks mood trends over time so you can spot patterns.',
+    title: 'Journal & Mood',
+    disableBeacon: true,
+    disableScrolling: true,
+  },
+  {
+    target: '#tour-nav-nutrition',
+    placement: 'bottom',
+    content: 'Log meals by scanning a barcode or logging manually. Your supplement schedule with streaks and refill reminders is also managed here.',
+    title: 'Nutrition & Supplements',
+    disableBeacon: true,
+    disableScrolling: true,
+  },
+  {
+    target: '#tour-nav-insights',
+    placement: 'bottom',
+    content: 'View 7/14/30/90-day trend charts across all modules, your wellness score breakdown, and export your data.',
+    title: 'Insights',
     disableBeacon: true,
     disableScrolling: true,
   },
 ];
 
-const helpSections = [
+const FAQ_ITEMS = [
   {
-    section: 'How to use',
-    items: [
-      { icon: Rocket, label: 'Getting started', tour: true },
-      { icon: CheckSquare, label: 'Tasks & goals', tour: false },
-      { icon: Trophy, label: 'Milestones', tour: false },
-    ],
+    q: 'How does the wellness score work?',
+    a: 'Your wellness score is calculated daily from five modules: Habits, Nutrition, Mood, Tasks, and Goals. Each contributes up to 20 points based on your activity that day. Check the Insights page for a full breakdown.',
   },
   {
-    section: 'Reference',
-    items: [
-      { icon: BookOpen, label: 'FAQ', tour: false },
-      { icon: Salad, label: 'Nutrition guide', tour: false },
-    ],
+    q: 'How do I log a meal without a barcode?',
+    a: 'Go to Nutrition and use the search bar to find any food by name. You can adjust the serving size before logging. The barcode scanner is a shortcut for packaged foods only.',
+  },
+  {
+    q: 'Why did my habit streak reset?',
+    a: 'Streaks reset if you miss a day entirely. Streaks are calculated in Singapore Time (SGT), so make sure you log before midnight SGT.',
+  },
+  {
+    q: 'Can I edit or delete a past journal entry?',
+    a: "Yes. Open the Journal page, navigate to the past date using the date picker, and you can edit or delete that day's entry.",
+  },
+  {
+    q: 'How do I export my data?',
+    a: 'Scroll to the bottom of the Insights page. You can export Habits, Goals, Nutrition, and Supplements as CSV files for the last 30 days.',
+  },
+  {
+    q: 'How do supplement streaks work?',
+    a: "A supplement is counted as taken when you mark it for that day's AM or PM slot. Miss a slot and the streak for that supplement resets.",
   },
 ];
 
+type View = 'home' | 'faq';
+
 export default function HelpCentre() {
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<View>('home');
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // auto-start for first-time users
   useEffect(() => {
-    if (run) {
-      document.body.style.overflow = 'hidden'; // Freeze page
-    } else {
-      document.body.style.overflow = 'unset';  
+    setMounted(true);
+    if (!localStorage.getItem(TOUR_DONE_KEY)) {
+      // Set immediately so a refresh mid-tour doesn't restart it
+      localStorage.setItem(TOUR_DONE_KEY, '1');
+      setRun(true);
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
+  }, []);
+
+  // Freeze page scroll while tour overlay is active
+  useEffect(() => {
+    document.body.style.overflow = run ? 'hidden' : 'unset';
+    return () => { document.body.style.overflow = 'unset'; };
   }, [run]);
 
   const handleJoyrideCallback = (data: JoyrideData) => {
     if (['finished', 'skipped'].includes(data.status)) {
       setRun(false);
+      localStorage.setItem(TOUR_DONE_KEY, '1');
     }
   };
 
   const startTour = () => {
     setOpen(false);
+    setView('home');
     setTourKey(prev => prev + 1);
     setRun(true);
+    // Mark as seen immediately so a refresh mid-tour doesn't restart it
+    localStorage.setItem(TOUR_DONE_KEY, '1');
   };
+
+  const handleClose = () => {
+    setOpen(false);
+    setView('home');
+    setOpenFaq(null);
+  };
+
+  if (!mounted) return null;
 
   return (
     <>
@@ -199,50 +275,100 @@ export default function HelpCentre() {
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-start justify-end bg-black/40 pt-16 pr-5"
-          onClick={() => setOpen(false)}
+          onClick={handleClose}
         >
           <div
-            className="bg-white rounded-2xl w-full max-w-xs shadow-2xl animate-in fade-in slide-in-from-top-4"
+            className="bg-white rounded-2xl w-full max-w-xs shadow-2xl animate-in fade-in slide-in-from-top-4 max-h-[80vh] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-base text-slate-800">Help centre</h2>
-              <button
-                onClick={() => setOpen(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
 
-            <div className="py-2">
-              {helpSections.map(({ section, items }) => (
-                <div key={section}>
+            {/* ── HOME VIEW ── */}
+            {view === 'home' && (
+              <>
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+                  <h2 className="font-semibold text-base text-slate-800">Help centre</h2>
+                  <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="py-2 overflow-y-auto flex-1">
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-wide px-5 pt-4 pb-1">
-                    {section}
+                    Get started
                   </p>
-                  {items.map(({ icon: Icon, label, tour }) => (
-                    <button
-                      key={label}
-                      onClick={tour ? startTour : undefined}
-                      className="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left"
-                    >
-                      <Icon size={16} className="text-slate-400 shrink-0" />
-                      <span className="text-sm text-slate-700">{label}</span>
-                      {tour && (
-                        <span className="ml-auto text-xs text-emerald-600 font-medium">
-                          Start tour →
-                        </span>
+                  <button
+                    onClick={startTour}
+                    className="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left"
+                  >
+                    <Rocket size={16} className="text-slate-400 shrink-0" />
+                    <span className="text-sm text-slate-700">Product tour</span>
+                    <span className="ml-auto text-xs text-emerald-600 font-medium">Start tour →</span>
+                  </button>
+
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wide px-5 pt-4 pb-1">
+                    Reference
+                  </p>
+                  <button
+                    onClick={() => setView('faq')}
+                    className="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left"
+                  >
+                    <BookOpen size={16} className="text-slate-400 shrink-0" />
+                    <span className="text-sm text-slate-700">FAQ</span>
+                    <ChevronRight size={14} className="ml-auto text-slate-400" />
+                  </button>
+                </div>
+
+                <div className="px-5 py-4 border-t border-slate-100 shrink-0">
+                  <p className="text-xs text-slate-400 text-center">LifeOS · Orbital 2026</p>
+                </div>
+              </>
+            )}
+
+            {/* ── FAQ VIEW ── */}
+            {view === 'faq' && (
+              <>
+                <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100 shrink-0">
+                  <button
+                    onClick={() => { setView('home'); setOpenFaq(null); }}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                    aria-label="Back"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <h2 className="font-semibold text-base text-slate-800">FAQ</h2>
+                  <button onClick={handleClose} className="ml-auto text-slate-400 hover:text-slate-600 transition-colors">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto flex-1 py-2">
+                  {FAQ_ITEMS.map((item, i) => (
+                    <div key={i} className="border-b border-slate-100 last:border-0">
+                      <button
+                        onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                        className="w-full flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left"
+                      >
+                        <span className="text-sm text-slate-700 leading-snug">{item.q}</span>
+                        {openFaq === i
+                          ? <ChevronUp size={14} className="text-slate-400 shrink-0" />
+                          : <ChevronDown size={14} className="text-slate-400 shrink-0" />
+                        }
+                      </button>
+                      {openFaq === i && (
+                        <p className="px-5 pb-4 text-xs text-slate-500 leading-relaxed">
+                          {item.a}
+                        </p>
                       )}
-                    </button>
+                    </div>
                   ))}
                 </div>
-              ))}
-            </div>
 
-            <div className="px-5 py-4 border-t border-slate-100">
-              <p className="text-xs text-slate-400 text-center">LifeOS · Orbital 2026</p>
-            </div>
+                <div className="px-5 py-4 border-t border-slate-100 shrink-0">
+                  <p className="text-xs text-slate-400 text-center">LifeOS · Orbital 2026</p>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       )}

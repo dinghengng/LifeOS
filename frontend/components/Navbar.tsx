@@ -9,11 +9,11 @@ interface AppNavbarProps {
 }
 
 const NAV_LINKS = [
-  { label: "Tasks", path: "/" },
-  { label: "Dashboard", path: "/dashboard" },
-  { label: "Journal", path: "/journal" },
-  { label: "Nutrition", path: "/nutrition" },
-  { label: "Insights", path: "/insights" },
+  { label: "Tasks",     path: "/",          tourId: "tour-nav-tasks"     },
+  { label: "Dashboard", path: "/dashboard", tourId: "tour-nav-dashboard" },
+  { label: "Journal",   path: "/journal",   tourId: "tour-nav-journal"   },
+  { label: "Nutrition", path: "/nutrition", tourId: "tour-nav-nutrition" },
+  { label: "Insights",  path: "/insights",  tourId: "tour-nav-insights"  },
 ];
 
 export default function AppNavbar({ onLogout }: AppNavbarProps) {
@@ -22,11 +22,12 @@ export default function AppNavbar({ onLogout }: AppNavbarProps) {
 
   return (
     <nav id="tour-navbar" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-      {NAV_LINKS.map(({ label, path }) => {
+      {NAV_LINKS.map(({ label, path, tourId }) => {
         const isActive = pathname === path;
         return (
           <button
             key={path}
+            id={tourId}
             onClick={() => router.push(path)}
             style={{
               padding: "6px 16px",

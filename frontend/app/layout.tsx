@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NotificationInitializer from "../components/notifications/NotificationInitializer";
 import { ToastProvider } from "../components/notifications/ToastContext";
+import GoogleTranslate from "../components/GoogleTranslate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ToastProvider>
           <NotificationInitializer />
           {children}
+          <GoogleTranslate />
         </ToastProvider>
       </body>
     </html>

@@ -126,10 +126,10 @@ function generateInsight(
     return `Fat intake is running high today (${Math.abs(remainingFats)}g over). Keep your remaining meals lean. Grilled protein, vegetables, and skip any added oils or dressings.`;
   // Nothing logged yet
   if (mealsLoggedToday === 0)
-    return `Nothing logged yet today. Start with a high-protein breakfast — eggs, Greek yoghurt, or a shake to front-load your ${goalLabel} targets and reduce evening cravings.`;
+    return `Nothing logged yet today. Start with a high-protein breakfast such as eggs, Greek yoghurt, or a shake to front-load your ${goalLabel} targets and reduce evening cravings.`;
   // Under half calories by afternoon / evening
   if (totalCalories < remainingCalories * 0.4 && mealsLoggedToday >= 1)
-    return `You've used less than half your calorie budget so far. Make sure you're eating enough — under-fuelling on a ${goalLabel} plan stalls progress just as much as overeating.`;
+    return `You've used less than half your calorie budget so far. Make sure you're eating enough, under-fuelling on a ${goalLabel} plan stalls progress just as much as overeating.`;
   // Carbs low for muscle gain
   if (fitnessGoal === "muscle_gain" && remainingCarbs > 100)
     return `You're ${remainingCarbs}g short on carbs. For muscle gain, carbs drive your training performance. Eat rice, pasta, or a banana before your next session would help.`;
@@ -215,6 +215,46 @@ export default function NutritionPage() {
   );
 
   const [history, setHistory] = useState<DayData[]>([]);
+  // Week picker: Monday-anchored, SGT
+  const getWeekStart = (date: Date): string => {
+    const d = new Date(date);
+    const day = d.getDay(); // 0=Sun
+    const diff = day === 0 ? -6 : 1 - day; // shift to Monday
+    d.setDate(d.getDate() + diff);
+    return d.toLocaleDateString("en-CA"); // YYYY-MM-DD
+  };
+  const todaySGT = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Singapore" }));
+  const [selectedWeekStart, setSelectedWeekStart] = useState<string>(getWeekStart(todaySGT));
+
+  // Build last 4 week options from today backward
+  const weekOptions: { label: string; start: string; end: string }[] = Array.from({ length: 4 }, (_, i) => {
+    const d = new Date(todaySGT);
+    d.setDate(d.getDate() - i * 7);
+    const start = new Date(d);
+    const day = start.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    start.setDate(start.getDate() + diff);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const fmt = (dt: Date) =>
+      dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "Asia/Singapore" });
+    return {
+      start: start.toLocaleDateString("en-CA"),
+      end: end.toLocaleDateString("en-CA"),
+      label: `${fmt(start)} – ${fmt(end)}`,
+    };
+  });
+
+  const selectedWeekEnd = weekOptions.find((w) => w.start === selectedWeekStart)?.end ?? "";
+
+  // Build full 7-day skeleton (Mon–Sun) and merge real data in
+  const filteredHistory: DayData[] = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(selectedWeekStart + "T00:00:00+08:00");
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" });
+    const real = history.find((h) => h.date === dateStr);
+    return real ?? { date: dateStr, calories: 0, protein: 0, carbs: 0, fats: 0, meal_count: 0 };
+  });
 
   // Award XP when a quest first flips to completed; persist to backend
   useEffect(() => {
@@ -281,7 +321,7 @@ export default function NutritionPage() {
           fetch(`${API_BASE}/api/user/metrics`, { credentials: "include" }),
           fetch(`${API_BASE}/api/supplements`, { credentials: "include" }),
           fetch(`${API_BASE}/api/user/xp`, { credentials: "include" }),
-          fetch(`${API_BASE}/api/nutrition/history?days=7`, {
+          fetch(`${API_BASE}/api/nutrition/history?days=30`, {
             credentials: "include",
           }),
         ]);
@@ -816,7 +856,25 @@ export default function NutritionPage() {
                 <QuestPanel quests={quests} totalXP={totalXP} />
               </section>
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-4">
-                <NutritionChart history={history} calorieTarget={targets.calories} proteinTarget={targets.protein} />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-600">Weekly Trend</span>
+                  <select
+                    value={selectedWeekStart}
+                    onChange={(e) => setSelectedWeekStart(e.target.value)}
+                    className="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-600 font-medium focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer"
+                  >
+                    {weekOptions.map((w) => (
+                      <option key={w.start} value={w.start}>
+                        {w.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <NutritionChart
+                  history={filteredHistory}
+                  calorieTarget={targets.calories}
+                  proteinTarget={targets.protein}
+                />
                 <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3.5">
                   <p className="text-sm text-green-700">{insight}</p>
                 </div>

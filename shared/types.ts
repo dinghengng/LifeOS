@@ -159,3 +159,13 @@ export interface ChallengeDefinition {
     gold: number;
   };
 }
+
+export interface ChallengeProgress extends ChallengeDefinition {
+  count: number;
+  tier: "bronze" | "silver" | "gold" | null;
+  nextTier: "bronze" | "silver" | "gold" | null;
+  remainingToNext: number | null;
+  periodStart: string;
+  periodEnd: string;
+  implemented: boolean;
+}

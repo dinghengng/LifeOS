@@ -32,6 +32,7 @@ function startReminderJobs() {
           title: 'Task Due Soon',
           body: `"${task.title}" is due soon!`,
           type: 'task_reminder',
+          params: { taskTitle: task.title },
           url: '/tasks'
         });
 
@@ -70,6 +71,7 @@ function startReminderJobs() {
           title: 'Daily Habit Check-in',
           body: "Don't forget to log your habits today!",
           type: 'habit_checkin',
+          params: {},
           url: '/habits'
         });
       }

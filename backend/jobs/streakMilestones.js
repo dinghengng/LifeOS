@@ -23,8 +23,7 @@ async function runStreakMilestones() {
       await notifyInsert(
         habit.user_id,
         'habit_milestone',
-        `${habit.streak}-Day Streak!`,
-        `You hit a ${habit.streak}-day streak on "${habit.name}". Keep it up!`,
+        { habitName: habit.name, streak: habit.streak },
         habit.id,
         today
       );

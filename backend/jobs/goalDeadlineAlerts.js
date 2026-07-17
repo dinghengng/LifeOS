@@ -28,13 +28,10 @@ async function runGoalDeadlineAlerts() {
 
       if (!WARN_DAYS.includes(daysLeft)) continue;
 
-      const dayLabel = daysLeft === 1 ? 'tomorrow' : `in ${daysLeft} days`;
-
       await notifyInsert(
         goal.user_id,
         'goal_nudge',
-        'Goal Deadline Approaching',
-        `"${goal.title}" is due ${dayLabel}. Lets get to it!`,
+        { goalTitle: goal.title, daysLeft },
         goal.id,
         today
       );

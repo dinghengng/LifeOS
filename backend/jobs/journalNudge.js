@@ -24,8 +24,7 @@ async function runJournalNudge() {
       await notifyInsert(
         user.id,
         'journal_nudge',
-        'Daily Journal',
-        "You haven't written anything today. Take 2 minutes to reflect.",
+        {},
         `journal-${user.id}`,
         today
       );

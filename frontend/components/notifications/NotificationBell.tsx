@@ -10,8 +10,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 interface NotificationItem {
   id: number;
   type: string;
-  title: string;
-  body: string;
+  params: Record<string, string | number>;
   sent_at: string;
   read_at: string | null;
   status: string;
@@ -35,6 +34,65 @@ function typeIcon(type: string): string {
   if (type === "habit_milestone") return "★";
   if (type === "journal_nudge") return "✎";
   return "·";
+}
+
+function renderNotification(
+  n: NotificationItem,
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string,
+): { title: string; body: string } {
+  const p = n.params ?? {};
+
+  switch (n.type) {
+    case "task_reminder":
+      return {
+        title: t("notification.taskReminder.title"),
+        body: t("notification.taskReminder.body", { taskTitle: String(p.taskTitle ?? "") }),
+      };
+    case "task_due":
+      return {
+        title: t("notification.taskOverdue.title"),
+        body: t("notification.taskOverdue.body", { taskTitle: String(p.taskTitle ?? "") }),
+      };
+    case "habit_checkin":
+      return {
+        title: t("notification.habitCheckin.title"),
+        body: t("notification.habitCheckin.body"),
+      };
+    case "habit_miss":
+      return {
+        title: t("notification.habitStreakRisk.title"),
+        body: t("notification.habitStreakRisk.body", {
+          habitName: String(p.habitName ?? ""),
+          streak: Number(p.streak ?? 0),
+        }),
+      };
+    case "habit_milestone":
+      return {
+        title: t("notification.habitMilestone.title", { streak: Number(p.streak ?? 0) }),
+        body: t("notification.habitMilestone.body", {
+          habitName: String(p.habitName ?? ""),
+          streak: Number(p.streak ?? 0),
+        }),
+      };
+    case "goal_nudge": {
+      const daysLeft = Number(p.daysLeft ?? 0);
+      const dayLabel =
+        daysLeft === 1
+          ? t("notification.goalDeadline.dayLabelTomorrow")
+          : t("notification.goalDeadline.dayLabelInDays", { days: daysLeft });
+      return {
+        title: t("notification.goalDeadline.title"),
+        body: t("notification.goalDeadline.body", { goalTitle: String(p.goalTitle ?? ""), dayLabel }),
+      };
+    }
+    case "journal_nudge":
+      return {
+        title: t("notification.journalNudge.title"),
+        body: t("notification.journalNudge.body"),
+      };
+    default:
+      return { title: n.type, body: "" };
+  }
 }
 
 export default function NotificationBell() {
@@ -247,7 +305,9 @@ export default function NotificationBell() {
                 </span>
               </div>
             ) : (
-              notifications.map((n) => (
+              notifications.map((n) => {
+                const { title, body } = renderNotification(n, t);
+                return (
                 <div
                   key={n.id}
                   onClick={() => !n.read_at && markOneRead(n.id)}
@@ -286,7 +346,7 @@ export default function NotificationBell() {
                         marginBottom: 2,
                       }}
                     >
-                      {n.title}
+                      {title}
                     </div>
                     <div
                       style={{
@@ -298,7 +358,7 @@ export default function NotificationBell() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {n.body}
+                      {body}
                     </div>
                     <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: 4 }}>
                       {timeAgo(n.sent_at, t)}
@@ -310,7 +370,8 @@ export default function NotificationBell() {
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
 

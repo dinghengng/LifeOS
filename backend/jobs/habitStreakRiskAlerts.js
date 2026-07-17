@@ -26,8 +26,7 @@ async function runHabitStreakRiskAlerts() {
       await notifyInsert(
         habit.user_id,
         'habit_miss',
-        'Streak at Risk',
-        `Log "${habit.name}" before midnight to keep your ${habit.streak}-day streak alive.`,
+        { habitName: habit.name, streak: habit.streak },
         habit.id,
         today
       );

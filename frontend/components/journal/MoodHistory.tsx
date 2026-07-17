@@ -242,7 +242,7 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
                 <div className="p-4 flex items-start gap-4">
                   {/*Mood emoji*/}
                   <div
-                    className="flex flex-col items-center justify-center rounded-xl border px-3 py-2 min-w-[60px]"
+                    className="flex flex-col items-center justify-center rounded-xl border px-3 py-2 min-w-15"
                     style={{
                       borderColor: mood.color,
                       backgroundColor: `${mood.color}18`,
@@ -335,7 +335,7 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
                 className="bg-white/80 backdrop-blur-md rounded-2xl border border-white/20 shadow overflow-hidden"
               >
                 <div className="p-4 flex items-start gap-4">
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 min-w-[60px]">
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 min-w-15">
                     <span className="text-2xl">📝</span>
                     <span className="text-xs font-semibold mt-0.5 text-slate-500">{t("moodHistory.note")}</span>
                   </div>

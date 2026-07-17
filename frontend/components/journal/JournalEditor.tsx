@@ -281,7 +281,7 @@ export default function JournalEditor({
                 onChange={(e) =>
                   setLinkedMoodLogId(e.target.value ? Number(e.target.value) : null)
                 }
-                className="text-xs text-slate-500 border border-slate-200 rounded-lg px-2 py-1 bg-white hover:border-indigo-300 transition max-w-[200px]"
+                className="text-xs text-slate-500 border border-slate-200 rounded-lg px-2 py-1 bg-white hover:border-indigo-300 transition max-w-50"
               >
                 <option value="">{t("journalEditor.linkMoodOption")}</option>
                 {moodLogs.map((log) => (

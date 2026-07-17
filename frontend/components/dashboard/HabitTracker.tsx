@@ -59,6 +59,11 @@ export default function HabitTracker({
     ? habits.filter((h) => h.category === activeCategory)
     : habits;
 
+  // Helper to translate category names safely
+  const getTranslatedCategory = (cat: string) => {
+    return CATEGORY_KEY_MAP[cat] ? t(CATEGORY_KEY_MAP[cat]) : cat;
+  };
+
   async function handleToggleExpand(id: string) {
     if (expandedId === id) {
       setExpandedId(null);
@@ -91,7 +96,7 @@ export default function HabitTracker({
           </h2>
           <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
             {activeCategory
-              ? t("habitTracker.countInCategory", { count: visibleHabits.length, category: activeCategory })
+              ? t("habitTracker.countInCategory", { count: visibleHabits.length, category: getTranslatedCategory(activeCategory) })
               : t("habitTracker.countActive", { count: visibleHabits.length })}
           </span>
         </div>
@@ -122,7 +127,7 @@ export default function HabitTracker({
               }}
             >
               {/* 3. Apply translation to the category name */}
-              {CATEGORY_KEY_MAP[cat] ? t(CATEGORY_KEY_MAP[cat]) : cat}
+              {getTranslatedCategory(cat)}
             </button>
           ))}
         </div>
@@ -168,7 +173,9 @@ export default function HabitTracker({
         </div>
       ) : visibleHabits.length === 0 ? (
         <div style={{ textAlign: "center", padding: "1.5rem 1rem", color: "var(--color-text-secondary)", fontSize: 12, marginBottom: 12 }}>
-          {t("habitTracker.emptyCategory", { category: activeCategory })}
+          {t("habitTracker.emptyCategory", {
+            category: activeCategory ? getTranslatedCategory(activeCategory) : "",
+          })}
         </div>
       ) : (
         visibleHabits.map((habit) => (

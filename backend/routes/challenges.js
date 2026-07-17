@@ -1,7 +1,15 @@
 const express = require("express");
 const pool = require("../db");
-const { CHALLENGES } = require("../config/challenges");
+const { CHALLENGES } = require("../config/challenges"); 
 const { getPeriodBounds } = require("../utils/period");
+
+const IMPLEMENTED_IDS = [
+  "task_sprint",
+  "habit_rhythm",
+  "reflect_reset",
+  "mood_checkin",
+  "fuel_your_week",
+];
 
 function computeTierProgress(count, tiers) {
   let tier = null;
@@ -25,8 +33,8 @@ function computeTierProgress(count, tiers) {
   return { tier, nextTier, remainingToNext };
 }
 
-async function getCountForChallenge(challenge, userId, start, end) {
-  if (challenge.id === "task_sprint") {
+async function getCountForChallenge(challengeId, userId, bounds) {
+  if (challengeId === "task_sprint") {
     const result = await pool.query(
       `SELECT COUNT(*) AS count
        FROM tasks
@@ -34,7 +42,7 @@ async function getCountForChallenge(challenge, userId, start, end) {
          AND is_completed = true
          AND completed_at >= $2
          AND completed_at < $3`,
-      [userId, start, end],
+      [userId, bounds.startInstant, bounds.endInstant],
     );
     return parseInt(result.rows[0].count, 10);
   }
@@ -103,8 +111,8 @@ function createChallengesRouter(requireAuth) {
     try {
       const results = await Promise.all(
         CHALLENGES.map(async (challenge) => {
-          const { start, end } = getPeriodBounds(challenge.period);
-          const count = await getCountForChallenge(challenge, req.user.id, start, end);
+          const bounds = getPeriodBounds(challenge.period);
+          const count = await getCountForChallenge(challenge.id, req.user.id, bounds);
           const { tier, nextTier, remainingToNext } = computeTierProgress(count, challenge.tiers);
 
           return {
@@ -117,9 +125,9 @@ function createChallengesRouter(requireAuth) {
             tier,
             nextTier,
             remainingToNext,
-            periodStart: start.toISOString(),
-            periodEnd: end.toISOString(),
-            implemented: challenge.id === "task_sprint",
+            periodStart: bounds.startInstant.toISOString(),
+            periodEnd: bounds.endInstant.toISOString(),
+            implemented: IMPLEMENTED_IDS.includes(challenge.id),
           };
         }),
       );

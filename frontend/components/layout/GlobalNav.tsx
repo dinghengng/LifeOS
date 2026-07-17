@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "../../context/LanguageContext";
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { key: "tasks" | "dashboard" | "journal" | "nutrition" | "insights"; href: string }[] = [
   { key: "tasks", href: "/" },
   { key: "dashboard", href: "/dashboard" },
   { key: "journal", href: "/journal" },

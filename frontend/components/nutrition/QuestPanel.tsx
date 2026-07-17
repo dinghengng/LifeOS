@@ -2,6 +2,7 @@
 
 import { type ReactNode } from "react";
 import { useTranslation } from "../../context/LanguageContext";
+import { TranslationKey } from "../../context/translations";
 
 export type Quest = {
   id: string;
@@ -18,11 +19,11 @@ interface QuestPanelProps {
 
 const XP_PER_LEVEL = 100;
 
-function getLevelInfo(xp: number, t: (key: string) => string) {
+function getLevelInfo(xp: number, t: (key: TranslationKey) => string) {
   const level = Math.floor(xp / XP_PER_LEVEL) + 1;
   const currentLevelXP = xp % XP_PER_LEVEL;
   const progress = (currentLevelXP / XP_PER_LEVEL) * 100;
-  const titleKeys = [
+  const titleKeys: TranslationKey[] = [
     "questPanel.levelTitle.newcomer",
     "questPanel.levelTitle.initiate",
     "questPanel.levelTitle.apprentice",

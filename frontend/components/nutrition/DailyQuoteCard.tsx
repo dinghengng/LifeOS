@@ -2,6 +2,7 @@
 
 import { Lightbulb } from "lucide-react";
 import { useTranslation } from "../../context/LanguageContext";
+import { TranslationKey } from "../../context/translations";
 
 const NUTRITION_QUOTES_COUNT = 50; //Quotes that randomly generate
 
@@ -27,7 +28,7 @@ export default function DailyQuoteCard() {
             &ldquo;
             </span>
             <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#0f172a", lineHeight: 1.4, letterSpacing: "-0.5px", position: "relative", zIndex: 1 }}>
-            {t(`dailyQuoteCard.quotes.${quoteIndex}`)}
+            {t(`dailyQuoteCard.quotes.${quoteIndex}` as TranslationKey)}
             </p>
             <span style={{ position: "absolute", bottom: -45, right: -15, fontSize: 64, color: "#e2e8f0", fontFamily: "Georgia, serif", lineHeight: 1 }}>
             &rdquo;

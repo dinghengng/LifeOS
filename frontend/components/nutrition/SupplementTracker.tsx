@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, X, Pill, Flame, AlertTriangle, PackageOpen } from "lucide-react";
 import { useTranslation } from "../../context/LanguageContext";
+import { TranslationKey } from "../../context/translations";
 
 export type Supplement = {
   id: string | number;
@@ -32,8 +33,28 @@ const timingColor: Record<string, string> = {
   Both: "#1D9E75",
 };
 
-// Static interaction lookup table. `noteKey` resolves via t(`supplementTracker.interactions.${noteKey}`)
-const KNOWN_INTERACTIONS: { a: string; b: string; noteKey: string }[] = [
+// Static interaction lookup table
+type InteractionNoteKey =
+  | "ironCalcium"
+  | "ironZinc"
+  | "zincCopper"
+  | "zincCalcium"
+  | "magnesiumCalcium"
+  | "calciumZinc"
+  | "calciumLevothyroxine"
+  | "magnesiumLevothyroxine"
+  | "ironLevothyroxine"
+  | "vitaminCB12"
+  | "vitaminAD"
+  | "seleniumVitaminC"
+  | "potassiumAceInhibitor"
+  | "folicAcidAntacid"
+  | "b12Antacid"
+  | "fiberMultivitamin"
+  | "fishOilVitaminE"
+  | "melatoninSedative";
+
+const KNOWN_INTERACTIONS: { a: string; b: string; noteKey: InteractionNoteKey }[] = [
   { a: "iron",       b: "calcium",    noteKey: "ironCalcium" },
   { a: "iron",       b: "zinc",       noteKey: "ironZinc" },
   { a: "zinc",       b: "copper",     noteKey: "zincCopper" },
@@ -48,16 +69,16 @@ const KNOWN_INTERACTIONS: { a: string; b: string; noteKey: string }[] = [
   { a: "selenium",   b: "vitamin c",  noteKey: "seleniumVitaminC" },
   { a: "potassium",  b: "ace inhib",  noteKey: "potassiumAceInhibitor" },
   { a: "folic acid", b: "antacid",    noteKey: "folicAcidAntacid" },
-  { a: "vitamin b12",b: "antacid",    noteKey: "vitaminB12Antacid" },
+  { a: "vitamin b12",b: "antacid",    noteKey: "b12Antacid" },
   { a: "fiber",      b: "multivitamin", noteKey: "fiberMultivitamin" },
   { a: "fish oil",   b: "vitamin e",  noteKey: "fishOilVitaminE" },
   { a: "melatonin",  b: "sedative",   noteKey: "melatoninSedative" },
 ];
 
 // Returns a list of interaction note keys for the current supplement list.
-// Caller resolves copy via t(`supplementTracker.interactions.${key}`).
-function getInteractionWarningKeys(supplements: Supplement[]): string[] {
-  const keys: string[] = [];
+// Caller resolves copy via t(`supplementTracker.interaction.${key}`).
+function getInteractionWarningKeys(supplements: Supplement[]): InteractionNoteKey[] {
+  const keys: InteractionNoteKey[] = [];
   const names = supplements.map((s) => s.name.toLowerCase());
 
   for (const pair of KNOWN_INTERACTIONS) {
@@ -108,7 +129,7 @@ const RoutineBlock = ({
   onToggle: (key: string) => void;
   onDelete: (id: string | number) => void;
   onRefill: (id: string | number) => void;
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }) => {
   if (items.length === 0) return null;
   const checked = items.filter((s) => checkedIds.has(`${prefix}-${s.id}`)).length;
@@ -192,7 +213,7 @@ const RoutineBlock = ({
                       background: "#fff7ed", color: "#ea580c",
                     }}>
                       <Flame size={9} />
-                      {t("supplementTracker.streakDays", { days: supp.streak })}
+                      {t("supplementTracker.streakBadge", { streak: supp.streak })}
                     </span>
                   )}
                   {/* Refill warning badge */}
@@ -210,7 +231,7 @@ const RoutineBlock = ({
                       title={t("supplementTracker.refillTooltip")}
                     >
                       <PackageOpen size={9} />
-                      {daysLeft === 0 ? t("supplementTracker.refillOutBtn") : t("supplementTracker.refillDaysLeftBtn", { days: daysLeft })}
+                      {daysLeft === 0 ? t("supplementTracker.refillOut") : t("supplementTracker.refillDaysLeftBtn", { days: daysLeft })}
                     </button>
                   )}
                 </div>
@@ -348,9 +369,9 @@ export default function SupplementTracker({
             <input placeholder={t("supplementTracker.dosePlaceholder")} value={dose}
               onChange={(e) => setDose(e.target.value)} style={inputStyle} />
             <select value={timing} onChange={(e) => setTiming(e.target.value as "AM" | "PM" | "Both")} style={inputStyle}>
-              <option value="AM">{t("supplementTracker.timingMorning")}</option>
-              <option value="PM">{t("supplementTracker.timingEvening")}</option>
-              <option value="Both">{t("supplementTracker.timingBoth")}</option>
+              <option value="AM">{t("supplementTracker.timing.am")}</option>
+              <option value="PM">{t("supplementTracker.timing.pm")}</option>
+              <option value="Both">{t("supplementTracker.timing.both")}</option>
             </select>
           </div>
           {/* Unit applies to both supply count and per-day amount so the division always makes sense */}
@@ -359,10 +380,10 @@ export default function SupplementTracker({
               {t("supplementTracker.trackRefillLabel")}
             </label>
             <select value={supplyUnit} onChange={(e) => setSupplyUnit(e.target.value)} style={inputStyle}>
-              <option value="pills">{t("supplementTracker.unitPills")}</option>
-              <option value="ml">{t("supplementTracker.unitMl")}</option>
-              <option value="scoops">{t("supplementTracker.unitScoops")}</option>
-              <option value="sachets">{t("supplementTracker.unitSachets")}</option>
+              <option value="pills">{t("supplementTracker.unit.pills")}</option>
+              <option value="ml">{t("supplementTracker.unit.ml")}</option>
+              <option value="scoops">{t("supplementTracker.unit.scoops")}</option>
+              <option value="sachets">{t("supplementTracker.unit.sachets")}</option>
             </select>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -443,12 +464,12 @@ export default function SupplementTracker({
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
             <AlertTriangle size={13} style={{ color: "#d97706", flexShrink: 0 }} />
             <span style={{ fontSize: 11, fontWeight: 700, color: "#b45309", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              {t("supplementTracker.interactionNoticeHeader")}
+              {t("supplementTracker.interactionNoticeHeading")}
             </span>
           </div>
           {interactionWarningKeys.map((key) => (
             <p key={key} style={{ margin: 0, fontSize: 12, color: "#92400e", lineHeight: 1.5 }}>
-              • {t(`supplementTracker.interactions.${key}`)}
+              • {t(`supplementTracker.interaction.${key}` as TranslationKey)}
             </p>
           ))}
           <p style={{ margin: "4px 0 0", fontSize: 11, color: "#a16207" }}>
@@ -524,7 +545,7 @@ export default function SupplementTracker({
                         cursor: refillAmount ? "pointer" : "default",
                       }}
                     >
-                      {t("supplementTracker.confirmBtn")}
+                      {t("supplementTracker.confirmButton")}
                     </button>
                     <button
                       type="button"
@@ -549,7 +570,7 @@ export default function SupplementTracker({
               textAlign: "center",
             }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "white" }}>
-                {t("supplementTracker.allDoneMessage")}
+                {t("supplementTracker.allDone")}
               </p>
             </div>
           )}

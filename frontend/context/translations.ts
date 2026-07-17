@@ -619,6 +619,7 @@ export const translations = {
     "globalNav.journal": "Journal",
     "globalNav.nutrition": "Nutrition",
     "globalNav.insights": "Insights",
+    "globalNav.challenges": "Challenges",
     "settingsCommon.saving": "Saving...",
     "settingsCommon.saveChanges": "Save changes",
 
@@ -929,6 +930,7 @@ export const translations = {
     "nav.journal": "日记",
     "nav.nutrition": "营养",
     "nav.insights": "洞察",
+    "nav.challenges": "挑战",
     "nav.logout": "登出",
     "nutrition.track": "记录",
     "nutrition.progress": "进度",
@@ -1521,6 +1523,7 @@ export const translations = {
     "globalNav.journal": "日记",
     "globalNav.nutrition": "营养",
     "globalNav.insights": "洞察",
+    "globalNav.challenges": "挑战",
     "settingsCommon.saving": "保存中...",
     "settingsCommon.saveChanges": "保存更改",
 

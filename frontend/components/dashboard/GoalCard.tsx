@@ -1,5 +1,6 @@
 "use client";
 import { Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "../../context/LanguageContext";
 
 export type Goal = {
   id: string;
@@ -18,18 +19,16 @@ const MONTH_INDEX: Record<string, number> = {
   July: 6, August: 7, September: 8, October: 9, November: 10, December: 11,
 };
 
-// Parses "Month Year" into days remaining from today; null if unparseable.
 function getDaysUntilDue(dueDate: string): number | null {
   const match = dueDate.trim().match(/^([A-Za-z]+)\s+(\d{4})$/);
   if (!match || !(match[1] in MONTH_INDEX)) return null;
-  const due = new Date(Number(match[2]), MONTH_INDEX[match[1]] + 1, 0); // last day of that month
+  const due = new Date(Number(match[2]), MONTH_INDEX[match[1]] + 1, 0);
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const diffMs = due.getTime() - now.getTime();
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
-// Returns a color for the "Due" label based on urgency. Past-due and <30 days = red, <90 = amber, else default.
 function getDueDateUrgencyColor(dueDate: string): string | undefined {
   const days = getDaysUntilDue(dueDate);
   if (days === null) return undefined;
@@ -49,17 +48,16 @@ export default function GoalCard({
   onEdit: (goal: Goal) => void;
   onDelete: (goalId: string) => void;
 }) {
+  const { t } = useTranslation();
   const doneMilestones = goal.milestones.filter((m) => m.done).length;
   const urgencyColor = getDueDateUrgencyColor(goal.dueDate);
 
   async function handleToggle(index: number) {
-    // changed to make render appear immediately instead of needing to refresh
     onMilestoneToggle(goal.id, index);
   }
 
   return (
     <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem", marginBottom: 12 }}>
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
         <div>
           <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", color: goal.color, display: "block", marginBottom: 2 }}>
@@ -71,51 +69,28 @@ export default function GoalCard({
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: 8, flexShrink: 0 }}>
           <span style={{ fontSize: 11, color: urgencyColor || "var(--color-text-secondary)", fontWeight: urgencyColor ? 700 : 400, whiteSpace: "nowrap" }}>
-            Due {goal.dueDate}
+            {t("goalCard.due", { date: goal.dueDate })}
           </span>
           <button
             onClick={() => onEdit(goal)}
-            aria-label="Edit goal"
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: "50%",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--color-text-secondary)",
-            }}
+            aria-label={t("goalCard.editAria")}
+            style={{ width: 24, height: 24, borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-secondary)" }}
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={() => onDelete(goal.id)}
-            aria-label="Delete goal"
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: "50%",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--color-text-secondary)",
-            }}
+            aria-label={t("goalCard.deleteAria")}
+            style={{ width: 24, height: 24, borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-secondary)" }}
           >
             <Trash2 size={14} />
           </button>
         </div>
       </div>
 
-      {/* Progress bar */}
       <div style={{ marginBottom: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-          <span style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>Progress</span>
+          <span style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{t("goalCard.progress")}</span>
           <span style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-primary)" }}>{goal.progress}%</span>
         </div>
         <div style={{ height: 6, background: "var(--color-background-secondary)", borderRadius: 99, overflow: "hidden" }}>
@@ -123,7 +98,6 @@ export default function GoalCard({
         </div>
       </div>
 
-      {/* Milestones */}
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {goal.milestones.map((ms, i) => (
           <div
@@ -142,15 +116,10 @@ export default function GoalCard({
             <div
               data-milestone-dot
               style={{
-                width: 14,
-                height: 14,
-                borderRadius: "50%",
+                width: 14, height: 14, borderRadius: "50%",
                 backgroundColor: ms.done ? goal.color : "transparent",
                 border: ms.done ? "none" : "2px solid #1e293b",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                 transition: "transform 0.12s ease",
                 boxShadow: ms.done ? "none" : "0 1px 2px rgba(0,0,0,0.06)",
               }}
@@ -162,7 +131,7 @@ export default function GoalCard({
         ))}
       </div>
       <p style={{ margin: "10px 0 0", fontSize: 11, color: "var(--color-text-secondary)" }}>
-        {doneMilestones}/{goal.milestones.length} milestones complete
+        {t("goalCard.milestonesComplete", { done: doneMilestones, total: goal.milestones.length })}
       </p>
     </div>
   );

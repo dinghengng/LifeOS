@@ -1,6 +1,7 @@
 "use client"; // Tells Next.js this component is interactive (checkboxes/buttons)
 
 import { Task, type Priority } from "../../shared/types";
+import { useTranslation } from "../context/LanguageContext";
 
 // added onDeleteTask to the list of required items.
 interface TaskListProps {
@@ -44,11 +45,11 @@ const priorityBadgeStyles: Record<Priority, string> = {
   none: "bg-slate-50 text-slate-600 border-slate-200",
 };
 
-const priorityLabel: Record<Priority, string> = {
-  critical: "Critical",
-  high: "High",
-  low: "Low",
-  none: "None",
+const priorityLabelKeys: Record<Priority, "priority.critical" | "priority.high" | "priority.low" | "priority.none"> = {
+  critical: "priority.critical",
+  high: "priority.high",
+  low: "priority.low",
+  none: "priority.none",
 };
 
 // THE COMPONENT: We grab all three props at once here.
@@ -58,22 +59,24 @@ export default function TaskList({
   onDeleteTask,
   onEditTask,
 }: TaskListProps) {
+  const { t } = useTranslation();
+
   // Shows a friendly message if the user has a clear schedule.
   if (tasks.length === 0) {
     return (
       <p className="text-slate-500 text-center mt-6 italic">
-        No tasks yet. Take a break!
+        {t("taskList.empty")}
       </p>
     );
   }
   //remaining tasks
-  const remainingCount = tasks.filter((t) => !t.isCompleted).length;
+  const remainingCount = tasks.filter((task) => !task.isCompleted).length;
   return (
     <div className="mt-6">
       <div className="flex items-end justify-between mb-4 border-b border-slate-200 pb-2">
-        <h2 className="text-xl font-bold text-slate-800">Your Tasks</h2>
+        <h2 className="text-xl font-bold text-slate-800">{t("taskList.heading")}</h2>
         <span className="text-sm font-medium text-slate-500">
-          ({remainingCount} remaining)
+          {t("taskList.remaining", { count: remainingCount })}
         </span>
       </div>
 
@@ -127,8 +130,8 @@ export default function TaskList({
                             }`}
                           >
                             {taskIsOverdue(task.dueDate, task.isCompleted)
-                              ? "⚠️ Overdue:"
-                              : "Due:"}{" "}
+                              ? t("taskList.overdue")
+                              : t("taskList.due")}{" "}
                             {formatDeadline(task.dueDate)}
                           </span>
                         )}
@@ -137,7 +140,7 @@ export default function TaskList({
                           <span
                             className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider ${priorityBadgeStyles[task.priority]}`}
                           >
-                            {priorityLabel[task.priority]}
+                            {t(priorityLabelKeys[task.priority])}
                           </span>
                         )}
                       </div>
@@ -150,14 +153,14 @@ export default function TaskList({
                   <button
                     onClick={() => onEditTask(task)}
                     className="text-slate-400 hover:text-indigo-600 transition-colors p-2 text-lg"
-                    title="Edit task"
+                    title={t("taskList.editTitle")}
                   >
                     ✎
                   </button>
                   <button
                     onClick={() => onDeleteTask(task.id)}
                     className="text-slate-400 hover:text-red-500 transition-colors p-2 text-xl"
-                    title="Delete task"
+                    title={t("taskList.deleteTitle")}
                   >
                     ✕
                   </button>

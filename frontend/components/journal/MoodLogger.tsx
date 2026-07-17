@@ -9,29 +9,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useToastContext } from "../notifications/ToastContext";
-
-// Default mood config
-// const DEFAULT_MOODS: { level: MoodLevel; emoji: string; label: string; color: string }[] = [
-//   { level: 1, emoji: "😢", label: "Awful",   color: "#ef4444" },
-//   { level: 2, emoji: "😕", label: "Bad",     color: "#f97316" },
-//   { level: 3, emoji: "😐", label: "Okay",    color: "#eab308" },
-//   { level: 4, emoji: "🙂", label: "Good",    color: "#22c55e" },
-//   { level: 5, emoji: "😄", label: "Great",   color: "#6366f1" },
-// ];
-
-// Stress slider labels at all positions
-const STRESS_ANCHORS: Record<number, string> = {
-  1: "Calm",
-  2: "Calm",
-  3: "Relaxed",
-  4: "Relaxed",
-  5: "Neutral",
-  6: "Neutral",
-  7: "Tense",
-  8: "Tense",
-  9: "Overwhelmed",
-  10: "Overwhelmed",
-};
+import { useTranslation } from "../../context/LanguageContext";
 
 interface MoodLoggerProps {
   onSaved: (newLogId: number) => void;
@@ -43,6 +21,7 @@ interface MoodLoggerProps {
 }
 
 export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustomTagDeleted, moodConfig, userName, }: MoodLoggerProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); //1=mood, 2=stress, 3=tags
   const [selectedMood, setSelectedMood] = useState<MoodLevel | null>(null);
   const [stressLevel, setStressLevel] = useState<StressLevel>(5);
@@ -53,6 +32,20 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
   const { showToast } = useToastContext();
   const greetingName = userName?.trim() || "you"; //user name defaults to "you"
 
+  // Moved inside component to access translations
+  const STRESS_ANCHORS: Record<number, string> = {
+    1: t("stress.calm"),
+    2: t("stress.calm"),
+    3: t("stress.relaxed"),
+    4: t("stress.relaxed"),
+    5: t("stress.neutral"),
+    6: t("stress.neutral"),
+    7: t("stress.tense"),
+    8: t("stress.tense"),
+    9: t("stress.overwhelmed"),
+    10: t("stress.overwhelmed"),
+  };
+
   const noteEditor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -62,7 +55,7 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
         orderedList: {},
         listItem: {},
       }),
-      Placeholder.configure({ placeholder: "How are you feeling right now?" }),
+      Placeholder.configure({ placeholder: t("moodLogger.placeholder") }),
     ],
     content: "",
     editorProps: {
@@ -113,10 +106,10 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
       setSelectedTagKeys([]);
       noteEditor?.commands.clearContent();
       onSaved(newLog.id);
-      showToast("Mood logged");
+      showToast(t("moodLogger.toastSuccess"));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not save mood log.");
-      showToast("Failed to save mood. Try again.", "error");
+      setError(err instanceof Error ? err.message : t("moodLogger.errorDefault"));
+      showToast(t("moodLogger.toastError"), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -126,10 +119,10 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-5">
       {/*Headers for each step*/}
       <h2 className="text-xl font-bold text-slate-800 mb-1 text-center">
-        {step === 1 && `Hey, ${greetingName}. How are you today?`}
-        {step === 2 && "How stressed do you feel?"}
-        {step === 3 && "What's been on your mind? (optional)"}
-        {step === 4 && "Add a quick note (optional)"}
+        {step === 1 && t("moodLogger.step1Title").replace("{name}", greetingName)}
+        {step === 2 && t("moodLogger.step2Title")}
+        {step === 3 && t("moodLogger.step3Title")}
+        {step === 4 && t("moodLogger.step4Title")}
       </h2>
 
       {/* Step indicator */}
@@ -179,11 +172,11 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
         <div className="flex flex-col items-center gap-6">
           <div className="w-full max-w-sm">
             <div className="flex justify-between text-xs text-slate-400 mb-1 px-1">
-              <span>Calm</span>
-              <span>Relaxed</span>
-              <span>Neutral</span>
-              <span>Tense</span>
-              <span>Overwhelmed</span>
+              <span>{t("stress.calm")}</span>
+              <span>{t("stress.relaxed")}</span>
+              <span>{t("stress.neutral")}</span>
+              <span>{t("stress.tense")}</span>
+              <span>{t("stress.overwhelmed")}</span>
             </div>
             <input
               type="range"
@@ -202,13 +195,13 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
               onClick={() => setStep(1)}
               className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition"
             >
-              Back
+              {t("common.back")}
             </button>
             <button
               onClick={() => setStep(3)}
               className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         </div>
@@ -242,13 +235,13 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
                     onClick={() => setStep(2)}
                     className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition"
                 >
-                    Back
+                    {t("common.back")}
                 </button>
                 <button
                     onClick={() => setStep(4)} 
                     className="px-5 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
                 >
-                    Continue
+                    {t("common.continue")}
                 </button>
             </div>
           </div>
@@ -347,7 +340,7 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
               onClick={() => setStep(3)}
               className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition"
             >
-              Back
+              {t("common.back")}
             </button>
             <button
               onClick={handleSave}
@@ -356,7 +349,7 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
                 isSubmitting ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
               }`}
             >
-              {isSubmitting ? "Saving..." : "Save"}
+              {isSubmitting ? t("common.saving") : t("common.save")}
             </button>
           </div>
         </div>

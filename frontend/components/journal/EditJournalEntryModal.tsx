@@ -7,13 +7,14 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { JournalEntry, MoodLog, MoodLevel, UpdateJournalEntryPayload } from "../../../shared/types";
 import { updateJournalEntry } from "../../../shared/api";
 import { useToastContext } from "../notifications/ToastContext";
+import { useTranslation } from "../../context/LanguageContext";
 
 const MOOD_EMOJI: Record<MoodLevel, string> = {
   1: "😢", 2: "😕", 3: "😐", 4: "🙂", 5: "😄",
 };
 
-function formatLogTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+function formatLogTime(iso: string, locale?: string): string {
+  return new Date(iso).toLocaleString(locale, {
     month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 }
@@ -26,12 +27,15 @@ interface EditJournalEntryModalProps {
 }
 
 export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }: EditJournalEntryModalProps) {
+  const { t, locale } = useTranslation();
   const [title, setTitle] = useState(entry.title ?? "");
   const [linkedMoodId, setLinkedMoodId] = useState<number | null>(entry.moodLogId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [, forceUpdate] = useState(0);
   const { showToast } = useToastContext();
+
+  const currentLocale = locale === "zh" ? "zh-CN" : "en-SG";
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -42,7 +46,7 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
         orderedList: {},
         listItem: {},
       }),
-      Placeholder.configure({ placeholder: "Write your reflection..." }),
+      Placeholder.configure({ placeholder: t("journalEditor.placeholder") }),
     ],
     content: entry.content ?? "",
     editorProps: {
@@ -65,7 +69,7 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
 
   const handleSave = async () => {
     if (!editor || editor.isEmpty) {
-      setError("Content cannot be empty.");
+      setError(t("journalEditor.errorEmptyContent"));
       return;
     }
     setIsSubmitting(true);
@@ -79,12 +83,12 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
 
     try {
       await updateJournalEntry(entry.id, payload);
-      showToast("Journal entry updated"); //toast noti
+      showToast(t("editJournal.toastSuccess")); //toast noti
       onSaved();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not save changes.");
-      showToast("Failed to update entry. Try again.", "error");
+      setError(err instanceof Error ? err.message : t("editJournal.errorDefault"));
+      showToast(t("editJournal.toastError"), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -100,7 +104,7 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center px-6 pt-5 pb-3 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-slate-800">Edit Journal Entry</h2>
+          <h2 className="text-lg font-bold text-slate-800">{t("editJournal.title")}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-xl leading-none">✕</button>
         </div>
 
@@ -185,7 +189,7 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Title:"
+            placeholder={t("journalEditor.titlePlaceholder")}
             maxLength={250}
             className="w-full text-sm font-medium text-slate-700 placeholder-slate-400 bg-transparent border-b border-slate-200 pb-2 focus:outline-none focus:border-indigo-400 transition"
           />
@@ -202,10 +206,10 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
             onChange={(e) => setLinkedMoodId(e.target.value ? Number(e.target.value) : null)}
             className="w-full text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-600 hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
           >
-            <option value="">🔗 Link to a mood (optional)</option>
+            <option value="">{t("journalEditor.linkMoodOption")}</option>
             {logs.map((log) => (
               <option key={log.id} value={log.id}>
-                {MOOD_EMOJI[log.moodLevel]} {formatLogTime(log.loggedAt)} · Stress {log.stressLevel}/10
+                {MOOD_EMOJI[log.moodLevel]} {formatLogTime(log.loggedAt, currentLocale)} · {t("editJournal.stressLabel").replace("{stress}", String(log.stressLevel))}
               </option>
             ))}
           </select>
@@ -223,7 +227,7 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
             onClick={onClose}
             className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSave}
@@ -232,7 +236,7 @@ export default function EditJournalEntryModal({ entry, logs, onSaved, onClose }:
               isSubmitting ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
             }`}
           >
-            {isSubmitting ? "Saving..." : "Save Changes"}
+            {isSubmitting ? t("common.saving") : t("common.saveChanges")}
           </button>
         </div>
       </div>

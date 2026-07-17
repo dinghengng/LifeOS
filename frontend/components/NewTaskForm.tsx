@@ -4,6 +4,7 @@
 
 import { useState, SyntheticEvent } from "react"; // In short, useState allows a React component to: remember data, change data when users interact, automatically update the UI when the data changes
 import { useToastContext } from "../components/notifications/ToastContext";
+import { useTranslation } from "../context/LanguageContext";
 
 type Priority = "critical" | "high" | "low" | "none";
 // Tell TypeScript we expect a function called 'onAddTask'
@@ -12,6 +13,8 @@ interface NewTaskFormProps {
 }
 
 export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
+  const { t } = useTranslation();
+
   // taskTitle is the current text, then'setTaskTitle' is the function we use to update it.
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDueDate, setTaskDueDate] = useState(""); // due date state
@@ -38,7 +41,7 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
 
     const trimmedTitle = taskTitle.trim();
     if (!trimmedTitle) {
-      setTitleError("Title cannot be empty.");
+      setTitleError(t("newTaskForm.errorTitleEmpty"));
       return;
     }
 
@@ -64,7 +67,7 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
 
       // validation to ensure deadline is in the future
       if (localDate.getTime() <= now.getTime()) {
-        setDeadlineError("Deadline must be in the future.");
+        setDeadlineError(t("newTaskForm.errorDeadlineFuture"));
         setIsSubmitting(false);
         return;
       }
@@ -74,7 +77,7 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
 
     // send the text
     onAddTask(trimmedTitle, combinedDueDate, taskPriority);
-    showToast("Task added successfully"); //toast confirmation noti
+    showToast(t("newTaskForm.toastAdded")); //toast confirmation noti
 
     // clear the input after adding
     setTaskTitle("");
@@ -90,7 +93,7 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
         <input
           type="text"
           autoFocus
-          placeholder="What to do?"
+          placeholder={t("newTaskForm.placeholder")}
           value={taskTitle}
           onChange={handleTitleChange}
           maxLength={150}
@@ -102,10 +105,10 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
             onChange={(e) => setTaskPriority(e.target.value as Priority)}
             className="flex-1 lg:w-24 rounded-xl border border-slate-200 bg-white/80 px-2 py-2 text-sm text-slate-700 transition-all focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
           >
-            <option value="none">Priority</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="low">Low</option>
+            <option value="none">{t("priority.placeholder")}</option>
+            <option value="critical">{t("priority.critical")}</option>
+            <option value="high">{t("priority.high")}</option>
+            <option value="low">{t("priority.low")}</option>
           </select>
 
           <input
@@ -137,7 +140,7 @@ export default function NewTaskForm({ onAddTask }: NewTaskFormProps) {
                 : "bg-indigo-600 hover:bg-indigo-500 hover:shadow-md hover:-translate-y-0.5"
             }`}
           >
-            {isSubmitting ? "..." : "Add"}
+            {isSubmitting ? t("newTaskForm.adding") : t("newTaskForm.add")}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import type { Task, Priority } from "../../shared/types";
 import { useToastContext } from "../components/notifications/ToastContext";
+import { useTranslation } from "../context/LanguageContext";
 
 interface EditTaskFormProps {
   task: Task;
@@ -20,6 +21,8 @@ export default function EditTaskForm({
   onSave,
   onCancel,
 }: EditTaskFormProps) {
+  const { t } = useTranslation();
+
   const [title, setTitle] = useState(task.title);
   const [priority, setPriority] = useState<Priority>(task.priority);
   const [date, setDate] = useState("");
@@ -62,7 +65,7 @@ export default function EditTaskForm({
 
   const trimmedTitle = title.trim();
   if (!trimmedTitle) {
-    setTitleError("Title cannot be empty.");
+    setTitleError(t("editTaskForm.errorTitleEmpty"));
     return;
   }
 
@@ -87,7 +90,7 @@ export default function EditTaskForm({
     const localDate = new Date(year, month - 1, day, hour, minute);
 
     if (localDate.getTime() <= now.getTime()) {
-      setDeadlineError("Deadline must be in the future.");
+      setDeadlineError(t("editTaskForm.errorDeadlineFuture"));
       setIsSubmitting(false);
       return;
     }
@@ -100,7 +103,7 @@ export default function EditTaskForm({
     dueDate: combinedDueDate,
     priority,
   });
-  showToast("Task updated"); //toast noti
+  showToast(t("editTaskForm.toastUpdated")); //toast noti
   setIsSubmitting(false);
 };
 
@@ -108,14 +111,14 @@ export default function EditTaskForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
   <div className="mb-1 flex items-center justify-between gap-2">
     <p className="text-xs text-slate-500">
-      Editing: <span className="font-semibold text-slate-700">{task.title}</span>
+      {t("editTaskForm.editing")} <span className="font-semibold text-slate-700">{task.title}</span>
     </p>
     <button
       type="button"
       onClick={onCancel}
       className="text-xs text-slate-500 hover:text-slate-700"
     >
-      Cancel
+      {t("editTaskForm.cancel")}
     </button>
   </div>
 
@@ -126,7 +129,7 @@ export default function EditTaskForm({
   onChange={handleTitleChange}
   maxLength={150}
   className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-  placeholder="Task title"
+  placeholder={t("editTaskForm.placeholder")}
 />
 
         <select
@@ -134,10 +137,10 @@ export default function EditTaskForm({
           onChange={(e) => setPriority(e.target.value as Priority)}
           className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          <option value="none">Priority</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="low">Low</option>
+          <option value="none">{t("priority.placeholder")}</option>
+          <option value="critical">{t("priority.critical")}</option>
+          <option value="high">{t("priority.high")}</option>
+          <option value="low">{t("priority.low")}</option>
         </select>
 
         <input
@@ -169,7 +172,7 @@ export default function EditTaskForm({
       : "bg-indigo-600 hover:bg-indigo-700"
   }`}
 >
-  {isSubmitting ? "Saving..." : "Save"}
+  {isSubmitting ? t("editTaskForm.saving") : t("editTaskForm.save")}
 </button>
       </div>
       {titleError && (

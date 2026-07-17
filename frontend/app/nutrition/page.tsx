@@ -21,6 +21,7 @@ import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import DailyQuoteCard from "../../components/nutrition/DailyQuoteCard";
 import LocalTabs from "../../components/layout/LocalTabs";
+import { useTranslation } from "../../context/LanguageContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -47,6 +48,7 @@ type SavedMeal = {
 };
 // 4 Quests for now , pending changes
 function buildQuests(
+  t: (key: string, vars?: Record<string, string | number>) => string,
   meals: Meal[],
   totalCalories: number,
   totalProtein: number,
@@ -56,32 +58,36 @@ function buildQuests(
   return [
     {
       id: "log_meals",
-      label: "Fuel Up",
-      description: "Log 3 or more meals today",
+      label: t("nutrition.quests.logMeals.label"),
+      description: t("nutrition.quests.logMeals.description"),
       xp: 20,
       icon: <UtensilsCrossed size={18} />,
       completed: meals.length >= 3,
     },
     {
       id: "hit_protein",
-      label: "Protein Quest",
-      description: `Hit your ${proteinTarget}g protein target`,
+      label: t("nutrition.quests.hitProtein.label"),
+      description: t("nutrition.quests.hitProtein.description", {
+        proteinTarget,
+      }),
       xp: 30,
       icon: <Dumbbell size={18} />,
       completed: totalProtein >= proteinTarget,
     },
     {
       id: "calorie_ceiling",
-      label: "Calorie Control",
-      description: `Stay within your ${calorieTarget} kcal ceiling`,
+      label: t("nutrition.quests.calorieCeiling.label"),
+      description: t("nutrition.quests.calorieCeiling.description", {
+        calorieTarget,
+      }),
       xp: 25,
       icon: <Target size={18} />,
       completed: totalCalories > 0 && totalCalories <= calorieTarget,
     },
     {
       id: "log_breakfast",
-      label: "Early Bird",
-      description: "Log a breakfast meal",
+      label: t("nutrition.quests.logBreakfast.label"),
+      description: t("nutrition.quests.logBreakfast.description"),
       xp: 15,
       icon: <Sunrise size={18} />,
       completed: meals.some(
@@ -92,6 +98,7 @@ function buildQuests(
 }
 //manual craft insights but may change depending on scale of the free ai that can be used
 function generateInsight(
+  t: (key: string, vars?: Record<string, string | number>) => string,
   remainingCalories: number,
   remainingProtein: number,
   remainingCarbs: number,
@@ -104,48 +111,60 @@ function generateInsight(
 
   // Hard over on calories
   if (remainingCalories < -300)
-    return `You're ${Math.abs(remainingCalories)} kcal over today. Skip further snacks and close the day with a light, protein-rich dinner to limit the damage.`;
+    return t("nutrition.insights.hardOverCalories", {
+      amount: Math.abs(remainingCalories),
+    });
   // Slightly over for calories
   if (remainingCalories < 0 && remainingCalories >= -300)
-    return `You're ${Math.abs(remainingCalories)} kcal over but not critical. A 20-minute walk burns roughly 100 kcal and helps with digestion too.`;
+    return t("nutrition.insights.slightlyOverCalories", {
+      amount: Math.abs(remainingCalories),
+    });
   // High protein gap but almost no calories left
   if (remainingProtein > 30 && remainingCalories < 300)
-    return `${remainingProtein}g protein still needed but only ${remainingCalories} kcal left. A whey isolate shake (~120 kcal, 25g protein) or egg whites are your best options here.`;
+    return t("nutrition.insights.highProteinGapLowCalories", {
+      remainingProtein,
+      remainingCalories,
+    });
   // Protein hit but more than 300 calories remaining
   if (remainingProtein <= 0 && remainingCalories > 300)
-    return `Protein target nailed. You have ${remainingCalories} kcal left! use it on complex carbs like oats, sweet potato, or brown rice to fuel tomorrow's session.`;
+    return t("nutrition.insights.proteinHitCaloriesLeft", {
+      remainingCalories,
+    });
   // Protein hit, calories nearly done too
   if (
     remainingProtein <= 0 &&
     remainingCalories <= 300 &&
     remainingCalories > 0
   )
-    return `Almost perfect day! Protein done, ${remainingCalories} kcal to spare. A piece of fruit or a handful of nuts closes it out cleanly.`;
+    return t("nutrition.insights.almostPerfectDay", { remainingCalories });
   // Fat is very high
   if (remainingFats < -15)
-    return `Fat intake is running high today (${Math.abs(remainingFats)}g over). Keep your remaining meals lean. Grilled protein, vegetables, and skip any added oils or dressings.`;
+    return t("nutrition.insights.fatVeryHigh", {
+      amount: Math.abs(remainingFats),
+    });
   // Nothing logged yet
   if (mealsLoggedToday === 0)
-    return `Nothing logged yet today. Start with a high-protein breakfast such as eggs, Greek yoghurt, or a shake to front-load your ${goalLabel} targets and reduce evening cravings.`;
+    return t("nutrition.insights.nothingLoggedYet", { goalLabel });
   // Under half calories by afternoon / evening
   if (totalCalories < remainingCalories * 0.4 && mealsLoggedToday >= 1)
-    return `You've used less than half your calorie budget so far. Make sure you're eating enough, under-fuelling on a ${goalLabel} plan stalls progress just as much as overeating.`;
+    return t("nutrition.insights.underHalfBudget", { goalLabel });
   // Carbs low for muscle gain
   if (fitnessGoal === "muscle_gain" && remainingCarbs > 100)
-    return `You're ${remainingCarbs}g short on carbs. For muscle gain, carbs drive your training performance. Eat rice, pasta, or a banana before your next session would help.`;
+    return t("nutrition.insights.carbsLowMuscleGain", { remainingCarbs });
   // Fat loss and on track
   if (
     fitnessGoal === "fat_loss" &&
     remainingCalories > 100 &&
     remainingProtein < 20
   )
-    return `Great deficit day. Protein is nearly there, a small lean protein source at dinner keeps muscle preserved while you're in the cut.`;
+    return t("nutrition.insights.fatLossOnTrack");
   // All good
-  return `You're on track for your ${goalLabel} goal. Keep your next meal balanced and you'll close today cleanly.`;
+  return t("nutrition.insights.onTrack", { goalLabel });
 }
 
 export default function NutritionPage() {
   const router = useRouter();
+  const { t, locale } = useTranslation();
   const [authLoading, setAuthLoading] = useState(true);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
@@ -197,6 +216,7 @@ export default function NutritionPage() {
   const fatTarget = Math.round((targets.calories * 0.25) / 9);
 
   const insight = generateInsight(
+    t,
     targets.calories - totalCalories,
     targets.protein - totalProtein,
     carbTarget - totalCarbs,
@@ -207,6 +227,7 @@ export default function NutritionPage() {
   ); // insights section
 
   const quests = buildQuests(
+    t,
     meals,
     totalCalories,
     totalProtein,
@@ -377,11 +398,11 @@ export default function NutritionPage() {
       }
     } catch (err) {
       console.error(err);
-      setError("Failed to load data.");
+      setError(t("nutrition.errors.loadFailed"));
     } finally {
       setDataLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!authLoading) fetchNutritionData();
@@ -440,15 +461,13 @@ export default function NutritionPage() {
         const err = await res.json().catch(() => ({}));
         console.error("Failed to add supplement:", err);
         setSuppError(
-          err.error || "Failed to add supplement. Please try again.",
+          err.error || t("nutrition.errors.addSupplementFailed"),
         );
         return false; // Return false on failure
       }
     } catch (err) {
       console.error("Network error adding supplement:", err);
-      setSuppError(
-        "Network error, please check your connection and try again.",
-      );
+      setSuppError(t("nutrition.errors.networkError"));
       return false; // Return false on failure
     }
   };
@@ -602,11 +621,11 @@ export default function NutritionPage() {
         setMealFats(Math.round((n["fat_100g"] || 0) * factor).toString());
       } else {
         // let user fill manually
-        setScanError("Product not found. Please enter nutrition manually.");
+        setScanError(t("nutrition.scan.notFound"));
       }
     } catch (err) {
       console.error("Barcode scan failed:", err);
-      setScanError("Scan failed or cancelled. Please enter manually.");
+      setScanError(t("nutrition.scan.failed"));
     } finally {
       setScanning(false);
     }
@@ -614,7 +633,7 @@ export default function NutritionPage() {
 
   // Delete Daily Log
   const handleDeleteLog = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this meal log?")) return;
+    if (!confirm(t("nutrition.confirm.deleteLog"))) return;
     try {
       const res = await fetch(`${API_BASE}/api/nutrition/${id}`, {
         method: "DELETE",
@@ -650,8 +669,7 @@ export default function NutritionPage() {
   // Delete Quick Add Meal
   const handleDeleteSaved = async (id: string | number | undefined) => {
     if (!id) return;
-    if (!confirm("Are you sure you want to remove this from quick add?"))
-      return;
+    if (!confirm(t("nutrition.confirm.deleteSaved"))) return;
     try {
       const res = await fetch(`${API_BASE}/api/nutrition/saved/${id}`, {
         method: "DELETE",
@@ -766,7 +784,7 @@ export default function NutritionPage() {
   if (authLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-(--color-background-tertiary,#f5f5f2)]">
-        <p className="text-slate-500">Loading...</p>
+        <p className="text-slate-500">{t("nutrition.loading")}</p>
       </main>
     );
   }
@@ -788,15 +806,15 @@ export default function NutritionPage() {
             onClick={handleLogout}
             className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
           >
-            Logout
+            {t("nutrition.logout")}
           </button>
         }
       />
 
       <PageHeader
-        eyebrow={today}
-        title="Health & Nutrition"
-        description="Track meals and supplements, complete quests to progress"
+        eyebrow={new Date().toLocaleDateString(locale === "zh" ? "zh-CN" : "en-SG", { weekday: "long", day: "numeric", month: "long" })}
+        title={t("nutrition.pageHeader.title")}
+        description={t("nutrition.pageHeader.description")}
         actions={<DailyQuoteCard />}
       />
 
@@ -809,14 +827,14 @@ export default function NutritionPage() {
 
       {dataLoading ? (
         <p className="text-center text-sm text-slate-400">
-          Loading nutrition panel...
+          {t("nutrition.loadingPanel")}
         </p>
       ) : (
         <>
           <LocalTabs
             items={[
-              { id: "tracker", label: "Track" },
-              { id: "insights", label: "Progress" },
+              { id: "tracker", label: t("nutrition.tabs.track") },
+              { id: "insights", label: t("nutrition.tabs.progress") },
             ]}
             activeId={activeSection}
             onChange={(id) => setActiveSection(id as "tracker" | "insights")}
@@ -857,7 +875,9 @@ export default function NutritionPage() {
               </section>
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-600">Weekly Trend</span>
+                  <span className="text-sm font-medium text-slate-600">
+                    {t("nutrition.weeklyTrend")}
+                  </span>
                   <select
                     value={selectedWeekStart}
                     onChange={(e) => setSelectedWeekStart(e.target.value)}
@@ -923,11 +943,10 @@ export default function NutritionPage() {
                   fontSize: "20px",
                 }}
               >
-                Personalize Your Goals
+                {t("nutrition.metricsModal.title")}
               </h3>
               <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
-                Let's tailor your calorie and protein targets to your exact body
-                metrics. (Optional)
+                {t("nutrition.metricsModal.description")}
               </p>
             </div>
 
@@ -948,14 +967,14 @@ export default function NutritionPage() {
                     display: "block",
                   }}
                 >
-                  Weight (kg)
+                  {t("nutrition.metricsModal.weightLabel")}
                 </label>
                 <input
                   type="number"
                   min="20"
                   max="400"
                   step="0.1"
-                  placeholder="e.g. 75"
+                  placeholder={t("nutrition.metricsModal.weightPlaceholder")}
                   value={metricsForm.weight}
                   onChange={(e) =>
                     setMetricsForm({ ...metricsForm, weight: e.target.value })
@@ -973,13 +992,13 @@ export default function NutritionPage() {
                     display: "block",
                   }}
                 >
-                  Height (cm)
+                  {t("nutrition.metricsModal.heightLabel")}
                 </label>
                 <input
                   type="number"
                   min="50"
                   max="270"
-                  placeholder="e.g. 175"
+                  placeholder={t("nutrition.metricsModal.heightPlaceholder")}
                   value={metricsForm.height}
                   onChange={(e) =>
                     setMetricsForm({ ...metricsForm, height: e.target.value })
@@ -999,7 +1018,7 @@ export default function NutritionPage() {
                   display: "block",
                 }}
               >
-                Primary Goal
+                {t("nutrition.metricsModal.goalLabel")}
               </label>
               <select
                 value={metricsForm.goal}
@@ -1008,11 +1027,15 @@ export default function NutritionPage() {
                 }
                 style={inputStyle}
               >
-                <option value="maintain">Maintain Current Weight</option>
-                <option value="muscle_gain">
-                  Build Muscle (Caloric Surplus)
+                <option value="maintain">
+                  {t("nutrition.metricsModal.goalMaintain")}
                 </option>
-                <option value="fat_loss">Lose Fat (Caloric Deficit)</option>
+                <option value="muscle_gain">
+                  {t("nutrition.metricsModal.goalMuscleGain")}
+                </option>
+                <option value="fat_loss">
+                  {t("nutrition.metricsModal.goalFatLoss")}
+                </option>
               </select>
             </div>
 
@@ -1031,7 +1054,7 @@ export default function NutritionPage() {
                   cursor: "pointer",
                 }}
               >
-                Skip for now
+                {t("nutrition.metricsModal.skip")}
               </button>
               <button
                 type="submit"
@@ -1046,7 +1069,7 @@ export default function NutritionPage() {
                   cursor: "pointer",
                 }}
               >
-                Save Targets
+                {t("nutrition.metricsModal.saveTargets")}
               </button>
             </div>
           </form>
@@ -1087,10 +1110,10 @@ export default function NutritionPage() {
           >
             <h3 style={{ margin: 0, color: "#1e293b" }}>
               {modalMode === "create"
-                ? "Log New Meal"
+                ? t("nutrition.mealModal.titleCreate")
                 : modalMode === "edit_log"
-                  ? "Edit Logged Meal"
-                  : "Edit Saved Meal"}
+                  ? t("nutrition.mealModal.titleEditLog")
+                  : t("nutrition.mealModal.titleEditSaved")}
             </h3>
 
             {/* Quick Add Section */}
@@ -1105,7 +1128,7 @@ export default function NutritionPage() {
                     textTransform: "uppercase",
                   }}
                 >
-                  Quick Add
+                  {t("nutrition.mealModal.quickAdd")}
                 </p>
                 <div
                   style={{
@@ -1155,7 +1178,7 @@ export default function NutritionPage() {
                           alignItems: "center",
                           justifyContent: "center",
                         }}
-                        title="Edit Quick Add"
+                        title={t("nutrition.mealModal.editQuickAdd")}
                       >
                         <SquarePen size={14} strokeWidth={2} />
                       </button>
@@ -1183,7 +1206,7 @@ export default function NutritionPage() {
             <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <input
                 type="text"
-                placeholder="Meal Name (e.g., Chicken Rice)"
+                placeholder={t("nutrition.mealModal.mealNamePlaceholder")}
                 value={mealName}
                 onChange={(e) => {
                   setMealName(e.target.value);
@@ -1214,7 +1237,9 @@ export default function NutritionPage() {
                   }}
                 >
                   <BsUpcScan size={16} />
-                  {scanning ? "Scanning…" : "Scan"}
+                  {scanning
+                    ? t("nutrition.mealModal.scanning")
+                    : t("nutrition.mealModal.scan")}
                 </button>
               )}
             </div>
@@ -1253,10 +1278,18 @@ export default function NutritionPage() {
               onChange={(e) => setMealType(e.target.value)}
               style={inputStyle}
             >
-              <option value="Breakfast">Breakfast</option>
-              <option value="Lunch">Lunch</option>
-              <option value="Dinner">Dinner</option>
-              <option value="Snack">Snack</option>
+              <option value="Breakfast">
+                {t("nutrition.mealModal.mealTypeBreakfast")}
+              </option>
+              <option value="Lunch">
+                {t("nutrition.mealModal.mealTypeLunch")}
+              </option>
+              <option value="Dinner">
+                {t("nutrition.mealModal.mealTypeDinner")}
+              </option>
+              <option value="Snack">
+                {t("nutrition.mealModal.mealTypeSnack")}
+              </option>
             </select>
 
             <div
@@ -1269,28 +1302,28 @@ export default function NutritionPage() {
             >
               <input
                 type="number"
-                placeholder="Calories (kcal)"
+                placeholder={t("nutrition.mealModal.caloriesPlaceholder")}
                 value={mealCalories}
                 onChange={(e) => setMealCalories(e.target.value)}
                 style={inputStyle}
               />
               <input
                 type="number"
-                placeholder="Protein (g)"
+                placeholder={t("nutrition.mealModal.proteinPlaceholder")}
                 value={mealProtein}
                 onChange={(e) => setMealProtein(e.target.value)}
                 style={inputStyle}
               />
               <input
                 type="number"
-                placeholder="Carbs (g)"
+                placeholder={t("nutrition.mealModal.carbsPlaceholder")}
                 value={mealCarbs}
                 onChange={(e) => setMealCarbs(e.target.value)}
                 style={inputStyle}
               />
               <input
                 type="number"
-                placeholder="Fats (g)"
+                placeholder={t("nutrition.mealModal.fatsPlaceholder")}
                 value={mealFats}
                 onChange={(e) => setMealFats(e.target.value)}
                 style={inputStyle}
@@ -1315,7 +1348,7 @@ export default function NutritionPage() {
                   checked={saveToFavorites}
                   onChange={(e) => setSaveToFavorites(e.target.checked)}
                 />
-                Save this meal to favorites for quick add
+                {t("nutrition.mealModal.saveToFavorites")}
               </label>
             )}
 
@@ -1339,7 +1372,7 @@ export default function NutritionPage() {
                   cursor: "pointer",
                 }}
               >
-                Cancel
+                {t("nutrition.mealModal.cancel")}
               </button>
               <button
                 type="submit"
@@ -1352,7 +1385,9 @@ export default function NutritionPage() {
                   cursor: "pointer",
                 }}
               >
-                {modalMode === "create" ? "Save" : "Save Changes"}
+                {modalMode === "create"
+                  ? t("nutrition.mealModal.save")
+                  : t("nutrition.mealModal.saveChanges")}
               </button>
             </div>
           </form>

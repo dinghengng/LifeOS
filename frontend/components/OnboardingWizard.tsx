@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import { WIZARD_SECTIONS } from "../../shared/settingsSection";
 import { MoodLevelConfig } from "../../shared/types";
 import MoodSettingsSection from "./settings/MoodSettingsSection";
+import { useTranslation } from "../context/LanguageContext";
+
 
 const WIZARD_STEP_COMPONENTS: Record<
   string,
@@ -24,6 +26,7 @@ interface Props {
 }
 
 export default function OnboardingWizard({ userName, onComplete }: Props) {
+  const { t } = useTranslation();
   const wizardSteps: WizardStep[] = [
     "welcome",
     ...WIZARD_SECTIONS.map((s) => s.id),
@@ -53,7 +56,7 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
       const result = await sectionSaveRef.current();
       setAdvancing(false);
       if (!result) {
-        setError("Could not save. Please try again.");
+        setError(t("onboarding.saveError"));
         return;
       }
     }
@@ -86,13 +89,14 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
           {currentStep === "welcome" && (
             <div className="text-center space-y-4 py-4">
               <h1 className="text-2xl font-semibold text-slate-800">
-                Welcome{userName ? `, ${userName.split(" ")[0]}` : ""}!
+                {userName
+                  ? t("onboarding.welcomeTitleNamed", { name: userName.split(" ")[0] })
+                  : t("onboarding.welcomeTitle")}
               </h1>
               <p className="text-slate-500 text-sm leading-relaxed">
-                LifeOS helps you track your mood, journal your days, and build
-                better habits. Let&apos;s take a minute to set things up.
+                {t("onboarding.welcomeBody")}
               </p>
-              <p className="text-xs text-slate-400">This takes about 1 minute</p>
+              <p className="text-xs text-slate-400">{t("onboarding.welcomeTime")}</p>
             </div>
           )}
 
@@ -104,7 +108,10 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
               <div className="space-y-5">
                 <div>
                   <p className="text-xs font-medium text-indigo-500 uppercase tracking-wide mb-1">
-                    Step {currentSectionIndex + 1} of {totalSectionSteps}
+                    {t("onboarding.stepLabel", {
+                      current: currentSectionIndex + 1,
+                      total: totalSectionSteps,
+                    })}
                   </p>
                   <h2 className="text-xl font-semibold text-slate-800">{section.title}</h2>
                   <p className="text-sm text-slate-500 mt-1">{section.description}</p>
@@ -120,9 +127,9 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
 
           {currentStep === "complete" && (
             <div className="text-center space-y-4 py-4">
-              <h2 className="text-2xl font-semibold text-slate-800">You&apos;re all set!</h2>
+              <h2 className="text-2xl font-semibold text-slate-800">{t("onboarding.completeTitle")}</h2>
               <p className="text-slate-500 text-sm leading-relaxed">
-                Your mood levels are configured. You can change them anytime from Settings.
+                {t("onboarding.completeBody")}
               </p>
             </div>
           )}
@@ -135,14 +142,20 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
               disabled={isFirstStep}
               className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 disabled:opacity-0 transition"
             >
-              Back
+              {t("onboarding.back")}
             </button>
             <button
               onClick={handleNext}
               disabled={advancing}
               className="px-6 py-2 text-sm font-semibold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 transition"
             >
-              {advancing ? "Saving…" : isLastStep ? "Start using LifeOS" : isFirstStep ? "Get started" : "Next"}
+              {advancing
+                ? t("onboarding.saving")
+                : isLastStep
+                ? t("onboarding.start")
+                : isFirstStep
+                ? t("onboarding.getStarted")
+                : t("onboarding.next")}
             </button>
           </div>
         </div>

@@ -6,18 +6,19 @@ import { deleteMoodLog, updateJournalEntry, deleteJournalEntry, } from "../../..
 import EditMoodLogModal from "./EditMoodLogModal";
 import EditJournalEntryModal from "./EditJournalEntryModal";
 import JournalEditor from "./JournalEditor";
+import { useTranslation } from "../../context/LanguageContext";
 
-const STRESS_ANCHORS: Record<number, string> = {
-  1: "Calm", 2: "Calm", 3: "Relaxed", 4: "Relaxed", 5: "Neutral",
-  6: "Neutral", 7: "Tense", 8: "Tense", 9: "Overwhelmed", 10: "Overwhelmed",
+const STRESS_KEYS: Record<number, string> = {
+  1: "calm", 2: "calm", 3: "relaxed", 4: "relaxed", 5: "neutral",
+  6: "neutral", 7: "tense", 8: "tense", 9: "overwhelmed", 10: "overwhelmed",
 };
 
-const MOOD_LABEL: Record<MoodLevel, string> = {
-  1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great",
+const MOOD_KEYS: Record<number, string> = {
+  1: "awful", 2: "bad", 3: "okay", 4: "good", 5: "great",
 };
 
-function formatLogTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+function formatLogTime(iso: string, locale?: string): string {
+  return new Date(iso).toLocaleString(locale, {
     month: "short", day: "numeric",
     hour: "2-digit", minute: "2-digit",
   });
@@ -27,24 +28,28 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function deriveTitle(entry: JournalEntry): string {
+function deriveTitle(entry: JournalEntry, t: any): string {
   if (entry.title?.trim())        return entry.title.trim();
   if (entry.promptUsed?.trim())   return entry.promptUsed.trim();
-  if (entry.moodLevel)            return `Felt ${MOOD_LABEL[entry.moodLevel]}`;
+  if (entry.moodLevel) {
+    const label = t(`mood.${MOOD_KEYS[entry.moodLevel]}`);
+    return t("moodHistory.felt").replace("{mood}", label);
+  }
   const text = stripHtml(entry.content ?? "").trim();
   if (text)                       return text.slice(0, 60) + (text.length > 60 ? "…" : "");
-  return "Untitled Entry";
+  return t("moodHistory.untitled");
 }
 
 function getMoodDisplay(
   level: MoodLevel,
+  t: any,
   moodConfig?: MoodLevelConfig[]
 ): { emoji: string; label: string; color: string } {
   const cfg = moodConfig?.find((m) => m.level === level);
 
   return {
     emoji: cfg?.emoji ?? "🙂",
-    label: cfg?.label ?? "Mood",
+    label: cfg?.label ?? t("moodHistory.defaultMood"),
     color: cfg?.color ?? "#6366f1",
   };
 }
@@ -65,8 +70,11 @@ function LinkToMoodButton({ entry, logs, moodConfig, onLinked }: {
   moodConfig?: MoodLevelConfig[];
   onLinked: () => void;
 }) {
+  const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
   const [linking, setLinking] = useState(false);
+  
+  const currentLocale = locale === "zh" ? "zh-CN" : "en-SG";
 
   const handleLink = async (logId: number) => {
     setLinking(true);
@@ -87,7 +95,7 @@ function LinkToMoodButton({ entry, logs, moodConfig, onLinked }: {
         onClick={() => setOpen(true)}
         className="text-xs px-3 py-1 rounded-lg border border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 transition"
       >
-        Link mood
+        {t("moodHistory.linkMood")}
       </button>
     );
   }
@@ -100,12 +108,12 @@ function LinkToMoodButton({ entry, logs, moodConfig, onLinked }: {
         onChange={(e) => e.target.value && handleLink(Number(e.target.value))}
         className="text-xs border border-indigo-300 rounded-lg px-2 py-1 bg-white text-slate-600 max-w-40"
       >
-        <option value="">Select mood...</option>
+        <option value="">{t("moodHistory.selectMood")}</option>
         {logs.map((log) => {
-          const mood = getMoodDisplay(log.moodLevel, moodConfig);
+          const mood = getMoodDisplay(log.moodLevel, t, moodConfig);
           return (
             <option key={log.id} value={log.id}>
-              {mood.emoji} {formatLogTime(log.loggedAt)}
+              {mood.emoji} {formatLogTime(log.loggedAt, currentLocale)}
             </option>
           );
         })}
@@ -114,7 +122,7 @@ function LinkToMoodButton({ entry, logs, moodConfig, onLinked }: {
         onClick={() => setOpen(false)}
         className="text-xs text-slate-400 hover:text-slate-600 transition whitespace-nowrap"
       >
-        Cancel
+        {t("common.cancel")}
       </button>
     </div>
   );
@@ -122,11 +130,14 @@ function LinkToMoodButton({ entry, logs, moodConfig, onLinked }: {
 
 
 export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh, onCustomTagCreated, onCustomTagDeleted }: MoodHistoryProps) {
+  const { t, locale } = useTranslation();
   const [editingLog, setEditingLog] = useState<MoodLog | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
-const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
+  const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
+
+  const currentLocale = locale === "zh" ? "zh-CN" : "en-SG";
 
   const entryByMoodLog = new Map<number, JournalEntry>();
   for (const entry of entries ?? []) {
@@ -142,28 +153,28 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
   );
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Delete this mood entry? This cannot be undone.")) return;
+    if (!confirm(t("moodHistory.confirmDeleteMood"))) return;
     setDeletingId(id);
     setError(null);
     try {
       await deleteMoodLog(id);
       onRefresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not delete entry.");
+      setError(err instanceof Error ? err.message : t("moodHistory.errorDelete"));
     } finally {
       setDeletingId(null);
     }
   };
 
   const handleDeleteEntry = async (id: number) => {
-    if (!confirm("Delete this journal entry? This cannot be undone.")) return;
+    if (!confirm(t("moodHistory.confirmDeleteEntry"))) return;
     setDeletingEntryId(id);
     setError(null);
     try {
       await deleteJournalEntry(id);
       onRefresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not delete entry.");
+      setError(err instanceof Error ? err.message : t("moodHistory.errorDelete"));
     } finally {
       setDeletingEntryId(null);
     }
@@ -174,7 +185,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
   if (logs.length === 0 && unlinkedEntries.length === 0) {
     return (
       <p className="text-slate-500 text-center mt-6 italic">
-        No entries yet. Log your first one above!
+        {t("moodHistory.noEntries")}
       </p>
     );
   }
@@ -205,7 +216,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
       )}
 
       <div className="w-full max-w-3xl mt-6">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">Recent Entries</h2>
+        <h2 className="text-xl font-bold text-slate-800 mb-4">{t("moodHistory.recentEntries")}</h2>
 
         {error && (
           <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">
@@ -215,8 +226,10 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
 
         <ul className="space-y-3">
           {logs.map((log) => {
-            const mood = getMoodDisplay(log.moodLevel, moodConfig);
+            const mood = getMoodDisplay(log.moodLevel, t, moodConfig);
             const linkedEntry = entryByMoodLog.get(log.id);
+            const stressLabel = t(`stress.${STRESS_KEYS[log.stressLevel]}`);
+            
             return (
               <li
                 key={log.id}
@@ -239,12 +252,12 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-700 mb-0.5">
-                      {linkedEntry ? deriveTitle(linkedEntry) : `Felt ${mood.label}`}
+                      {linkedEntry ? deriveTitle(linkedEntry, t) : t("moodHistory.felt").replace("{mood}", mood.label)}
                     </p>
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-xs text-slate-400">{formatLogTime(log.loggedAt)}</span>
+                      <span className="text-xs text-slate-400">{formatLogTime(log.loggedAt, currentLocale)}</span>
                       <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                        Stress: {STRESS_ANCHORS[log.stressLevel]} ({log.stressLevel}/10)
+                        {t("moodHistory.stressLabel").replace("{level}", stressLabel).replace("{score}", String(log.stressLevel))}
                       </span>
                     </div>
 
@@ -269,7 +282,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                       onClick={() => setEditingLog(log)}
                       className="text-xs px-3 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 transition"
                     >
-                      Edit
+                      {t("common.edit")}
                     </button>
                     <button
                       onClick={() => handleDelete(log.id)}
@@ -280,7 +293,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                           : "border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-300 hover:text-red-600"
                       }`}
                     >
-                      {deletingId === log.id ? "..." : "Delete"}
+                      {deletingId === log.id ? "..." : t("common.delete")}
                     </button>
                   </div>
                 </div>
@@ -289,7 +302,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                 <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/60">
                   {linkedEntry ? (
                     <p className="text-sm text-slate-600 line-clamp-2">
-                      {stripHtml(linkedEntry.content ?? "") || "No journal text yet."}
+                      {stripHtml(linkedEntry.content ?? "") || t("moodHistory.noJournalText")}
                     </p>
                   ) : log.note ? (
                     <p className="text-sm text-slate-600 whitespace-pre-wrap break-words">
@@ -321,14 +334,14 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                 <div className="p-4 flex items-start gap-4">
                   <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 min-w-[60px]">
                     <span className="text-2xl">📝</span>
-                    <span className="text-xs font-semibold mt-0.5 text-slate-500">Note</span>
+                    <span className="text-xs font-semibold mt-0.5 text-slate-500">{t("moodHistory.note")}</span>
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-700 mb-0.5">
-                      {deriveTitle(entry)}
+                      {deriveTitle(entry, t)}
                     </p>
-                    <span className="text-xs text-slate-400">{formatLogTime(entry.createdAt)}</span>
+                    <span className="text-xs text-slate-400">{formatLogTime(entry.createdAt, currentLocale)}</span>
                     {stripHtml(entry.content ?? "") && (
                       <p className="text-sm text-slate-500 mt-1 line-clamp-2">
                         {stripHtml(entry.content ?? "").slice(0, 120)}
@@ -341,7 +354,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                       onClick={() => setEditingEntry(entry)}
                       className="text-xs px-3 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 transition"
                     >
-                      Edit
+                      {t("common.edit")}
                     </button>
                     <button
                       onClick={() => handleDeleteEntry(entry.id)}
@@ -352,7 +365,7 @@ const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
                           : "border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-300 hover:text-red-600"
                       }`}
                     >
-                      {deletingEntryId === entry.id ? "..." : "Delete"}
+                      {deletingEntryId === entry.id ? "..." : t("common.delete")}
                     </button>
                   </div>
                 </div>

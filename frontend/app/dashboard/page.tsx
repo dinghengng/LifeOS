@@ -17,6 +17,8 @@ import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
+import { useTranslation } from "../../context/LanguageContext";
+import { TranslationKey } from "../../context/translations";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -28,11 +30,32 @@ const GOAL_CATEGORY_ICONS: Record<string, string> = {
   Career: "💼",
   Finance: "💰",
 };
+const CATEGORY_KEY_MAP: Record<string, TranslationKey> = {
+  Fitness: "category.fitness",
+  Spiritual: "category.spiritual",
+  Relationship: "category.relationship",
+  Career: "category.career",
+  Finance: "category.finance",
+};
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
+const MONTH_KEY_MAP: Record<string, TranslationKey> = {
+  January: "month.january",
+  February: "month.february",
+  March: "month.march",
+  April: "month.april",
+  May: "month.may",
+  June: "month.june",
+  July: "month.july",
+  August: "month.august",
+  September: "month.september",
+  October: "month.october",
+  November: "month.november",
+  December: "month.december",
+};
 
 function getYearOptions(): number[] {
   const currentYear = new Date().getFullYear();
@@ -51,6 +74,7 @@ function parseDueDate(dueDate: string): { month: string; year: string } {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { t, locale } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -111,12 +135,12 @@ export default function DashboardPage() {
       setGoals(await goalsRes.json());
     } catch (err) {
       console.error(err);
-      setError("Failed to load dashboard data.");
+      setError(t("dashboard.errorLoad"));
       //showToast("Failed to load dashboard data", "error");
     } finally {
       setDataLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!authLoading) fetchDashboardData();
@@ -144,7 +168,7 @@ export default function DashboardPage() {
 
     // Trigger the toast immediately if a milestone is hit
     if (newStreak > targetHabit.streak && STREAK_MILESTONES.includes(newStreak)) {
-      showToast(`🔥 ${newStreak}-day streak on "${targetHabit.name}"!`, "success");
+      showToast(t("dashboard.toast.streak", { n: newStreak, name: targetHabit.name }), "success");
     }
 
     const newTotalDays = wasOn ? (targetHabit.totalDays || 0) : (targetHabit.totalDays || 0) + 1;
@@ -398,9 +422,9 @@ export default function DashboardPage() {
           setShowHabitModal(false);
           setHabitName("");
           setEditingHabitId(null);
-          showToast("Habit updated", "success");
+          showToast(t("dashboard.toast.habitUpdated"), "success");
         } else {
-          showToast("Failed to update habit", "error");
+          showToast(t("dashboard.toast.habitUpdateFailed"), "error");
         }
         return;
       }
@@ -421,13 +445,13 @@ export default function DashboardPage() {
         setHabits([...habits, { ...newHabit, category: newHabit.category ?? habitCategory }]);
         setShowHabitModal(false);
         setHabitName("");
-        showToast("Habit added", "success");
+        showToast(t("dashboard.toast.habitAdded"), "success");
       } else {
-        showToast("Failed to create habit", "error");
+        showToast(t("dashboard.toast.habitAddFailed"), "error");
       }
     } catch (err) {
       console.error(err);
-      showToast("Something went wrong", "error");
+      showToast(t("dashboard.toast.genericError"), "error");
     }
   }
 
@@ -485,9 +509,9 @@ export default function DashboardPage() {
           );
           setShowGoalModal(false);
           resetGoalForm();
-          showToast("Goal updated", "success");
+          showToast(t("dashboard.toast.goalUpdated"), "success");
         } else {
-          showToast("Failed to update goal", "error");
+          showToast(t("dashboard.toast.goalUpdateFailed"), "error");
         }
         return;
       }
@@ -512,13 +536,13 @@ export default function DashboardPage() {
         setGoalMonth("");
         setGoalYear("");
         setGoalMilestones("");
-        showToast("Goal added", "success");
+        showToast(t("dashboard.toast.goalAdded"), "success");
       } else {
-        showToast("Failed to create goal", "error");
+        showToast(t("dashboard.toast.goalAddFailed"), "error");
       }
     } catch (err) {
       console.error(err);
-      showToast("Something went wrong", "error");
+      showToast(t("dashboard.toast.genericError"), "error");
     }
   }
 
@@ -545,7 +569,7 @@ export default function DashboardPage() {
   if (authLoading) {
     return (
       <AppShell>
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-slate-500">{t("dashboard.loading")}</p>
       </AppShell>
     );
   }
@@ -558,15 +582,15 @@ export default function DashboardPage() {
             onClick={handleLogout}
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
-            Logout
+            {t("common.logout")}
           </button>
         }
       />
 
       <PageHeader
-        eyebrow={today}
-        title={user?.name ? `${user.name}'s dashboard` : "Your dashboard"}
-        description="Log your habits and goals, track your completion and streak"
+        eyebrow={new Date().toLocaleDateString(locale === "zh" ? "zh-CN" : "en-SG", { weekday: "long", day: "numeric", month: "long" })}
+        title={user?.name ? t("dashboard.welcomeNamed", { name: user.name }) : t("dashboard.welcome")}
+        description={t("dashboard.description")}
       />
 
       {/* error msg */}
@@ -588,8 +612,8 @@ export default function DashboardPage() {
           <section className="flex-1 min-w-0 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <LocalTabs
               items={[
-                { id: "habit", label: "Habit", count: habits.length },
-                { id: "goal", label: "Goal", count: goals.length },
+                { id: "habit", label: t("dashboard.tabs.habit"), count: habits.length },
+                { id: "goal", label: t("dashboard.tabs.goal"), count: goals.length },
               ]}
               activeId={activeTab}
               onChange={(id) => setActiveTab(id as "habit" | "goal")}
@@ -666,10 +690,10 @@ export default function DashboardPage() {
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
             }}
           >
-            <h3 style={{ margin: 0, color: "#1e293b" }}>{editingHabitId ? "Edit Habit" : "Add New Habit"}</h3>
+            <h3 style={{ margin: 0, color: "#1e293b" }}>{editingHabitId ? t("dashboard.habitModal.editTitle") : t("dashboard.habitModal.addTitle")}</h3>
             <input
               type="text"
-              placeholder="Habit description (e.g. Morning stretch)"
+              placeholder={t("dashboard.habitModal.namePlaceholder")}
               value={habitName}
               onChange={(e) => setHabitName(e.target.value)}
               style={{
@@ -689,7 +713,7 @@ export default function DashboardPage() {
                   gap: "4px",
                 }}
               >
-                <span style={{ fontSize: "12px", color: "#64748b" }}>Category</span>
+                <span style={{ fontSize: "12px", color: "#64748b" }}>{t("dashboard.habitModal.category")}</span>
                 <select
                   value={habitCategory}
                   onChange={(e) => setHabitCategory(e.target.value)}
@@ -702,7 +726,7 @@ export default function DashboardPage() {
                 >
                   {GOAL_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
-                      {GOAL_CATEGORY_ICONS[cat]} {cat}
+                      {GOAL_CATEGORY_ICONS[cat]} {t(CATEGORY_KEY_MAP[cat])}
                     </option>
                   ))}
                 </select>
@@ -716,7 +740,7 @@ export default function DashboardPage() {
                 }}
               >
                 <span style={{ fontSize: "12px", color: "#64748b" }}>
-                  Theme Color
+                  {t("dashboard.habitModal.themeColor")}
                 </span>
                 <select
                   value={habitColor}
@@ -728,10 +752,10 @@ export default function DashboardPage() {
                     color: "#1e293b",
                   }}
                 >
-                  <option value="#1D9E75">Mint Green</option>
-                  <option value="#534AB7">Indigo</option>
-                  <option value="#D85A30">Orange</option>
-                  <option value="#378ADD">Ocean Blue</option>
+                  <option value="#1D9E75">{t("dashboard.color.mintGreen")}</option>
+                  <option value="#534AB7">{t("dashboard.color.indigo")}</option>
+                  <option value="#D85A30">{t("dashboard.color.orange")}</option>
+                  <option value="#378ADD">{t("dashboard.color.oceanBlue")}</option>
                 </select>
               </div>
             </div>
@@ -759,7 +783,7 @@ export default function DashboardPage() {
                   cursor: "pointer",
                 }}
               >
-                Cancel
+                {t("dashboard.habitModal.cancel")}
               </button>
               <button
                 type="submit"
@@ -772,7 +796,7 @@ export default function DashboardPage() {
                   cursor: "pointer",
                 }}
               >
-                Save
+                {t("dashboard.habitModal.save")}
               </button>
             </div>
           </form>
@@ -810,11 +834,11 @@ export default function DashboardPage() {
               boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
             }}
           >
-            <h3 style={{ margin: 0, color: "#1e293b" }}>{editingGoalId ? "Edit Goal" : "Add Long-term Goal"}</h3>
+            <h3 style={{ margin: 0, color: "#1e293b" }}>{editingGoalId ? t("dashboard.goalModal.editTitle") : t("dashboard.goalModal.addTitle")}</h3>
             
             <input
               type="text"
-              placeholder="Goal Objective (e.g. Read 24 books)"
+              placeholder={t("dashboard.goalModal.titlePlaceholder")}
               value={goalTitle}
               onChange={(e) => setGoalTitle(e.target.value)}
               style={{
@@ -830,7 +854,7 @@ export default function DashboardPage() {
             
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>
-                Category
+                {t("dashboard.goalModal.category")}
               </span>
               <select
                 value={goalCategory}
@@ -846,7 +870,7 @@ export default function DashboardPage() {
               >
                 {GOAL_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
-                    {GOAL_CATEGORY_ICONS[cat]} {cat}
+                    {GOAL_CATEGORY_ICONS[cat]} {t(CATEGORY_KEY_MAP[cat])}
                   </option>
                 ))}
               </select>
@@ -854,7 +878,7 @@ export default function DashboardPage() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>
-                Target Date
+                {t("dashboard.goalModal.targetDate")}
               </span>
               <div style={{ display: "flex", gap: "12px", width: "100%" }}>
                 <select
@@ -872,11 +896,11 @@ export default function DashboardPage() {
                   required
                 >
                   <option value="" disabled>
-                    Month
+                    {t("dashboard.goalModal.month")}
                   </option>
                   {MONTH_NAMES.map((m) => (
                     <option key={m} value={m}>
-                      {m}
+                      {t(MONTH_KEY_MAP[m])}
                     </option>
                   ))}
                 </select>
@@ -895,7 +919,7 @@ export default function DashboardPage() {
                   required
                 >
                   <option value="" disabled>
-                    Year
+                    {t("dashboard.goalModal.year")}
                   </option>
                   {getYearOptions().map((y) => (
                     <option key={y} value={y}>
@@ -908,7 +932,7 @@ export default function DashboardPage() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>
-                Theme Color
+                {t("dashboard.goalModal.themeColor")}
               </span>
               <select
                 value={goalColor}
@@ -922,19 +946,19 @@ export default function DashboardPage() {
                   boxSizing: "border-box",
                 }}
               >
-                <option value="#534AB7">Indigo</option>
-                <option value="#1D9E75">Mint Green</option>
-                <option value="#D85A30">Orange</option>
+                <option value="#534AB7">{t("dashboard.color.indigo")}</option>
+                <option value="#1D9E75">{t("dashboard.color.mintGreen")}</option>
+                <option value="#D85A30">{t("dashboard.color.orange")}</option>
               </select>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               <span style={{ fontSize: "12px", color: "#64748b" }}>
-                Checklist Milestones (One per line)
+                {t("dashboard.goalModal.milestones")}
               </span>
               <textarea
                 // React requires curly braces and standard \n for line breaks in placeholders
-                placeholder={"Subtask milestone 1\nSubtask milestone 2\nSubtask milestone 3"} 
+                placeholder={t("dashboard.goalModal.milestonesPlaceholder")}
                 value={goalMilestones}
                 onChange={(e) => setGoalMilestones(e.target.value)}
                 rows={3}
@@ -966,7 +990,7 @@ export default function DashboardPage() {
                   cursor: "pointer",
                 }}
               >
-                Cancel
+                {t("dashboard.goalModal.cancel")}
               </button>
               <button
                 type="submit"
@@ -980,7 +1004,7 @@ export default function DashboardPage() {
                   cursor: "pointer",
                 }}
               >
-                Save
+                {t("dashboard.goalModal.save")}
               </button>
             </div>
           </form>

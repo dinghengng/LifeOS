@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, X, Pill, Flame, AlertTriangle, PackageOpen } from "lucide-react";
+import { useTranslation } from "../../context/LanguageContext";
 
 export type Supplement = {
   id: string | number;
@@ -31,41 +32,42 @@ const timingColor: Record<string, string> = {
   Both: "#1D9E75",
 };
 
-// Static interaction lookup table
-const KNOWN_INTERACTIONS: { a: string; b: string; note: string }[] = [
-  { a: "iron",       b: "calcium",    note: "Calcium can reduce iron absorption by up to 50%! Separate by at least 2h." },
-  { a: "iron",       b: "zinc",       note: "High-dose iron and zinc compete for the same absorption pathway! Space them apart." },
-  { a: "zinc",       b: "copper",     note: "High-dose zinc (50mg+) can block copper absorption over time." },
-  { a: "zinc",       b: "calcium",    note: "High-dose calcium may reduce zinc absorption, moderate doses together are usually fine." },
-  { a: "magnesium",  b: "calcium",    note: "Large supplemental doses may compete for absorption, but normal amounts are generally safe together." },
-  { a: "calcium",    b: "zinc",       note: "High-dose calcium may reduce zinc absorption." },
-  { a: "calcium",    b: "levothyrox", note: "Calcium can blunt thyroid medication absorption, separate by 4h+." },
-  { a: "magnesium",  b: "levothyrox", note: "Magnesium reduces levothyroxine absorption, separate by at least 4 hours." },
-  { a: "iron",       b: "levothyrox", note: "Iron binds levothyroxine and reduces absorption, separate by at least 4 hours." },
-  { a: "vitamin c",  b: "vitamin b12",note: "Very high doses of Vitamin C taken together may reduce B12 availability, evidence is limited; spacing by 2h is a reasonable precaution." },
-  { a: "vitamin a",  b: "vitamin d",  note: "Very high vitamin A intake may counteract some vitamin D effects on bone health." },
-  { a: "selenium",   b: "vitamin c",  note: "Very large simultaneous doses of vitamin C may reduce selenium absorption." },
-  { a: "potassium",  b: "ace inhib",  note: "ACE inhibitors raise potassium levels, extra supplementation risks hyperkalemia." },
-  { a: "folic acid", b: "antacid",    note: "Antacids and acid reducers can impair folic acid absorption." },
-  { a: "vitamin b12",b: "antacid",    note: "Long-term acid reducer use is linked to B12 malabsorption." },
-  { a: "fiber",      b: "multivitamin", note: "Fiber supplements may reduce absorption of some vitamins and minerals, space them apart." },
-  { a: "fish oil",   b: "vitamin e",  note: "Both have mild blood-thinning properties, combined effect may be additive." },
-  { a: "melatonin",  b: "sedative",   note: "Combining sedatives with melatonin may cause excess drowsiness." },
+// Static interaction lookup table. `noteKey` resolves via t(`supplementTracker.interactions.${noteKey}`)
+const KNOWN_INTERACTIONS: { a: string; b: string; noteKey: string }[] = [
+  { a: "iron",       b: "calcium",    noteKey: "ironCalcium" },
+  { a: "iron",       b: "zinc",       noteKey: "ironZinc" },
+  { a: "zinc",       b: "copper",     noteKey: "zincCopper" },
+  { a: "zinc",       b: "calcium",    noteKey: "zincCalcium" },
+  { a: "magnesium",  b: "calcium",    noteKey: "magnesiumCalcium" },
+  { a: "calcium",    b: "zinc",       noteKey: "calciumZinc" },
+  { a: "calcium",    b: "levothyrox", noteKey: "calciumLevothyroxine" },
+  { a: "magnesium",  b: "levothyrox", noteKey: "magnesiumLevothyroxine" },
+  { a: "iron",       b: "levothyrox", noteKey: "ironLevothyroxine" },
+  { a: "vitamin c",  b: "vitamin b12",noteKey: "vitaminCB12" },
+  { a: "vitamin a",  b: "vitamin d",  noteKey: "vitaminAD" },
+  { a: "selenium",   b: "vitamin c",  noteKey: "seleniumVitaminC" },
+  { a: "potassium",  b: "ace inhib",  noteKey: "potassiumAceInhibitor" },
+  { a: "folic acid", b: "antacid",    noteKey: "folicAcidAntacid" },
+  { a: "vitamin b12",b: "antacid",    noteKey: "vitaminB12Antacid" },
+  { a: "fiber",      b: "multivitamin", noteKey: "fiberMultivitamin" },
+  { a: "fish oil",   b: "vitamin e",  noteKey: "fishOilVitaminE" },
+  { a: "melatonin",  b: "sedative",   noteKey: "melatoninSedative" },
 ];
 
-// Returns a list of warning strings for the current supplement list
-function getInteractionWarnings(supplements: Supplement[]): string[] {
-  const warnings: string[] = [];
+// Returns a list of interaction note keys for the current supplement list.
+// Caller resolves copy via t(`supplementTracker.interactions.${key}`).
+function getInteractionWarningKeys(supplements: Supplement[]): string[] {
+  const keys: string[] = [];
   const names = supplements.map((s) => s.name.toLowerCase());
 
   for (const pair of KNOWN_INTERACTIONS) {
     const hasA = names.some((n) => n.includes(pair.a));
     const hasB = names.some((n) => n.includes(pair.b));
     if (hasA && hasB) {
-      warnings.push(pair.note);
+      keys.push(pair.noteKey);
     }
   }
-  return warnings;
+  return keys;
 }
 
 // Returns days of supply left; returns null if supplyCount not set
@@ -96,6 +98,7 @@ const RoutineBlock = ({
   onToggle,
   onDelete,
   onRefill,
+  t,
 }: {
   label: string;
   color: string;
@@ -105,6 +108,7 @@ const RoutineBlock = ({
   onToggle: (key: string) => void;
   onDelete: (id: string | number) => void;
   onRefill: (id: string | number) => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) => {
   if (items.length === 0) return null;
   const checked = items.filter((s) => checkedIds.has(`${prefix}-${s.id}`)).length;
@@ -118,7 +122,7 @@ const RoutineBlock = ({
           {label}
         </span>
         <span style={{ fontSize: 11, color: "#94a3b8" }}>
-          {checked}/{items.length} taken
+          {t("supplementTracker.takenCount", { checked, total: items.length })}
         </span>
         <div style={{ flex: 1, height: 4, background: "#f1f5f9", borderRadius: 99, overflow: "hidden" }}>
           <div style={{
@@ -188,7 +192,7 @@ const RoutineBlock = ({
                       background: "#fff7ed", color: "#ea580c",
                     }}>
                       <Flame size={9} />
-                      {supp.streak}d
+                      {t("supplementTracker.streakDays", { days: supp.streak })}
                     </span>
                   )}
                   {/* Refill warning badge */}
@@ -203,10 +207,10 @@ const RoutineBlock = ({
                         background: "#fef2f2", color: "#dc2626",
                         border: "none", cursor: "pointer",
                       }}
-                      title="Click to refill"
+                      title={t("supplementTracker.refillTooltip")}
                     >
                       <PackageOpen size={9} />
-                      {daysLeft === 0 ? "Out! Refill" : `${daysLeft}d left · Refill`}
+                      {daysLeft === 0 ? t("supplementTracker.refillOutBtn") : t("supplementTracker.refillDaysLeftBtn", { days: daysLeft })}
                     </button>
                   )}
                 </div>
@@ -219,7 +223,7 @@ const RoutineBlock = ({
                   color: "#cbd5e1", padding: 2, display: "flex",
                   alignItems: "center", flexShrink: 0,
                 }}
-                title="Remove"
+                title={t("supplementTracker.removeTooltip")}
               >
                 <X size={13} />
               </button>
@@ -241,6 +245,7 @@ export default function SupplementTracker({
   addError,
   onClearError,
 }: SupplementTrackerProps) {
+  const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [dose, setDose] = useState("");
@@ -256,8 +261,8 @@ export default function SupplementTracker({
   const checkedAM = amSupps.filter((s) => checkedIds.has(`AM-${s.id}`)).length;
   const checkedPM = pmSupps.filter((s) => checkedIds.has(`PM-${s.id}`)).length;
 
-  // Compute interaction warnings from the current supplement list
-  const interactionWarnings = getInteractionWarnings(supplements);
+  // Compute interaction warning keys from the current supplement list
+  const interactionWarningKeys = getInteractionWarningKeys(supplements);
 
   const handleAdd = async () => {
     if (!name.trim()) return;
@@ -307,10 +312,15 @@ export default function SupplementTracker({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)" }}>
-            Supplements & Medication
+            {t("supplementTracker.title")}
           </h2>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
-            AM: {checkedAM}/{amSupps.length} · PM: {checkedPM}/{pmSupps.length}
+            {t("supplementTracker.amPmSummary", {
+              checkedAM,
+              totalAM: amSupps.length,
+              checkedPM,
+              totalPM: pmSupps.length,
+            })}
           </p>
         </div>
         <button
@@ -323,7 +333,7 @@ export default function SupplementTracker({
             cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
           }}
         >
-          {showForm ? "Cancel" : <><Plus size={14} /> Add</>}
+          {showForm ? t("supplementTracker.cancelBtn") : <><Plus size={14} /> {t("supplementTracker.addBtn")}</>}
         </button>
       </div>
 
@@ -332,38 +342,38 @@ export default function SupplementTracker({
           background: "#f8fafc", border: "0.5px solid #e2e8f0", borderRadius: 10,
           padding: "14px", marginBottom: 16, display: "flex", flexDirection: "column", gap: 10,
         }}>
-          <input placeholder="Name (e.g. Vitamin C, Creatine)" value={name}
+          <input placeholder={t("supplementTracker.namePlaceholder")} value={name}
             onChange={(e) => setName(e.target.value)} style={inputStyle} autoFocus />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <input placeholder="Dose (e.g. 500 mg)" value={dose}
+            <input placeholder={t("supplementTracker.dosePlaceholder")} value={dose}
               onChange={(e) => setDose(e.target.value)} style={inputStyle} />
             <select value={timing} onChange={(e) => setTiming(e.target.value as "AM" | "PM" | "Both")} style={inputStyle}>
-              <option value="AM">Morning (AM)</option>
-              <option value="PM">Evening (PM)</option>
-              <option value="Both">Both</option>
+              <option value="AM">{t("supplementTracker.timingMorning")}</option>
+              <option value="PM">{t("supplementTracker.timingEvening")}</option>
+              <option value="Both">{t("supplementTracker.timingBoth")}</option>
             </select>
           </div>
           {/* Unit applies to both supply count and per-day amount so the division always makes sense */}
           <div>
             <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>
-              Track refill in units of
+              {t("supplementTracker.trackRefillLabel")}
             </label>
             <select value={supplyUnit} onChange={(e) => setSupplyUnit(e.target.value)} style={inputStyle}>
-              <option value="pills">Pills / capsules</option>
-              <option value="ml">ml (liquid)</option>
-              <option value="scoops">Scoops</option>
-              <option value="sachets">Sachets</option>
+              <option value="pills">{t("supplementTracker.unitPills")}</option>
+              <option value="ml">{t("supplementTracker.unitMl")}</option>
+              <option value="scoops">{t("supplementTracker.unitScoops")}</option>
+              <option value="sachets">{t("supplementTracker.unitSachets")}</option>
             </select>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <div>
               <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>
-                Total supply ({supplyUnit})
+                {t("supplementTracker.totalSupplyLabel", { unit: supplyUnit })}
               </label>
               <input
                 type="number"
                 min="0"
-                placeholder={`e.g. 60 ${supplyUnit}`}
+                placeholder={t("supplementTracker.totalSupplyPlaceholder", { unit: supplyUnit })}
                 value={supplyCount}
                 onChange={(e) => setSupplyCount(e.target.value)}
                 style={inputStyle}
@@ -371,7 +381,7 @@ export default function SupplementTracker({
             </div>
             <div>
               <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>
-                Used per day ({supplyUnit})
+                {t("supplementTracker.usedPerDayLabel", { unit: supplyUnit })}
               </label>
               <input
                 type="number"
@@ -386,7 +396,7 @@ export default function SupplementTracker({
           {/* Guardrail note so users don't confuse this with the free-text "dose" field above (e.g. "500mg") */}
           {supplyCount && (
             <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>
-              Both values must be in the same unit ({supplyUnit}): this is separate from the dosage text above.
+              {t("supplementTracker.unitGuardrail", { unit: supplyUnit })}
             </p>
           )}
           <button onClick={handleAdd} disabled={!name.trim()} style={{
@@ -396,7 +406,7 @@ export default function SupplementTracker({
             fontWeight: 600, fontSize: 13,
             cursor: name.trim() ? "pointer" : "default", transition: "all 0.2s",
           }}>
-            Add to routine
+            {t("supplementTracker.addToRoutineBtn")}
           </button>
           {addError && (
             <div style={{
@@ -419,7 +429,7 @@ export default function SupplementTracker({
       )}
 
       {/* Interaction warnings, is shown when 2+ supplements with a known interaction are present */}
-      {interactionWarnings.length > 0 && (
+      {interactionWarningKeys.length > 0 && (
         <div style={{
           marginBottom: 14,
           background: "#fffbeb",
@@ -433,16 +443,16 @@ export default function SupplementTracker({
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
             <AlertTriangle size={13} style={{ color: "#d97706", flexShrink: 0 }} />
             <span style={{ fontSize: 11, fontWeight: 700, color: "#b45309", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Interaction notice
+              {t("supplementTracker.interactionNoticeHeader")}
             </span>
           </div>
-          {interactionWarnings.map((w, i) => (
-            <p key={i} style={{ margin: 0, fontSize: 12, color: "#92400e", lineHeight: 1.5 }}>
-              • {w}
+          {interactionWarningKeys.map((key) => (
+            <p key={key} style={{ margin: 0, fontSize: 12, color: "#92400e", lineHeight: 1.5 }}>
+              • {t(`supplementTracker.interactions.${key}`)}
             </p>
           ))}
           <p style={{ margin: "4px 0 0", fontSize: 11, color: "#a16207" }}>
-            This is informational only. Consult a pharmacist or doctor for personalised advice.
+            {t("supplementTracker.interactionDisclaimer")}
           </p>
         </div>
       )}
@@ -453,7 +463,7 @@ export default function SupplementTracker({
           borderTop: "0.5px solid var(--color-border-tertiary)",
           color: "var(--color-text-secondary)", fontSize: 13,
         }}>
-          No supplements added yet. Add your daily vitamins, medications, or supplements.
+          {t("supplementTracker.emptyState")}
         </div>
       ) : (
         <>
@@ -464,10 +474,10 @@ export default function SupplementTracker({
             marginRight: -4,
             position: "relative",
           }}>
-            <RoutineBlock label="Morning" color={timingColor.AM} items={amSupps} prefix="AM"
-              checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} onRefill={openRefillPopover} />
-            <RoutineBlock label="Evening" color={timingColor.PM} items={pmSupps} prefix="PM"
-              checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} onRefill={openRefillPopover} />
+            <RoutineBlock label={t("supplementTracker.morningLabel")} color={timingColor.AM} items={amSupps} prefix="AM"
+              checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} onRefill={openRefillPopover} t={t} />
+            <RoutineBlock label={t("supplementTracker.eveningLabel")} color={timingColor.PM} items={pmSupps} prefix="PM"
+              checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} onRefill={openRefillPopover} t={t} />
 
             {/* Inline refill card — replaces window.prompt with a styled, on-brand input */}
             {refillingId !== null && (() => {
@@ -482,14 +492,18 @@ export default function SupplementTracker({
                   display: "flex", flexDirection: "column", gap: 8,
                 }}>
                   <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "#1e293b" }}>
-                    Refill &ldquo;{target.name}&rdquo; — currently {target.supplyCount ?? 0} {formatUnit(target.supplyCount ?? 0, target.supplyUnit ?? "units")} left
+                    {t("supplementTracker.refillCardHeader", {
+                      name: target.name,
+                      count: target.supplyCount ?? 0,
+                      unit: formatUnit(target.supplyCount ?? 0, target.supplyUnit ?? "units"),
+                    })}
                   </p>
                   <div style={{ display: "flex", gap: 8 }}>
                     <input
                       type="number"
                       min="0"
                       autoFocus
-                      placeholder={`Units added (${target.supplyUnit ?? "pills"})`}
+                      placeholder={t("supplementTracker.unitsAddedPlaceholder", { unit: target.supplyUnit ?? "pills" })}
                       value={refillAmount}
                       onChange={(e) => setRefillAmount(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") confirmRefill(target.id, target.supplyCount); }}
@@ -510,7 +524,7 @@ export default function SupplementTracker({
                         cursor: refillAmount ? "pointer" : "default",
                       }}
                     >
-                      Confirm
+                      {t("supplementTracker.confirmBtn")}
                     </button>
                     <button
                       type="button"
@@ -520,7 +534,7 @@ export default function SupplementTracker({
                         backgroundColor: "white", color: "#64748b", fontSize: 13, cursor: "pointer",
                       }}
                     >
-                      Cancel
+                      {t("supplementTracker.cancelBtn")}
                     </button>
                   </div>
                 </div>
@@ -535,7 +549,7 @@ export default function SupplementTracker({
               textAlign: "center",
             }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "white" }}>
-                💊 All supplements taken for today!
+                {t("supplementTracker.allDoneMessage")}
               </p>
             </div>
           )}

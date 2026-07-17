@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "../context/LanguageContext";
 
 interface LoginFormProps {
   onLogin: (email: string, password: string, rememberMe: boolean) => Promise<void>;
@@ -9,6 +10,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onLogin, onSwitchToRegister, error }: LoginFormProps) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -27,10 +29,10 @@ export default function LoginForm({ onLogin, onSwitchToRegister, error }: LoginF
     <div className="flex flex-col items-center justify-center min-h-screen px-4">
       <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-8 w-full max-w-md">
         <h1 className="text-2xl font-bold text-slate-800 mb-1 text-center">
-          Welcome back
+          {t("login.title")}
         </h1>
         <p className="text-sm text-slate-500 text-center mb-6">
-          Sign in to your LifeOS account
+          {t("login.subtitle")}
         </p>
 
         {/* Error message */}
@@ -44,12 +46,12 @@ export default function LoginForm({ onLogin, onSwitchToRegister, error }: LoginF
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Email field */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700">Email</label>
+            <label className="text-sm font-medium text-slate-700">{t("login.email")}</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("login.emailPlaceholder")}
               required
               className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -57,13 +59,13 @@ export default function LoginForm({ onLogin, onSwitchToRegister, error }: LoginF
         
           {/* Password field */}
           <div className="flex flex-col gap-1">
-  <label className="text-sm font-medium text-slate-700">Password</label>
+  <label className="text-sm font-medium text-slate-700">{t("login.password")}</label>
   <div className="relative">
     <input
       type={showPassword ? "text" : "password"}
       value={password}
       onChange={(e) => setPassword(e.target.value)}
-      placeholder="••••••••"
+      placeholder={t("login.passwordPlaceholder")}
       required
       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
     />
@@ -71,7 +73,7 @@ export default function LoginForm({ onLogin, onSwitchToRegister, error }: LoginF
       type="button"
       onClick={() => setShowPassword((prev) => !prev)}
       className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-700"
-      aria-label={showPassword ? "Hide password" : "Show password"}
+      aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -96,7 +98,7 @@ export default function LoginForm({ onLogin, onSwitchToRegister, error }: LoginF
               onChange={(e) => setRememberMe(e.target.checked)}
               className="w-4 h-4 accent-indigo-600"
             />
-            Remember me
+            {t("login.rememberMe")}
           </label>
 
           {/* Submit button */}
@@ -109,18 +111,18 @@ export default function LoginForm({ onLogin, onSwitchToRegister, error }: LoginF
                 : "bg-indigo-600 hover:bg-indigo-700"
             }`}
           >
-            {isSubmitting ? "Signing in..." : "Sign in"}
+            {isSubmitting ? t("login.submitting") : t("login.submit")}
           </button>
         </form>
 
         {/* Link to register new acc */}
         <p className="text-sm text-center text-slate-500 mt-4">
-          No account yet?{" "}
+          {t("login.noAccount")}{" "}
           <button
             onClick={onSwitchToRegister}
             className="text-indigo-600 font-medium hover:underline"
           >
-            Create one
+            {t("login.createOne")}
           </button>
         </p>
       </div>

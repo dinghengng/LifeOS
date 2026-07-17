@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { X, Rocket, BookOpen, ChevronRight, ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from '../context/LanguageContext';
 
 interface JoyrideTooltipProps {
   index: number;
@@ -28,7 +29,7 @@ const Joyride = dynamic(
 
 const TOUR_DONE_KEY = 'lifeos-tour-done';
 
-const CustomTooltip = ({
+function CustomTooltip({
   index,
   step,
   backProps,
@@ -37,138 +38,128 @@ const CustomTooltip = ({
   tooltipProps,
   isLastStep,
   size,
-}: JoyrideTooltipProps) => (
-  <div
-    {...tooltipProps}
-    className="bg-slate-900 rounded-xl p-5 w-80 shadow-2xl border border-slate-700 font-sans"
-    style={{ zIndex: 1000 }}
-  >
-    <div className="flex justify-between items-center mb-4">
-      <button
-        {...skipProps}
-        className="text-slate-400 hover:text-white text-xs font-semibold bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded transition"
-      >
-        Skip Tutorial
-      </button>
-      <span className="text-slate-400 text-xs font-bold">
-        {index + 1} / {size}
-      </span>
-    </div>
-    <h3 className="text-emerald-400 font-bold text-lg mb-2">{step.title}</h3>
-    <p className="text-slate-200 text-sm mb-6 leading-relaxed">{step.content}</p>
-    <div className="flex justify-end gap-3">
-      {index > 0 && (
+}: JoyrideTooltipProps) {
+  const { t } = useTranslation();
+
+  return (
+    <div
+      {...tooltipProps}
+      className="bg-slate-900 rounded-xl p-5 w-80 shadow-2xl border border-slate-700 font-sans"
+      style={{ zIndex: 1000 }}
+    >
+      <div className="flex justify-between items-center mb-4">
         <button
-          {...backProps}
-          className="text-slate-300 hover:text-white text-sm font-semibold px-4 py-2 transition"
+          {...skipProps}
+          className="text-slate-400 hover:text-white text-xs font-semibold bg-slate-700/50 hover:bg-slate-700 px-2 py-1 rounded transition"
         >
-          Back
+          {t('helpCentre.tour.skip')}
         </button>
-      )}
-      <button
-        {...primaryProps}
-        className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition"
-      >
-        {isLastStep ? 'Finish' : 'Next'}
-      </button>
+        <span className="text-slate-400 text-xs font-bold">
+          {index + 1} / {size}
+        </span>
+      </div>
+      <h3 className="text-emerald-400 font-bold text-lg mb-2">{step.title}</h3>
+      <p className="text-slate-200 text-sm mb-6 leading-relaxed">{step.content}</p>
+      <div className="flex justify-end gap-3">
+        {index > 0 && (
+          <button
+            {...backProps}
+            className="text-slate-300 hover:text-white text-sm font-semibold px-4 py-2 transition"
+          >
+            {t('helpCentre.tour.back')}
+          </button>
+        )}
+        <button
+          {...primaryProps}
+          className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg text-sm shadow-md transition"
+        >
+          {isLastStep ? t('helpCentre.tour.finish') : t('helpCentre.tour.next')}
+        </button>
+      </div>
     </div>
-  </div>
-);
-
-const tourSteps = [
-  {
-    target: 'body',
-    placement: 'center',
-    content: "LifeOS is your all-in-one personal OS! Tasks, goals, journaling, nutrition, supplements, and insights. Let's take a quick tour.",
-    title: 'Welcome to LifeOS 🚀',
-    disableBeacon: true,
-    disableScrolling: true,
-  },
-  {
-    target: '#tour-navbar',
-    placement: 'bottom',
-    content: 'The navigation bar gives you access to every section of LifeOS.',
-    title: 'Navigation',
-    disableBeacon: true,
-    disableScrolling: true,
-  },
-  {
-    target: '#tour-nav-tasks',
-    placement: 'bottom',
-    content: 'Manage everything you need to do. Create tasks, set priorities and due dates, and check them off as you go.',
-    title: 'Tasks',
-    disableBeacon: true,
-    disableScrolling: true,
-  },
-  {
-    target: '#tour-tasks',
-    placement: 'left',
-    content: 'Your task board. Tasks are sortable by priority, due date, or status.',
-    title: 'Task Board',
-    disableBeacon: true,
-    disableScrolling: true,
-  },
-  {
-    target: '#tour-add-task',
-    placement: 'top',
-    content: 'Quickly add a task: set a title, due date, and priority level in seconds.',
-    title: 'Add a Task',
-    disableBeacon: true,
-    disableScrolling: true,
-  },
-  {
-    target: '#tour-priority-filter',
-    placement: 'bottom',
-    content: 'Filter your list by priority: Critical, High, Low, or view all at once.',
-    title: 'Filter by Priority',
-    disableBeacon: true,
-    disableScrolling: true,
-  },
-  {
-    target: '#tour-navbar',
-    content: 'Seamlessly navigate to the other pages from here. Hope you enjoy your stay!',
-    title: 'Navigation',
-    disableBeacon: true,
-    disableScrolling: true,
-  },
-];
-
-const FAQ_ITEMS = [
-  {
-    q: 'How does the wellness score work?',
-    a: 'Your wellness score is calculated daily from five modules: Habits, Nutrition, Mood, Tasks, and Goals. Each contributes up to 20 points based on your activity that day. Check the Insights page for a full breakdown.',
-  },
-  {
-    q: 'How do I log a meal without a barcode?',
-    a: 'Go to Nutrition and use the search bar to find any food by name. You can adjust the serving size before logging. The barcode scanner is a shortcut for packaged foods only.',
-  },
-  {
-    q: 'Why did my habit streak reset?',
-    a: 'Streaks reset if you miss a day entirely. Streaks are calculated in Singapore Time (SGT), so make sure you log before midnight SGT.',
-  },
-  {
-    q: 'Can I edit or delete a past journal entry?',
-    a: "Yes. Open the Journal page, navigate to the past date using the date picker, and you can edit or delete that day's entry.",
-  },
-  {
-    q: 'How do I export my data?',
-    a: 'Scroll to the bottom of the Insights page. You can export Habits, Goals, Nutrition, and Supplements as CSV files for the last 30 days.',
-  },
-  {
-    q: 'How do supplement streaks work?',
-    a: "A supplement is counted as taken when you mark it for that day's AM or PM slot. Miss a slot and the streak for that supplement resets.",
-  },
-];
+  );
+}
 
 type View = 'home' | 'faq';
 
 export default function HelpCentre() {
+  const { t } = useTranslation();
+
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>('home');
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Tour steps and FAQ items pull their copy from the translation dictionary
+  // so they follow the active language automatically.
+  const tourSteps = [
+    {
+      target: 'body',
+      placement: 'center',
+      content: t('helpCentre.tour.steps.welcome.content'),
+      title: t('helpCentre.tour.steps.welcome.title'),
+      disableBeacon: true,
+      disableScrolling: true,
+    },
+    {
+      target: '#tour-navbar',
+      placement: 'bottom',
+      content: t('helpCentre.tour.steps.navigation.content'),
+      title: t('helpCentre.tour.steps.navigation.title'),
+      disableBeacon: true,
+      disableScrolling: true,
+    },
+    {
+      target: '#tour-nav-tasks',
+      placement: 'bottom',
+      content: t('helpCentre.tour.steps.tasksNav.content'),
+      title: t('helpCentre.tour.steps.tasksNav.title'),
+      disableBeacon: true,
+      disableScrolling: true,
+    },
+    {
+      target: '#tour-tasks',
+      placement: 'left',
+      content: t('helpCentre.tour.steps.taskBoard.content'),
+      title: t('helpCentre.tour.steps.taskBoard.title'),
+      disableBeacon: true,
+      disableScrolling: true,
+    },
+    {
+      target: '#tour-add-task',
+      placement: 'top',
+      content: t('helpCentre.tour.steps.addTask.content'),
+      title: t('helpCentre.tour.steps.addTask.title'),
+      disableBeacon: true,
+      disableScrolling: true,
+    },
+    {
+      target: '#tour-priority-filter',
+      placement: 'bottom',
+      content: t('helpCentre.tour.steps.priorityFilter.content'),
+      title: t('helpCentre.tour.steps.priorityFilter.title'),
+      disableBeacon: true,
+      disableScrolling: true,
+    },
+    {
+      target: '#tour-navbar',
+      content: t('helpCentre.tour.steps.navigationEnd.content'),
+      title: t('helpCentre.tour.steps.navigationEnd.title'),
+      disableBeacon: true,
+      disableScrolling: true,
+    },
+  ];
+
+  const FAQ_ITEMS = [
+    { q: t('helpCentre.faq.wellnessScore.q'), a: t('helpCentre.faq.wellnessScore.a') },
+    { q: t('helpCentre.faq.logMeal.q'), a: t('helpCentre.faq.logMeal.a') },
+    { q: t('helpCentre.faq.habitStreak.q'), a: t('helpCentre.faq.habitStreak.a') },
+    { q: t('helpCentre.faq.editJournal.q'), a: t('helpCentre.faq.editJournal.a') },
+    { q: t('helpCentre.faq.exportData.q'), a: t('helpCentre.faq.exportData.a') },
+    { q: t('helpCentre.faq.supplementStreak.q'), a: t('helpCentre.faq.supplementStreak.a') },
+  ];
 
   // auto-start for first-time users
   useEffect(() => {
@@ -229,7 +220,7 @@ export default function HelpCentre() {
       <button
         onClick={() => setOpen(true)}
         className="fixed top-5 right-5 z-40 flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 shadow-md transition-all"
-        aria-label="Help centre"
+        aria-label={t('helpCentre.ariaLabel')}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -261,7 +252,7 @@ export default function HelpCentre() {
             {view === 'home' && (
               <>
                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-                  <h2 className="font-semibold text-base text-slate-800">Help centre</h2>
+                  <h2 className="font-semibold text-base text-slate-800">{t('helpCentre.title')}</h2>
                   <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 transition-colors">
                     <X size={18} />
                   </button>
@@ -269,32 +260,32 @@ export default function HelpCentre() {
 
                 <div className="py-2 overflow-y-auto flex-1">
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-wide px-5 pt-4 pb-1">
-                    Get started
+                    {t('helpCentre.getStarted')}
                   </p>
                   <button
                     onClick={startTour}
                     className="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left"
                   >
                     <Rocket size={16} className="text-slate-400 shrink-0" />
-                    <span className="text-sm text-slate-700">Product tour</span>
-                    <span className="ml-auto text-xs text-emerald-600 font-medium">Start tour →</span>
+                    <span className="text-sm text-slate-700">{t('helpCentre.productTour')}</span>
+                    <span className="ml-auto text-xs text-emerald-600 font-medium">{t('helpCentre.startTour')}</span>
                   </button>
 
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-wide px-5 pt-4 pb-1">
-                    Reference
+                    {t('helpCentre.reference')}
                   </p>
                   <button
                     onClick={() => setView('faq')}
                     className="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors text-left"
                   >
                     <BookOpen size={16} className="text-slate-400 shrink-0" />
-                    <span className="text-sm text-slate-700">FAQ</span>
+                    <span className="text-sm text-slate-700">{t('helpCentre.faqLabel')}</span>
                     <ChevronRight size={14} className="ml-auto text-slate-400" />
                   </button>
                 </div>
 
                 <div className="px-5 py-4 border-t border-slate-100 shrink-0">
-                  <p className="text-xs text-slate-400 text-center">LifeOS · Orbital 2026</p>
+                  <p className="text-xs text-slate-400 text-center">{t('helpCentre.footer')}</p>
                 </div>
               </>
             )}
@@ -306,11 +297,11 @@ export default function HelpCentre() {
                   <button
                     onClick={() => { setView('home'); setOpenFaq(null); }}
                     className="text-slate-400 hover:text-slate-600 transition-colors"
-                    aria-label="Back"
+                    aria-label={t('helpCentre.back')}
                   >
                     <ChevronLeft size={18} />
                   </button>
-                  <h2 className="font-semibold text-base text-slate-800">FAQ</h2>
+                  <h2 className="font-semibold text-base text-slate-800">{t('helpCentre.faqLabel')}</h2>
                   <button onClick={handleClose} className="ml-auto text-slate-400 hover:text-slate-600 transition-colors">
                     <X size={18} />
                   </button>
@@ -339,7 +330,7 @@ export default function HelpCentre() {
                 </div>
 
                 <div className="px-5 py-4 border-t border-slate-100 shrink-0">
-                  <p className="text-xs text-slate-400 text-center">LifeOS · Orbital 2026</p>
+                  <p className="text-xs text-slate-400 text-center">{t('helpCentre.footer')}</p>
                 </div>
               </>
             )}

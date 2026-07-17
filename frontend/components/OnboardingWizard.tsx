@@ -5,6 +5,7 @@ import { WIZARD_SECTIONS } from "../../shared/settingsSection";
 import { MoodLevelConfig } from "../../shared/types";
 import MoodSettingsSection from "./settings/MoodSettingsSection";
 import { useTranslation } from "../context/LanguageContext";
+import type { TranslationKey } from "../context/translations";
 
 
 const WIZARD_STEP_COMPONENTS: Record<
@@ -113,8 +114,8 @@ export default function OnboardingWizard({ userName, onComplete }: Props) {
                       total: totalSectionSteps,
                     })}
                   </p>
-                  <h2 className="text-xl font-semibold text-slate-800">{section.title}</h2>
-                  <p className="text-sm text-slate-500 mt-1">{section.description}</p>
+                  <h2 className="text-xl font-semibold text-slate-800">{t(section.titleKey as TranslationKey)}</h2>
+                  <p className="text-sm text-slate-500 mt-1">{t(section.descriptionKey as TranslationKey)}</p>
                 </div>
                 <SectionComponent
                   hideSaveButton

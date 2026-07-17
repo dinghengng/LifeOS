@@ -10,6 +10,15 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useToastContext } from "../notifications/ToastContext";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
+
+const MOOD_LABEL_KEYS: Record<MoodLevel, TranslationKey> = {
+  1: "mood.awful",
+  2: "mood.bad",
+  3: "mood.okay",
+  4: "mood.good",
+  5: "mood.great",
+};
 
 interface MoodLoggerProps {
   onSaved: (newLogId: number) => void;
@@ -159,7 +168,7 @@ export default function MoodLogger({ onSaved, tags, onCustomTagCreated, onCustom
                   }}
                 >
                   <span className="text-4xl leading-none">{mood.emoji}</span>
-                  <span className="text-xs font-medium text-slate-700">{mood.label}</span>
+                  <span className="text-xs font-medium text-slate-700">{t(MOOD_LABEL_KEYS[mood.level as MoodLevel])}</span>
                 </button>
               );
             })}

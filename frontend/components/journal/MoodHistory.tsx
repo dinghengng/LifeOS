@@ -6,15 +6,17 @@ import { deleteMoodLog, updateJournalEntry, deleteJournalEntry, } from "../../..
 import EditMoodLogModal from "./EditMoodLogModal";
 import EditJournalEntryModal from "./EditJournalEntryModal";
 import JournalEditor from "./JournalEditor";
+import { systemTagLabel } from "./TagSelector";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
-const STRESS_KEYS: Record<number, string> = {
-  1: "calm", 2: "calm", 3: "relaxed", 4: "relaxed", 5: "neutral",
-  6: "neutral", 7: "tense", 8: "tense", 9: "overwhelmed", 10: "overwhelmed",
+const STRESS_KEYS: Record<number, TranslationKey> = {
+  1: "stress.calm", 2: "stress.calm", 3: "stress.relaxed", 4: "stress.relaxed", 5: "stress.neutral",
+  6: "stress.neutral", 7: "stress.tense", 8: "stress.tense", 9: "stress.overwhelmed", 10: "stress.overwhelmed",
 };
 
-const MOOD_KEYS: Record<number, string> = {
-  1: "awful", 2: "bad", 3: "okay", 4: "good", 5: "great",
+const MOOD_KEYS: Record<number, TranslationKey> = {
+  1: "mood.awful", 2: "mood.bad", 3: "mood.okay", 4: "mood.good", 5: "mood.great",
 };
 
 function formatLogTime(iso: string, locale?: string): string {
@@ -32,7 +34,7 @@ function deriveTitle(entry: JournalEntry, t: any): string {
   if (entry.title?.trim())        return entry.title.trim();
   if (entry.promptUsed?.trim())   return entry.promptUsed.trim();
   if (entry.moodLevel) {
-    const label = t(`mood.${MOOD_KEYS[entry.moodLevel]}`);
+    const label = t(MOOD_KEYS[entry.moodLevel]);
     return t("moodHistory.felt").replace("{mood}", label);
   }
   const text = stripHtml(entry.content ?? "").trim();
@@ -46,10 +48,11 @@ function getMoodDisplay(
   moodConfig?: MoodLevelConfig[]
 ): { emoji: string; label: string; color: string } {
   const cfg = moodConfig?.find((m) => m.level === level);
+  const labelKey = MOOD_KEYS[level];
 
   return {
     emoji: cfg?.emoji ?? "🙂",
-    label: cfg?.label ?? t("moodHistory.defaultMood"),
+    label: labelKey ? t(labelKey) : cfg?.label ?? t("moodHistory.defaultMood"),
     color: cfg?.color ?? "#6366f1",
   };
 }
@@ -228,7 +231,7 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
           {logs.map((log) => {
             const mood = getMoodDisplay(log.moodLevel, t, moodConfig);
             const linkedEntry = entryByMoodLog.get(log.id);
-            const stressLabel = t(`stress.${STRESS_KEYS[log.stressLevel]}`);
+            const stressLabel = t(STRESS_KEYS[log.stressLevel]);
             
             return (
               <li
@@ -269,7 +272,7 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
                             key={tag.id}
                             className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 capitalize"
                           >
-                            {tag.name}
+                            {systemTagLabel(tag, t)}
                           </span>
                         ))}
                       </div>

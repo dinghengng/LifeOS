@@ -5,6 +5,7 @@ import { MoodLevelConfig, EmojiPack, MoodLevel } from "../../../shared/types";
 import { fetchEmojiPacks, saveMoodConfig } from "../../../shared/api";
 import { useToastContext } from "../notifications/ToastContext";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 import SettingsSectionCard from "./SettingsSectionCard";
 import SettingsActionFooter from "./SettingsActionFooter";
 
@@ -16,13 +17,37 @@ const DEFAULT_LEVEL_META: Omit<MoodLevelConfig, "id" | "label">[] = [
   { level: 5, emoji: "😄", color: "#6366f1", displayOrder: 4 },
 ];
 
-const DEFAULT_LEVEL_KEYS: Record<number, string> = {
-  1: "awful",
-  2: "bad",
-  3: "okay",
-  4: "good",
-  5: "great",
+const DEFAULT_LEVEL_KEYS: Record<number, TranslationKey> = {
+  1: "moodSettings.defaultLevels.awful",
+  2: "moodSettings.defaultLevels.bad",
+  3: "moodSettings.defaultLevels.okay",
+  4: "moodSettings.defaultLevels.good",
+  5: "moodSettings.defaultLevels.great",
 };
+
+
+const DEFAULT_ENGLISH_LABELS: Record<number, string> = {
+  1: "Awful",
+  2: "Bad",
+  3: "Okay",
+  4: "Good",
+  5: "Great",
+};
+
+// Emoji pack names come from the backend as fixed lowercase slugs.
+const EMOJI_PACK_KEYS: Record<string, TranslationKey> = {
+  classic: "emojiPack.classic",
+  energy: "emojiPack.energy",
+  animals: "emojiPack.animals",
+  food: "emojiPack.food",
+  weather: "emojiPack.weather",
+  minimalist: "emojiPack.minimalist",
+};
+
+function emojiPackLabel(pack: EmojiPack, t: (key: TranslationKey) => string): string {
+  const key = EMOJI_PACK_KEYS[pack.name.toLowerCase()];
+  return key ? t(key) : pack.name;
+}
 
 interface Props {
   initialConfig?: MoodLevelConfig[];
@@ -45,10 +70,16 @@ export default function MoodSettingsSection({
   const [selectedPackId, setSelectedPackId] = useState<number | null>(null);
   const [levels, setLevels] = useState<Omit<MoodLevelConfig, "id">[]>(() =>
     initialConfig
-      ? initialConfig.map(({ id: _id, ...rest }) => rest)
+      ? initialConfig.map(({ id: _id, ...rest }) => ({
+          ...rest,
+          label:
+            rest.label === DEFAULT_ENGLISH_LABELS[rest.level]
+              ? t(DEFAULT_LEVEL_KEYS[rest.level])
+              : rest.label,
+        }))
       : DEFAULT_LEVEL_META.map((m) => ({
           ...m,
-          label: t(`moodSettings.defaultLevels.${DEFAULT_LEVEL_KEYS[m.level]}`),
+          label: t(DEFAULT_LEVEL_KEYS[m.level]),
         }))
   );
   const [saving, setSaving] = useState(false);
@@ -128,7 +159,7 @@ export default function MoodSettingsSection({
                   : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
               }`}
             >
-              <span className="text-xs font-medium text-slate-600">{pack.name}</span>
+              <span className="text-xs font-medium text-slate-600">{emojiPackLabel(pack, t)}</span>
               <div className="flex w-full flex-wrap justify-center gap-0.5 text-base leading-none">
                 {pack.emojis.map((em, i) => <span key={i}>{em}</span>)}
               </div>

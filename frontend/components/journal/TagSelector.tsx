@@ -4,8 +4,31 @@ import { useState } from "react";
 import { Tag, TagsResponse } from "../../../shared/types";
 import { createCustomTag, deleteCustomTag } from "../../../shared/api";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 const tagKey = (tag: Tag) => `${tag.type}:${tag.id}`; //Unique keys to handle collisions
+
+export const SYSTEM_TAG_KEYS: Record<string, TranslationKey> = {
+  "bad habits": "tag.badHabits",
+  "beauty": "tag.beauty",
+  "exercise": "tag.exercise",
+  "family": "tag.family",
+  "food": "tag.food",
+  "friends": "tag.friends",
+  "health": "tag.health",
+  "hobbies": "tag.hobbies",
+  "relationships": "tag.relationships",
+  "school": "tag.school",
+  "sleep": "tag.sleep",
+  "weather": "tag.weather",
+  "work": "tag.work",
+};
+
+export function systemTagLabel(tag: Tag, t: (key: TranslationKey) => string): string {
+  if (tag.type !== "system") return tag.name;
+  const key = SYSTEM_TAG_KEYS[tag.name];
+  return key ? t(key) : tag.name;
+}
 
 interface TagSelectorProps {
   tags: TagsResponse;
@@ -80,7 +103,7 @@ export default function TagSelector({
                 : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300"
             }`}
           >
-            {tag.name}
+            {systemTagLabel(tag, t)}
           </button>
         ))}
       </div>

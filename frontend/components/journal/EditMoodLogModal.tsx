@@ -6,6 +6,7 @@ import { updateMoodLog } from "../../../shared/api";
 import TagSelector from "./TagSelector";
 import { useToastContext } from "../notifications/ToastContext";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 const FALLBACK_MOOD_CONFIG: MoodLevelConfig[] = [
   { id: 1, level: 1, emoji: "😢", label: "Awful", color: "#ef4444", displayOrder: 0 },
@@ -14,6 +15,14 @@ const FALLBACK_MOOD_CONFIG: MoodLevelConfig[] = [
   { id: 4, level: 4, emoji: "🙂", label: "Good", color: "#22c55e", displayOrder: 3 },
   { id: 5, level: 5, emoji: "😄", label: "Great", color: "#6366f1", displayOrder: 4 },
 ];
+
+const MOOD_LABEL_KEYS: Record<MoodLevel, TranslationKey> = {
+  1: "mood.awful",
+  2: "mood.bad",
+  3: "mood.okay",
+  4: "mood.good",
+  5: "mood.great",
+};
 
 interface EditMoodLogModalProps {
   log: MoodLog;
@@ -115,7 +124,7 @@ export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClo
                   }}
                 >
                   <span className="text-2xl">{mood.emoji}</span>
-                  <span className="text-[10px] font-medium text-slate-700">{mood.label}</span>
+                  <span className="text-[10px] font-medium text-slate-700">{t(MOOD_LABEL_KEYS[mood.level])}</span>
                 </button>
               );
             })}

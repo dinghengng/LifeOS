@@ -13,6 +13,7 @@ import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 const SECTION_COMPONENTS: Record<
   string,
@@ -64,7 +65,7 @@ export default function SettingsPage() {
   const activeSection = SETTINGS_SECTIONS.find((s) => s.id === activeSectionId);
   const ActiveComponent = SECTION_COMPONENTS[activeSectionId] ?? null;
 
-  const tabItems = SETTINGS_SECTIONS.map((s) => ({ id: s.id, label: s.title }));
+  const tabItems = SETTINGS_SECTIONS.map((s) => ({ id: s.id, label: t(s.titleKey as TranslationKey) }));
 
   return (
     <AppShell>
@@ -89,8 +90,8 @@ export default function SettingsPage() {
       <div>
         {activeSection && activeSectionId !== "nutrition_goals" ? (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-slate-900">{activeSection.title}</h2>
-            <p className="mt-1 text-sm text-slate-500">{activeSection.description}</p>
+            <h2 className="text-lg font-semibold text-slate-900">{t(activeSection.titleKey as TranslationKey)}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t(activeSection.descriptionKey as TranslationKey)}</p>
           </div>
         ) : null}
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { type ReactNode } from "react";
+import { useTranslation } from "../../context/LanguageContext";
+import { TranslationKey } from "../../context/translations";
 
 export type Quest = {
   id: string;
@@ -17,27 +19,27 @@ interface QuestPanelProps {
 
 const XP_PER_LEVEL = 100;
 
-function getLevelInfo(xp: number) {
+function getLevelInfo(xp: number, t: (key: TranslationKey) => string) {
   const level = Math.floor(xp / XP_PER_LEVEL) + 1;
   const currentLevelXP = xp % XP_PER_LEVEL;
   const progress = (currentLevelXP / XP_PER_LEVEL) * 100;
-  const titles = [
-    "Newcomer",
-    "Initiate",
-    "Apprentice",
-    "Practitioner",
-    "Adept",
-    "Expert",
-    "Master",
-    "Champion",
-    "Legend",
-    "Ascendant",
+  const titleKeys: TranslationKey[] = [
+    "questPanel.levelTitle.newcomer",
+    "questPanel.levelTitle.initiate",
+    "questPanel.levelTitle.apprentice",
+    "questPanel.levelTitle.practitioner",
+    "questPanel.levelTitle.adept",
+    "questPanel.levelTitle.expert",
+    "questPanel.levelTitle.master",
+    "questPanel.levelTitle.champion",
+    "questPanel.levelTitle.legend",
+    "questPanel.levelTitle.ascendant",
   ];
   return {
     level,
     currentLevelXP,
     progress,
-    title: titles[Math.min(level - 1, titles.length - 1)],
+    title: t(titleKeys[Math.min(level - 1, titleKeys.length - 1)]),
   };
 }
 
@@ -73,7 +75,8 @@ const QuestCheckbox = ({ completed }: { completed: boolean }) => (
 );
 
 export default function QuestPanel({ quests, totalXP }: QuestPanelProps) {
-  const { level, currentLevelXP, progress, title } = getLevelInfo(totalXP);
+  const { t } = useTranslation();
+  const { level, currentLevelXP, progress, title } = getLevelInfo(totalXP, t);
   const completedCount = quests.filter((q) => q.completed).length;
 
   const r = 28;
@@ -100,10 +103,10 @@ export default function QuestPanel({ quests, totalXP }: QuestPanelProps) {
               color: "var(--color-text-primary)",
             }}
           >
-            Daily Quests
+            {t("questPanel.title")}
           </h2>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
-            {completedCount}/{quests.length} completed today
+            {t("questPanel.completedToday", { completed: completedCount, total: quests.length })}
           </p>
         </div>
 
@@ -160,7 +163,7 @@ export default function QuestPanel({ quests, totalXP }: QuestPanelProps) {
                   letterSpacing: "0.03em",
                 }}
               >
-                LVL
+                {t("questPanel.lvl")}
               </span>
             </div>
           </div>
@@ -177,7 +180,7 @@ export default function QuestPanel({ quests, totalXP }: QuestPanelProps) {
               {title}
             </p>
             <p style={{ margin: "2px 0 0", fontSize: 11, color: "#64748b" }}>
-              {currentLevelXP} / {XP_PER_LEVEL} XP
+              {t("questPanel.xpProgress", { current: currentLevelXP, max: XP_PER_LEVEL })}
             </p>
             <p
               style={{
@@ -187,7 +190,7 @@ export default function QuestPanel({ quests, totalXP }: QuestPanelProps) {
                 fontWeight: 600,
               }}
             >
-              {totalXP} XP total
+              {t("questPanel.xpTotal", { xp: totalXP })}
             </p>
           </div>
         </div>
@@ -255,7 +258,7 @@ export default function QuestPanel({ quests, totalXP }: QuestPanelProps) {
                 flexShrink: 0,
               }}
             >
-              +{quest.xp} XP
+              {t("questPanel.xpBadge", { xp: quest.xp })}
             </span>
           </div>
         ))}
@@ -274,8 +277,7 @@ export default function QuestPanel({ quests, totalXP }: QuestPanelProps) {
           <p
             style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "white" }}
           >
-            All quests complete! You earned{" "}
-            {quests.reduce((s, q) => s + q.xp, 0)} XP today.
+            {t("questPanel.allComplete", { xp: quests.reduce((s, q) => s + q.xp, 0) })}
           </p>
         </div>
       )}

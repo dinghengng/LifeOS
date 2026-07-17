@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "../context/LanguageContext";
 
 interface RegisterFormProps {
   onRegister: (email: string, password: string, name: string) => Promise<void>;
@@ -9,6 +10,7 @@ interface RegisterFormProps {
 }
 
 export default function RegisterForm({ onRegister, onSwitchToLogin, error }: RegisterFormProps) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -24,11 +26,11 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
     setLocalError(null);
 
     if (password.length < 8) {
-      setLocalError("Password must be at least 8 characters.");
+      setLocalError(t("register.errorPasswordLength"));
       return;
     }
     if (password !== confirm) {
-      setLocalError("Passwords do not match.");
+      setLocalError(t("register.errorPasswordMatch"));
       return;
     }
 
@@ -43,10 +45,10 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
     <div className="flex flex-col items-center justify-center min-h-screen px-4">
       <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 p-8 w-full max-w-md">
         <h1 className="text-2xl font-bold text-slate-800 mb-1 text-center">
-          Create your account
+          {t("register.title")}
         </h1>
         <p className="text-sm text-slate-500 text-center mb-6">
-          Start building better habits with LifeOS
+          {t("register.subtitle")}
         </p>
 
         {/* Error at the top of the form */}
@@ -61,25 +63,25 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
           {/* Optional display name field */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700">
-              Name <span className="text-slate-400">(optional)</span>
+              {t("register.nameLabel")} <span className="text-slate-400">{t("register.nameOptional")}</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
+              placeholder={t("register.namePlaceholder")}
               className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
           {/* Email field */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700">Email</label>
+            <label className="text-sm font-medium text-slate-700">{t("register.email")}</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("register.emailPlaceholder")}
               required
               className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -87,13 +89,13 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
 
           {/* Password field */}
           <div className="flex flex-col gap-1">
-  <label className="text-sm font-medium text-slate-700">Password</label>
+  <label className="text-sm font-medium text-slate-700">{t("register.password")}</label>
   <div className="relative">
     <input
       type={showPassword ? "text" : "password"}
       value={password}
       onChange={(e) => setPassword(e.target.value)}
-      placeholder="At least 8 characters"
+      placeholder={t("register.passwordPlaceholder")}
       required
       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
     />
@@ -101,7 +103,7 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
       type="button"
       onClick={() => setShowPassword((prev) => !prev)}
       className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-700"
-      aria-label={showPassword ? "Hide password" : "Show password"}
+      aria-label={showPassword ? t("register.hidePassword") : t("register.showPassword")}
     >
       {/* Simple eye icon as inline SVG */}
       <svg
@@ -122,14 +124,14 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
           {/* Confirm password field */}
           <div className="flex flex-col gap-1">
   <label className="text-sm font-medium text-slate-700">
-    Confirm password
+    {t("register.confirmPassword")}
   </label>
   <div className="relative">
     <input
       type={showConfirm ? "text" : "password"}
       value={confirm}
       onChange={(e) => setConfirm(e.target.value)}
-      placeholder="Repeat your password"
+      placeholder={t("register.confirmPlaceholder")}
       required
       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
     />
@@ -137,7 +139,7 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
       type="button"
       onClick={() => setShowConfirm((prev) => !prev)}
       className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-700"
-      aria-label={showConfirm ? "Hide password" : "Show password"}
+      aria-label={showConfirm ? t("register.hidePassword") : t("register.showPassword")}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -164,18 +166,18 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
                 : "bg-indigo-600 hover:bg-indigo-700"
             }`}
           >
-            {isSubmitting ? "Creating account..." : "Create account"}
+            {isSubmitting ? t("register.submitting") : t("register.submit")}
           </button>
         </form>
 
         {/* Sign in to existing acc */}
         <p className="text-sm text-center text-slate-500 mt-4">
-          Already have an account?{" "}
+          {t("register.haveAccount")}{" "}
           <button
             onClick={onSwitchToLogin}
             className="text-indigo-600 font-medium hover:underline"
           >
-            Sign in
+            {t("register.signIn")}
           </button>
         </p>
       </div>

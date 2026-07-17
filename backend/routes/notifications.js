@@ -88,7 +88,7 @@ function createNotificationRouter(requireAuth) {
     res.set('Cache-Control', 'no-store');
     try {
       const { rows } = await pool.query(
-        `SELECT id, type, title, body, sent_at, read_at, status
+        `SELECT id, type, params, sent_at, read_at, status
         FROM notification_log
         WHERE user_id = $1
         ORDER BY sent_at DESC

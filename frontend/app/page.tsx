@@ -12,6 +12,7 @@ import HelpCentre from "../components/GuidedTour";
 import AppShell from "../components/layout/AppShell";
 import AppHeader from "../components/layout/AppHeader";
 import PageHeader from "../components/layout/PageHeader";
+import { useTranslation } from "../context/LanguageContext";
 
 // Import types and unified API functions from the shared folder
 import { Task, Priority, User } from "../../shared/types";
@@ -40,6 +41,7 @@ const hasDueTime = (dueDate: string | null) => !!dueDate;
 
 export default function Page() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -90,13 +92,13 @@ export default function Page() {
         setTasks(data);
       } catch (err: unknown) {
         console.error(err);
-        setError("Unable to load tasks. Please try again.");
+        setError(t("tasks.errorLoad"));
       } finally {
         setLoading(false);
       }
     };
     loadTasks();
-  }, [currentUser]);
+  }, [currentUser, t]);
 
   // Task Handlers using API
   const handleAddTask = async (
@@ -110,7 +112,7 @@ export default function Page() {
       setTasks([...tasks, newTask]);
     } catch (err: unknown) {
       console.error(err);
-      setError("Could not add task. Please try again.");
+      setError(t("tasks.errorAdd"));
     }
   };
 
@@ -129,7 +131,7 @@ export default function Page() {
       );
     } catch (err: unknown) {
       console.error(err);
-      setError("Could not update task. Please try again.");
+      setError(t("tasks.errorUpdate"));
     }
   };
 
@@ -140,7 +142,7 @@ export default function Page() {
       setTasks(tasks.filter((task) => task.id !== idToDelete));
     } catch (err: unknown) {
       console.error(err);
-      setError("Could not delete task. Please try again.");
+      setError(t("tasks.errorDelete"));
     }
   };
 
@@ -157,7 +159,7 @@ export default function Page() {
       setEditingTask(null);
     } catch (err: unknown) {
       console.error(err);
-      setError("Could not update task. Please try again.");
+      setError(t("tasks.errorUpdate"));
     }
   };
 
@@ -236,7 +238,7 @@ export default function Page() {
         className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center"
         style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
       >
-        <p className="text-white text-lg font-medium drop-shadow">Loading...</p>
+        <p className="text-white text-lg font-medium drop-shadow">{t("tasks.loading")}</p>
       </main>
     );
   }
@@ -279,7 +281,7 @@ export default function Page() {
             onClick={handleLogout}
             className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
           >
-            Logout
+            {t("common.logout")}
           </button>
         }
       />
@@ -287,9 +289,9 @@ export default function Page() {
       <HelpCentre />
 
       <PageHeader
-        eyebrow={`Welcome back, ${currentUser.name || currentUser.email}`}
-        title="LifeOS Tasks"
-        description="Add, prioritise, and track what needs to be done"
+        eyebrow={t("tasks.welcomeBack", { name: currentUser.name || currentUser.email })}
+        title={t("tasks.title")}
+        description={t("tasks.description")}
       />
 
       {error && (
@@ -297,7 +299,7 @@ export default function Page() {
       )}
 
       {loading ? (
-        <p className="text-slate-500 text-center mt-4">Loading tasks...</p>
+        <p className="text-slate-500 text-center mt-4">{t("tasks.loadingTasks")}</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <section id="tour-tasks" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -320,7 +322,7 @@ export default function Page() {
                     }`}
                   >
                     <span className="uppercase tracking-wider">
-                      {level === "all" ? "All" : level}
+                      {t(`tasks.filter.${level}` as const)}
                     </span>
                     <span
                       className={`px-1.5 py-0.5 rounded-full text-[10px] ${
@@ -344,13 +346,13 @@ export default function Page() {
 
           <div className="flex flex-col gap-6">
             <section id="tour-add-task" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-900 mb-3">Add a task</h2>
+              <h2 className="text-base font-semibold text-slate-900 mb-3">{t("tasks.addTask")}</h2>
               <NewTaskForm onAddTask={handleAddTask} />
             </section>
 
             {editingTask && (
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-base font-semibold text-slate-900 mb-3">Edit task</h2>
+                <h2 className="text-base font-semibold text-slate-900 mb-3">{t("tasks.editTask")}</h2>
                 <EditTaskForm
                   task={editingTask}
                   onSave={(updates) => saveTaskEdits(editingTask.id, updates)}

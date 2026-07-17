@@ -22,13 +22,12 @@ async function runOverdueTaskAlerts() {
     for (const task of tasks) {
       // only alert once per day
       const { rowCount } = await pool.query(
-        `INSERT INTO notification_log (user_id, type, title, body, ref_id, ref_date, status, sent_at)
-         VALUES ($1, 'task_due', $2, $3, $4, $5, 'unread', NOW())
+        `INSERT INTO notification_log (user_id, type, params, ref_id, ref_date, status, sent_at)
+         VALUES ($1, 'task_due', $2, $3, $4, 'unread', NOW())
          ON CONFLICT (user_id, type, ref_id, ref_date) DO NOTHING`,
         [
           task.user_id,
-          'Overdue Task',
-          `"${task.title}" was due and is still incomplete.`,
+          JSON.stringify({ taskTitle: task.title }),
           String(task.id),
           today,
         ]
@@ -42,6 +41,7 @@ async function runOverdueTaskAlerts() {
         title: 'Overdue Task',
         body: `"${task.title}" was due and is still incomplete.`,
         type: 'task_due',
+        params: { taskTitle: task.title },
         url: '/tasks',
       });
 

@@ -1,5 +1,6 @@
 "use client";
 import { SquarePen, Trash2 } from "lucide-react";
+import { useTranslation } from "../../context/LanguageContext";
 
 export type Meal = {
   id: string;
@@ -32,6 +33,7 @@ export default function NutritionTracker({
   proteinTarget,
   fitnessGoal,
 }: NutritionTrackerProps) {
+  const { t } = useTranslation();
   const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
   const totalProtein = meals.reduce((sum, m) => sum + m.protein, 0);
 
@@ -54,7 +56,7 @@ export default function NutritionTracker({
               color: "var(--color-text-primary)",
             }}
           >
-            Nutrition Tracker
+            {t("nutritionTracker.title")}
           </h2>
           <p
             style={{
@@ -64,7 +66,7 @@ export default function NutritionTracker({
               fontWeight: 500,
             }}
           >
-            Goal:{" "}
+            {t("nutritionTracker.goalLabel")}{" "}
             <span style={{ color: "#4f46e5", textTransform: "capitalize" }}>
               {fitnessGoal.replace("_", " ")}
             </span>
@@ -76,7 +78,7 @@ export default function NutritionTracker({
               color: "var(--color-text-secondary)",
             }}
           >
-            {meals.length} items logged today
+            {t("nutritionTracker.itemsLoggedToday", { count: meals.length })}
           </p>
         </div>
         <button
@@ -92,7 +94,7 @@ export default function NutritionTracker({
             cursor: "pointer",
           }}
         >
-          + Log Meal
+          {t("nutritionTracker.logMealBtn")}
         </button>
       </div>
 
@@ -114,12 +116,12 @@ export default function NutritionTracker({
             }}
           >
             <span style={{ color: "var(--color-text-secondary)" }}>
-              Daily Calories
+              {t("nutritionTracker.dailyCalories")}
             </span>
             <span
               style={{ fontWeight: 600, color: "var(--color-text-primary)" }}
             >
-              {totalCalories} / {calorieTarget} kcal
+              {t("nutritionTracker.caloriesProgress", { total: totalCalories, target: calorieTarget })}
             </span>
           </div>
           <div
@@ -152,12 +154,12 @@ export default function NutritionTracker({
             }}
           >
             <span style={{ color: "var(--color-text-secondary)" }}>
-              Protein Target
+              {t("nutritionTracker.proteinTarget")}
             </span>
             <span
               style={{ fontWeight: 600, color: "var(--color-text-primary)" }}
             >
-              {totalProtein} / {proteinTarget}g
+              {t("nutritionTracker.proteinProgress", { total: totalProtein, target: proteinTarget })}
             </span>
           </div>
           <div
@@ -201,7 +203,7 @@ export default function NutritionTracker({
               letterSpacing: "0.05em",
             }}
           >
-            Meal Logs
+            {t("nutritionTracker.mealLogsHeader")}
           </h3>
 
           {meals.map((meal) => (
@@ -248,19 +250,19 @@ export default function NutritionTracker({
                 >
                   <span>
                     <strong style={{ color: "#D85A30", fontWeight: 600 }}>
-                      Protein:
+                      {t("nutritionTracker.proteinShort")}
                     </strong>{" "}
                     {meal.protein}g
                   </span>
                   <span>
                     <strong style={{ color: "#EAB308", fontWeight: 600 }}>
-                      Carbs:
+                      {t("nutritionTracker.carbsShort")}
                     </strong>{" "}
                     {meal.carbs}g
                   </span>
                   <span>
                     <strong style={{ color: "#378ADD", fontWeight: 600 }}>
-                      Fats:
+                      {t("nutritionTracker.fatsShort")}
                     </strong>{" "}
                     {meal.fats}g
                   </span>
@@ -283,7 +285,7 @@ export default function NutritionTracker({
                     minWidth: "65px",
                   }}
                 >
-                  {meal.calories} kcal
+                  {t("nutritionTracker.kcalValue", { value: meal.calories })}
                 </div>
                 <button
                   onClick={() => onEditMealClick(meal)}
@@ -297,11 +299,11 @@ export default function NutritionTracker({
                     alignItems: "center",
                     justifyContent: "center",
                   }}
-                  title="Edit Meal"
+                  title={t("nutritionTracker.editMealTitle")}
                 >
                   <SquarePen size={16} strokeWidth={2} />
                 </button>
-                <button onClick={() => onDeleteMealClick(meal.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#ef4444", display: "flex", alignItems: "center" }} title="Delete Meal">
+                <button onClick={() => onDeleteMealClick(meal.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#ef4444", display: "flex", alignItems: "center" }} title={t("nutritionTracker.deleteMealTitle")}>
                     <Trash2 size={16} strokeWidth={2} />
                   </button>
               </div>
@@ -318,7 +320,7 @@ export default function NutritionTracker({
             fontSize: 13,
           }}
         >
-          No meals logged yet for today. Track your first meal to get started!
+          {t("nutritionTracker.emptyState")}
         </div>
       )}
     </div>

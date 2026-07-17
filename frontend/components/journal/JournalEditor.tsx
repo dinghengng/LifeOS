@@ -7,6 +7,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { createJournalEntry } from "../../../shared/api";
 import { CreateJournalEntryPayload, MoodLog, MoodLevel, MoodLevelConfig } from "../../../shared/types";
 import { useToastContext } from "../notifications/ToastContext";
+import { useTranslation } from "../../context/LanguageContext";
 
 // const MOOD_EMOJI: Record<MoodLevel, string> = {
 //   1: "😢", 2: "😕", 3: "😐", 4: "🙂", 5: "😄",
@@ -33,6 +34,7 @@ export default function JournalEditor({
   promptText = null,
   jumpToEditorToken = 0,
 }: JournalEditorProps) {
+  const { t, locale } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(!compact);
@@ -43,6 +45,8 @@ export default function JournalEditor({
   const [isPromptLocked, setIsPromptLocked] = useState(false);
   const { showToast } = useToastContext();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  
+  const currentLocale = locale === "zh" ? "zh-CN" : "en-SG";
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -54,7 +58,7 @@ export default function JournalEditor({
         listItem: {},
       }),
       Placeholder.configure({
-        placeholder: "What's on your mind today ...",
+        placeholder: t("journalEditor.placeholderMain"),
       }),
     ],
     content: "",
@@ -116,10 +120,10 @@ export default function JournalEditor({
       setIsExpanded(!compact);
       setLinkedMoodLogId(defaultMoodLogId);
       onSaved();
-      showToast("Journal entry saved"); //toast noti
+      showToast(t("journalEditor.toastSuccess")); //toast noti
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not save entry.");
-      showToast("Failed to save entry. Try again.", "error");
+      setError(err instanceof Error ? err.message : t("journalEditor.errorDefault"));
+      showToast(t("journalEditor.toastError"), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -138,7 +142,7 @@ export default function JournalEditor({
   const formatLogOption = (log: MoodLog) => {
     const mood = moodConfig.find((m) => m.level === log.moodLevel);
     const emoji = mood?.emoji ?? "🙂";
-    const date = new Date(log.loggedAt).toLocaleString(undefined, {
+    const date = new Date(log.loggedAt).toLocaleString(currentLocale, {
       month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
     });
     return `${emoji} ${date}`;
@@ -231,7 +235,7 @@ export default function JournalEditor({
                 onClick={() => { setTitle(""); setIsPromptLocked(false); }}
                 className="text-indigo-400 hover:text-indigo-600 text-xs transition shrink-0"
               >
-                ✕ Remove prompt
+                {t("journalEditor.removePrompt")}
               </button>
             </div>
           ) : (
@@ -239,7 +243,7 @@ export default function JournalEditor({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title:"
+              placeholder={t("journalEditor.titlePlaceholder")}
               maxLength={250}
               className="w-full text-sm font-medium text-slate-700 placeholder-slate-400 bg-transparent border-b border-slate-200 pb-2 focus:outline-none focus:border-indigo-400 transition"
             />
@@ -253,7 +257,7 @@ export default function JournalEditor({
           onClick={() => { setIsExpanded(true); setTimeout(() => editor?.commands.focus(), 0); }}
           className="w-full text-left px-4 py-3 text-sm text-slate-400 italic hover:text-slate-500 transition"
         >
-          + Add a journal reflection...
+          {t("journalEditor.addReflection")}
         </button>
       ) : (
         <EditorContent editor={editor} />
@@ -269,7 +273,7 @@ export default function JournalEditor({
               <p className="text-xs text-red-600">{error}</p>
             ) : defaultMoodLogId ? (
               <span className="text-xs text-indigo-500 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
-                🔗 Linked to mood log
+                {t("journalEditor.linkedToMood")}
               </span>
             ) : moodLogs.length > 0 ? (
               <select
@@ -277,9 +281,9 @@ export default function JournalEditor({
                 onChange={(e) =>
                   setLinkedMoodLogId(e.target.value ? Number(e.target.value) : null)
                 }
-                className="text-xs text-slate-500 border border-slate-200 rounded-lg px-2 py-1 bg-white hover:border-indigo-300 transition max-w-[200px]"
+                className="text-xs text-slate-500 border border-slate-200 rounded-lg px-2 py-1 bg-white hover:border-indigo-300 transition max-w-50"
               >
-                <option value="">🔗 Link to a mood (optional)</option>
+                <option value="">{t("journalEditor.linkMoodOption")}</option>
                 {moodLogs.map((log) => (
                   <option key={log.id} value={log.id}>
                     {formatLogOption(log)}
@@ -295,7 +299,7 @@ export default function JournalEditor({
               onClick={handleDiscard}
               className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs hover:bg-slate-50 transition"
             >
-              Discard
+              {t("common.discard")}
             </button>
             <button
               onClick={handleSave}
@@ -306,7 +310,7 @@ export default function JournalEditor({
                   : "bg-indigo-600 hover:bg-indigo-700"
               }`}
             >
-              {isSubmitting ? "Saving..." : "Save Entry"}
+              {isSubmitting ? t("common.saving") : t("journalEditor.saveEntry")}
             </button>
           </div>
 

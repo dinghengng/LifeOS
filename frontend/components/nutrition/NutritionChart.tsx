@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "../../context/LanguageContext";
+import { TranslationKey } from "../../context/translations";
 
 export type DayData = {
   date: string;
@@ -37,7 +39,69 @@ function fmtWeek(history: DayData[]) {
   return `${first.toLocaleDateString("en-SG", opts)} – ${last.toLocaleDateString("en-SG", opts)}`;
 }
 
+type SuggestionLabelKey =
+  | "notLogged"
+  | "caloriesOverSignificant"
+  | "caloriesOverModerate"
+  | "caloriesUnderSignificant"
+  | "caloriesUnderModerate"
+  | "caloriesClose"
+  | "caloriesSlightlyOver"
+  | "caloriesSlightlyUnder"
+  | "proteinUnderSignificant"
+  | "proteinUnderModerate"
+  | "proteinOverSignificant"
+  | "proteinClose"
+  | "proteinSlightlyOver"
+  | "proteinSlightlyUnder";
+
+// Returns delta + a translation key for the suggestion label (no hook access here, so the
+// caller resolves the actual copy via t(`nutritionChart.suggestion.${labelKey}`)).
+function getSuggestion(
+  daysLogged: number,
+  weekAvg: number,
+  target: number,
+  metric: Metric,
+): { delta: number; labelKey: SuggestionLabelKey } | null {
+  if (daysLogged < 1)
+    return { delta: 0, labelKey: "notLogged" };
+  const diff = weekAvg - target;
+
+  if (metric === "calories") {
+    if (diff > 300)
+      return { delta: -150, labelKey: "caloriesOverSignificant" };
+    if (diff > 200)
+      return { delta: -100, labelKey: "caloriesOverModerate" };
+    if (diff < -600)
+      return { delta: +200, labelKey: "caloriesUnderSignificant" };
+    if (diff < -300)
+      return { delta: +100, labelKey: "caloriesUnderModerate" };
+    if (Math.abs(diff) <= 100)
+      return { delta: 0, labelKey: "caloriesClose" };
+    // moderate over/under, no strong signal yet
+    return diff > 0
+      ? { delta: 0, labelKey: "caloriesSlightlyOver" }
+      : { delta: 0, labelKey: "caloriesSlightlyUnder" };
+  }
+
+  if (metric === "protein") {
+    if (diff < -40)
+      return { delta: +10, labelKey: "proteinUnderSignificant" };
+    if (diff < -20)
+      return { delta: +5, labelKey: "proteinUnderModerate" };
+    if (diff > 30)
+      return { delta: -5, labelKey: "proteinOverSignificant" };
+    if (Math.abs(diff) <= 10)
+      return { delta: 0, labelKey: "proteinClose" };
+    return diff > 0
+      ? { delta: 0, labelKey: "proteinSlightlyOver" }
+      : { delta: 0, labelKey: "proteinSlightlyUnder" };
+  }
+  return null;
+}
+
 export default function NutritionChart({ history, calorieTarget, proteinTarget }: NutritionChartProps) {
+  const { t } = useTranslation();
   const [metric, setMetric] = useState<Metric>("calories");
   const [hovered, setHovered] = useState<number | null>(null);
 
@@ -52,35 +116,7 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
   const daysLogged = history.filter(d => d.meal_count > 0).length;
   const avgVsTarget = weekAvg - target;
 
-  const suggestion = (() => {
-    if (daysLogged < 3) return null;
-    const diff = weekAvg - target;
-
-    if (metric === "calories") {
-      if (diff > 300)
-        return { delta: -150, label: "consistently over by a significant margin, pulling target down 150 kcal" };
-      if (diff > 200)
-        return { delta: -100, label: "consistently over, nudging target down 100 kcal" };
-      if (diff < -600)
-        return { delta: +200, label: "significantly under, either under-logging or under-eating. Nudging target up 200 kcal" };
-      if (diff < -300)
-        return { delta: +100, label: "consistently under, nudging target up 100 kcal" };
-      if (Math.abs(diff) <= 100 && daysLogged >= 5)
-        return { delta: 0, label: "right on target this week! no adjustment needed. Great consistency" };
-    }
-
-    if (metric === "protein") {
-      if (diff < -40)
-        return { delta: +10, label: "well under your protein target, nudging up 10g" };
-      if (diff < -20)
-        return { delta: +5, label: "consistently under, nudging protein up 5g" };
-      if (diff > 30)
-        return { delta: -5, label: "exceeding protein target consistently, you could ease back 5g" };
-      if (Math.abs(diff) <= 10 && daysLogged >= 5)
-        return { delta: 0, label: "hitting your protein target consistently! no adjustment needed" };
-    }
-    return null;
-  })();
+  const suggestion = getSuggestion(daysLogged, weekAvg, target, metric);
 
   const barHeightPct  = (val: number) => `${Math.min((val / maxVal) * 100, 100)}%`;
   const targetLinePct = `${Math.min((target / maxVal) * 100, 100)}%`;
@@ -91,7 +127,7 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)" }}>
-            Weekly Overview
+            {t("nutritionChart.title")}
           </h2>
           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>{fmtWeek(history)}</p>
         </div>
@@ -120,7 +156,7 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
                 transition: "all 0.2s ease",
               }}
             >
-              {m === "calories" ? "Calories" : "Protein"}
+              {m === "calories" ? t("nutritionChart.tabCalories") : t("nutritionChart.tabProtein")}
             </button>
           ))}
         </div>
@@ -130,20 +166,20 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: "1.25rem" }}>
         {[
           {
-            label: "Daily avg",
+            label: t("nutritionChart.dailyAvg"),
             value: `${weekAvg} ${unit}`,
             highlight: false,
           },
           {
-            label: "vs target",
-            value: daysLogged >= 3
+            label: t("nutritionChart.vsTarget"),
+            value: daysLogged >= 1
               ? `${avgVsTarget >= 0 ? "+" : ""}${avgVsTarget} ${unit}`
               : "—",
-            highlight: daysLogged >= 3 && Math.abs(avgVsTarget) > (metric === "calories" ? 150 : 10),
+            highlight: daysLogged >= 1 && Math.abs(avgVsTarget) > (metric === "calories" ? 150 : 10),
           },
           {
-            label: "Days logged",
-            value: `${daysLogged} / 7`,
+            label: t("nutritionChart.daysLogged"),
+            value: t("nutritionChart.daysLoggedValue", { count: daysLogged }),
             highlight: false,
           },
         ].map(stat => (
@@ -189,7 +225,7 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
           background: "var(--color-background-primary)",
           padding: "0 2px",
         }}>
-          target
+          {t("nutritionChart.targetLineLabel")}
         </span>
 
         {/* Bars */}
@@ -203,7 +239,8 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
         }}>
           {history.map((day, i) => {
             const val       = day[metric];
-            const isToday   = i === history.length - 1;
+            const todayStr  = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" });
+            const isToday   = day.date === todayStr;
             const isOver    = val > target;
             const isEmpty   = val === 0;
             const isHovered = hovered === i;
@@ -241,7 +278,7 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
                     pointerEvents: "none",
                     zIndex: 10,
                   }}>
-                    {val} {unit}
+                    {t("nutritionChart.tooltipValue", { value: val, unit })}
                   </div>
                 )}
 
@@ -272,8 +309,8 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
           <div key={day.date} style={{ flex: 1, textAlign: "center" }}>
             <span style={{
               fontSize: 11,
-              color: i === history.length - 1 ? color.text : "#94a3b8",
-              fontWeight: i === history.length - 1 ? 700 : 400,
+              color: day.date === new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" }) ? color.text : "#94a3b8",
+              fontWeight: day.date === new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Singapore" }) ? 700 : 400,
             }}>
               {fmt(day.date)}
             </span>
@@ -291,9 +328,9 @@ export default function NutritionChart({ history, calorieTarget, proteinTarget }
           border: `0.5px solid ${color.target}`,
         }}>
           <span style={{ fontSize: 13, color: color.text }}>
-            Your 7-day average is {suggestion.label}.
+            {t("nutritionChart.summaryPrefix", { label: t(`nutritionChart.suggestion.${suggestion.labelKey}` as TranslationKey) })}
             {suggestion.delta !== 0 && (
-              <> Next week's suggested target: <strong>{target + suggestion.delta} {unit}</strong>.</>
+              <> {t("nutritionChart.nextWeekTarget", { target: target + suggestion.delta, unit })}</>
             )}
           </span>
         </div>

@@ -16,16 +16,12 @@ import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
+import { useTranslation } from "../../context/LanguageContext";
 
 type Tab = "mood" | "write" | "history";
 
-const JOURNAL_TABS: { id: Tab; label: string }[] = [
-  { id: "mood", label: "Mood" },
-  { id: "write", label: "Write" },
-  { id: "history", label: "History" },
-];
-
 export default function JournalPage() {
+  const { t, locale } = useTranslation();
   const [logs, setLogs] = useState<MoodLog[]>([]);
   const [tags, setTags] = useState<TagsResponse>({ system: [], custom: [] });
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -38,6 +34,12 @@ export default function JournalPage() {
   const [promptJumpToken, setPromptJumpToken] = useState(0);
   const [moodConfig, setMoodConfig] = useState<MoodLevelConfig[]>([]);
   const router = useRouter();
+
+  const JOURNAL_TABS: { id: Tab; label: string }[] = [
+    { id: "mood", label: t("journal.tabs.mood") },
+    { id: "write", label: t("journal.tabs.write") },
+    { id: "history", label: t("journal.tabs.history") },
+  ];
 
   useEffect(() => {
     const init = async () => {
@@ -110,7 +112,7 @@ export default function JournalPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-sm text-slate-400">Loading…</p>
+        <p className="text-sm text-slate-400">{t("journal.loading")}</p>
       </div>
     );
   }
@@ -123,7 +125,7 @@ export default function JournalPage() {
             onClick={handleLogout}
             className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
           >
-            Logout
+            {t("common.logout")}
           </button>
         }
       />
@@ -141,9 +143,9 @@ export default function JournalPage() {
       )}
 
       <PageHeader
-        eyebrow={new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" })}
-        title="Life Journal"
-        description="Log your mood, reflect your thoughts, and look back on your history"
+        eyebrow={new Date().toLocaleDateString(locale === "zh" ? "zh-CN" : "en-SG", { weekday: "long", day: "numeric", month: "long" })}
+        title={t("journal.title")}
+        description={t("journal.description")}
       />
 
       <LocalTabs

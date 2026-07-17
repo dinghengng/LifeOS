@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "../../context/LanguageContext";
 
 export type HeatmapStatus = "done" | "skipped" | "missed" | "future" | "none";
 
@@ -35,9 +36,9 @@ function monthKey(dateStr: string): string {
   return dateStr.slice(0, 7); // YYYY-MM
 }
 
-function monthTitle(key: string): string {
+function monthTitle(key: string, dateLocale: string): string {
   const [y, m] = key.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("en-SG", { month: "long", year: "numeric" });
+  return new Date(y, m - 1, 1).toLocaleDateString(dateLocale, { month: "long", year: "numeric" });
 }
 
 type MonthBlock = {
@@ -48,7 +49,7 @@ type MonthBlock = {
 
 /** Groups into full calendar-month blocks, each a Mon-Sun grid. Days outside the habit's data 
  * (before it existed, or beyond today) render as blank cells rather than "missed".*/
-function buildMonths(data: HeatmapDay[]): MonthBlock[] {
+function buildMonths(data: HeatmapDay[], dateLocale: string): MonthBlock[] {
   if (data.length === 0) return [];
 
   const byDate = new Map(data.map((d) => [d.date, d]));
@@ -79,7 +80,7 @@ function buildMonths(data: HeatmapDay[]): MonthBlock[] {
     }
 
     const key = `${y}-${pad2(m)}`;
-    months.push({ key, title: monthTitle(key), weeks });
+    months.push({ key, title: monthTitle(key, dateLocale), weeks });
 
     m += 1;
     if (m > 12) {
@@ -100,11 +101,13 @@ export default function HabitHeatmap({
   habitColor: string;
   maxMonths?: number;
 }) {
+  const { t, locale } = useTranslation();
+  const dateLocale = locale === "zh" ? "zh-CN" : "en-SG";
   const [hovered, setHovered] = useState<HeatmapDay | null>(null);
 
   if (data.length === 0) return null;
 
-  const allMonths = buildMonths(data);
+  const allMonths = buildMonths(data, dateLocale);
   const months = maxMonths > 0 ? allMonths.slice(-maxMonths) : allMonths;
 
   return (
@@ -112,47 +115,18 @@ export default function HabitHeatmap({
       <div style={{ display: "flex", gap: 20, overflowX: "auto", paddingBottom: 4 }}>
         {months.map((month) => (
           <div key={month.key} style={{ flex: "0 0 auto" }}>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: "var(--color-text-secondary, #64748b)",
-                marginBottom: 4,
-              }}
-            >
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-secondary, #64748b)", marginBottom: 4 }}>
               {month.title}
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: `repeat(7, ${CELL}px)`,
-                gap: GAP,
-                marginBottom: 3,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP, marginBottom: 3 }}>
               {DAY_LABELS.map((d, i) => (
-                <div
-                  key={i}
-                  style={{
-                    fontSize: 8,
-                    textAlign: "center",
-                    color: "var(--color-text-secondary, #94a3b8)",
-                  }}
-                >
+                <div key={i} style={{ fontSize: 8, textAlign: "center", color: "var(--color-text-secondary, #94a3b8)" }}>
                   {d}
                 </div>
               ))}
             </div>
             {month.weeks.map((week, wi) => (
-              <div
-                key={wi}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: `repeat(7, ${CELL}px)`,
-                  gap: GAP,
-                  marginBottom: GAP,
-                }}
-              >
+              <div key={wi} style={{ display: "grid", gridTemplateColumns: `repeat(7, ${CELL}px)`, gap: GAP, marginBottom: GAP }}>
                 {week.map((day, di) => {
                   if (!day) return <div key={di} style={{ width: CELL, height: CELL }} />;
                   const isSkipped = day.status === "skipped";
@@ -162,10 +136,7 @@ export default function HabitHeatmap({
                       onMouseEnter={() => setHovered(day)}
                       onMouseLeave={() => setHovered(null)}
                       style={{
-                        position: "relative",
-                        width: CELL,
-                        height: CELL,
-                        borderRadius: 3,
+                        position: "relative", width: CELL, height: CELL, borderRadius: 3,
                         background: statusFill(day.status, habitColor),
                         border:
                           day.status === "missed"
@@ -179,32 +150,23 @@ export default function HabitHeatmap({
                       {hovered === day && (
                         <div
                           style={{
-                            position: "absolute",
-                            bottom: "130%",
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            background: "#1e293b",
-                            color: "#fff",
-                            fontSize: 11,
-                            padding: "3px 7px",
-                            borderRadius: 4,
-                            whiteSpace: "nowrap",
-                            pointerEvents: "none",
-                            zIndex: 10,
+                            position: "absolute", bottom: "130%", left: "50%", transform: "translateX(-50%)",
+                            background: "#1e293b", color: "#fff", fontSize: 11, padding: "3px 7px", borderRadius: 4,
+                            whiteSpace: "nowrap", pointerEvents: "none", zIndex: 10,
                           }}
                         >
-                          {new Date(day.date).toLocaleDateString("en-SG", {
+                          {new Date(day.date).toLocaleDateString(dateLocale, {
                             weekday: "short",
                             day: "numeric",
                             month: "short",
                           })}
                           {" · "}
                           {day.status === "done"
-                            ? "Completed"
+                            ? t("habitHeatmap.done")
                             : day.status === "skipped"
-                              ? "Rest day"
+                              ? t("habitHeatmap.restDay")
                               : day.status === "missed"
-                                ? "Missed"
+                                ? t("habitHeatmap.missed")
                                 : ""}
                         </div>
                       )}
@@ -216,18 +178,10 @@ export default function HabitHeatmap({
           </div>
         ))}
       </div>
-      <div
-        style={{
-          display: "flex",
-          gap: 10,
-          marginTop: 8,
-          fontSize: 10,
-          color: "var(--color-text-secondary, #64748b)",
-        }}
-      >
-        <LegendSwatch color={habitColor} label="Done" />
-        <LegendSwatch dashed label="Rest day" />
-        <LegendSwatch color="var(--color-background-secondary, #f1f5f9)" bordered label="Missed" />
+      <div style={{ display: "flex", gap: 10, marginTop: 8, fontSize: 10, color: "var(--color-text-secondary, #64748b)" }}>
+        <LegendSwatch color={habitColor} label={t("habitHeatmap.done")} />
+        <LegendSwatch dashed label={t("habitHeatmap.restDay")} />
+        <LegendSwatch color="var(--color-background-secondary, #f1f5f9)" bordered label={t("habitHeatmap.missed")} />
       </div>
     </div>
   );
@@ -248,9 +202,7 @@ function LegendSwatch({
     <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
       <span
         style={{
-          width: 9,
-          height: 9,
-          borderRadius: 2,
+          width: 9, height: 9, borderRadius: 2,
           background: dashed ? "transparent" : color,
           border: dashed ? "1px dashed #94a3b8" : bordered ? "1px solid #cbd5e1" : "none",
         }}

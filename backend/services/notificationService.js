@@ -16,7 +16,7 @@ function isQuietHours(quietStart, quietEnd) {
   return current >= start && current < end;
 }
 
-async function sendToUser(userId, { title, body, type, url = '/' }) {
+async function sendToUser(userId, { title, body, type, params = {}, url = '/' }) {
   const { rows: [prefs] } = await db.query(
     'SELECT * FROM notification_preferences WHERE user_id = $1', [userId]
   );
@@ -24,9 +24,9 @@ async function sendToUser(userId, { title, body, type, url = '/' }) {
   if (prefs && isQuietHours(prefs.quiet_start, prefs.quiet_end)) return;
 
   await db.query(
-    `INSERT INTO notification_log (user_id, type, title, body, status)
-     VALUES ($1, $2, $3, $4, 'unread')`,
-    [userId, type, title, body]
+    `INSERT INTO notification_log (user_id, type, params, status)
+     VALUES ($1, $2, $3, 'unread')`,
+    [userId, type, JSON.stringify(params)]
   );
   
   const { rows: tokens } = await db.query(

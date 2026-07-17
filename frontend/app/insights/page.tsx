@@ -4,13 +4,17 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Download, TrendingUp, Maximize2, X } from "lucide-react";
-import Navbar from "../../components/Navbar";
+import AppShell from "../../components/layout/AppShell";
+import AppHeader from "../../components/layout/AppHeader";
+import PageHeader from "../../components/layout/PageHeader";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
 import { computeWellnessScore, WellnessBreakdown } from "../../components/insights/WellnessScore";
 import type { Habit } from "../../components/dashboard/HabitRow";
 import type { Goal } from "../../components/dashboard/GoalCard";
 import type { DayData } from "../../components/nutrition/NutritionChart";
 import type { Supplement } from "../../components/nutrition/SupplementTracker";
+import type { TranslationKey } from "../../context/translations";
+import { useTranslation } from "../../context/LanguageContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -34,17 +38,20 @@ const CATEGORY_COLORS: Record<keyof Omit<WellnessBreakdown, "overall">, string> 
   supplements: "#dc2626",
 };
 
-// Returns color based on score
-function getScoreStyle(score: number): { color: string; label: string } {
-  if (score >= 75) return { color: "#16a34a", label: "Keep going" };
-  if (score >= 50) return { color: "#d97706", label: "On track" };
-  return { color: "#dc2626", label: "Needs a push" };
+type TFunc = (key: TranslationKey, params?: Record<string, string | number>) => string;
+
+// Returns color based on score. Defined outside the component (no hook access), so `t` is threaded in.
+function getScoreStyle(score: number, t: TFunc): { color: string; label: string } {
+  if (score >= 75) return { color: "#16a34a", label: t("insightsPage.scoreKeepGoing") };
+  if (score >= 50) return { color: "#d97706", label: t("insightsPage.scoreOnTrack") };
+  return { color: "#dc2626", label: t("insightsPage.scoreNeedsPush") };
 }
 
 // Converts an array of flat objects into a downloadable CSV file.
-function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
+// `emptyAlertMessage` is passed in from the caller since this helper has no hook access.
+function downloadCsv(filename: string, rows: Record<string, unknown>[], emptyAlertMessage: string) {
   if (rows.length === 0) {
-    alert("Nothing to export yet — no data logged for this category.");
+    alert(emptyAlertMessage);
     return;
   }
   const headers = Object.keys(rows[0]);
@@ -71,6 +78,7 @@ function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
 }
 
 export default function InsightsPage() {
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const [authLoading, setAuthLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
@@ -220,7 +228,7 @@ export default function InsightsPage() {
   if (authLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-(--color-background-tertiary,#f5f5f2)]">
-        <p className="text-slate-500">Loading...</p>
+        <p className="text-slate-500">{t("insightsPage.loading")}</p>
       </main>
     );
   }
@@ -231,42 +239,31 @@ export default function InsightsPage() {
     month: "long",
   });
 
+  // Category display labels — resolved once so both the grid and the expanded-chart modal stay in sync.
+  const categoryLabels = {
+    habits: t("insightsPage.categoryHabits"),
+    goals: t("insightsPage.categoryGoals"),
+    nutrition: t("insightsPage.categoryNutrition"),
+    supplements: t("insightsPage.categorySupplements"),
+  };
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--color-background-tertiary, #f5f5f2)",
-        fontFamily: "var(--font-sans)",
-        padding: "2rem",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-end",
-          marginBottom: "2rem",
-        }}
-      >
-        <div>
-          <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{today}</p>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 28,
-              fontWeight: 500,
-              color: "var(--color-text-primary)",
-              letterSpacing: "-0.01em",
-            }}
+    <AppShell>
+      <AppHeader
+        rightActions={
+          <button
+            onClick={handleLogout}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
-            Insights
-          </h1>
-        </div>
-        <Navbar onLogout={handleLogout} />
-      </div>
+            {t("common.logout")}
+          </button>
+        }
+      />
+
+      <PageHeader eyebrow={new Date().toLocaleDateString(locale === "zh" ? "zh-CN" : "en-SG", { weekday: "long", day: "numeric", month: "long" })} title={t("insightsPage.title")} description={t("insightsPage.description")}/>
 
       {dataLoading ? (
-        <p style={{ textAlign: "center", color: "#64748b" }}>Loading insights...</p>
+        <p style={{ textAlign: "center", color: "#64748b" }}>{t("insightsPage.loadingInsights")}</p>
       ) : (
         <div style={{ maxWidth: 1000, margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           {/* Overall wellness score + category breakdown */}
@@ -284,14 +281,14 @@ export default function InsightsPage() {
           >
             <div style={{ textAlign: "center", minWidth: 140 }}>
               <p style={{ margin: 0, fontSize: 12, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Overall
+                {t("insightsPage.overallLabel")}
               </p>
-              <p style={{ margin: "4px 0 0", fontSize: 42, fontWeight: 600, color: getScoreStyle(score.overall).color }}>
+              <p style={{ margin: "4px 0 0", fontSize: 42, fontWeight: 600, color: getScoreStyle(score.overall, t).color }}>
                 {score.overall}
                 <span style={{ fontSize: 18, fontWeight: 500, color: "#94a3b8" }}>/100</span>
               </p>
-              <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 600, color: getScoreStyle(score.overall).color }}>
-                {getScoreStyle(score.overall).label}
+              <p style={{ margin: "2px 0 0", fontSize: 12, fontWeight: 600, color: getScoreStyle(score.overall, t).color }}>
+                {getScoreStyle(score.overall, t).label}
               </p>
             </div>
 
@@ -300,9 +297,9 @@ export default function InsightsPage() {
                 <div key={key}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                     <span style={{ fontSize: 12, textTransform: "capitalize", color: "var(--color-text-primary)" }}>
-                      {key}
+                      {categoryLabels[key]}
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: getScoreStyle(score[key]).color }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: getScoreStyle(score[key], t).color }}>
                       {score[key]}
                       <span style={{ color: "#94a3b8", fontWeight: 500 }}>/100</span>
                     </span>
@@ -336,7 +333,7 @@ export default function InsightsPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <TrendingUp size={16} style={{ color: "var(--color-text-primary)" }} />
                 <h2 style={{ margin: 0, fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>
-                  {rangeDays}-day trends
+                  {t("insightsPage.trendsHeader", { days: rangeDays })}
                 </h2>
               </div>
 
@@ -359,7 +356,7 @@ export default function InsightsPage() {
                       transition: "background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease",
                     }}
                   >
-                    {opt}d
+                    {t("insightsPage.rangeDaysBtn", { days: opt })}
                   </button>
                 ))}
               </div>
@@ -374,61 +371,65 @@ export default function InsightsPage() {
             >
               <TrendChartCard
                 chartKey="habits"
-                label="Habits"
+                label={categoryLabels.habits}
                 color={CATEGORY_COLORS.habits}
                 data={habitsTrend}
-                emptyMessage={`No habit logs yet in the last ${rangeDays} days — this fills in as you check off habits.`}
+                emptyMessage={t("insightsPage.emptyHabits", { days: rangeDays })}
                 onExpand={setExpandedChart}
                 onPointClick={(date) => goToDayDetail("habits", date)}
                 onExport={() =>
                   downloadCsv(
                     "habits_trend.csv",
                     habitsTrend.map((d) => ({ date: d.date, score: d.score })),
+                    t("insightsPage.exportEmptyAlert"),
                   )
                 }
               />
               <TrendChartCard
                 chartKey="goals"
-                label="Goals"
+                label={categoryLabels.goals}
                 color={CATEGORY_COLORS.goals}
                 data={goalsTrend}
-                emptyMessage="No goal progress recorded yet — this fills in as milestones are checked off."
+                emptyMessage={t("insightsPage.emptyGoals")}
                 onExpand={setExpandedChart}
                 onPointClick={(date) => goToDayDetail("goals", date)}
                 onExport={() =>
                   downloadCsv(
                     "goals_trend.csv",
                     goalsTrend.map((d) => ({ date: d.date, score: d.score })),
+                    t("insightsPage.exportEmptyAlert"),
                   )
                 }
               />
               <TrendChartCard
                 chartKey="nutrition"
-                label="Nutrition"
+                label={categoryLabels.nutrition}
                 color={CATEGORY_COLORS.nutrition}
                 data={nutritionTrend}
-                emptyMessage={`No logged nutrition days yet in the last ${rangeDays} days — this fills in as you log meals.`}
+                emptyMessage={t("insightsPage.emptyNutrition", { days: rangeDays })}
                 onExpand={setExpandedChart}
                 onPointClick={(date) => goToDayDetail("nutrition", date)}
                 onExport={() =>
                   downloadCsv(
                     "nutrition_trend.csv",
                     nutritionTrend.map((d) => ({ date: d.date, score: d.score })),
+                    t("insightsPage.exportEmptyAlert"),
                   )
                 }
               />
               <TrendChartCard
                 chartKey="supplements"
-                label="Supplements"
+                label={categoryLabels.supplements}
                 color={CATEGORY_COLORS.supplements}
                 data={supplementsTrend}
-                emptyMessage={`No supplement logs yet in the last ${rangeDays} days — this fills in as you check them off.`}
+                emptyMessage={t("insightsPage.emptySupplements", { days: rangeDays })}
                 onExpand={setExpandedChart}
                 onPointClick={(date) => goToDayDetail("supplements", date)}
                 onExport={() =>
                   downloadCsv(
                     "supplements_trend.csv",
                     supplementsTrend.map((d) => ({ date: d.date, score: d.score })),
+                    t("insightsPage.exportEmptyAlert"),
                   )
                 }
               />
@@ -445,31 +446,31 @@ export default function InsightsPage() {
                 > = {
                   habits: {
                     category: "habits",
-                    label: "Habits",
+                    label: categoryLabels.habits,
                     color: CATEGORY_COLORS.habits,
                     data: habitsTrend,
-                    emptyMessage: `No habit logs yet in the last ${rangeDays} days — this fills in as you check off habits.`,
+                    emptyMessage: t("insightsPage.emptyHabits", { days: rangeDays }),
                   },
                   goals: {
                     category: "goals",
-                    label: "Goals",
+                    label: categoryLabels.goals,
                     color: CATEGORY_COLORS.goals,
                     data: goalsTrend,
-                    emptyMessage: "No goal progress recorded yet — this fills in as milestones are checked off.",
+                    emptyMessage: t("insightsPage.emptyGoals"),
                   },
                   nutrition: {
                     category: "nutrition",
-                    label: "Nutrition",
+                    label: categoryLabels.nutrition,
                     color: CATEGORY_COLORS.nutrition,
                     data: nutritionTrend,
-                    emptyMessage: `No logged nutrition days yet in the last ${rangeDays} days — this fills in as you log meals.`,
+                    emptyMessage: t("insightsPage.emptyNutrition", { days: rangeDays }),
                   },
                   supplements: {
                     category: "supplements",
-                    label: "Supplements",
+                    label: categoryLabels.supplements,
                     color: CATEGORY_COLORS.supplements,
                     data: supplementsTrend,
-                    emptyMessage: `No supplement logs yet in the last ${rangeDays} days — this fills in as you check them off.`,
+                    emptyMessage: t("insightsPage.emptySupplements", { days: rangeDays }),
                   },
                 };
                 const chart = chartMap[expandedChart];
@@ -507,7 +508,7 @@ export default function InsightsPage() {
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
                         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--color-text-primary, #0f172a)" }}>
-                          {chart.label} — {rangeDays}-day trend
+                          {t("insightsPage.modalTitle", { label: chart.label, days: rangeDays })}
                         </h3>
                         <button
                           onClick={() => setExpandedChart(null)}
@@ -520,7 +521,7 @@ export default function InsightsPage() {
                             color: "#64748b",
                             flexShrink: 0,
                           }}
-                          aria-label="Close"
+                          aria-label={t("insightsPage.closeAriaLabel")}
                         >
                           <X size={18} />
                         </button>
@@ -555,11 +556,11 @@ export default function InsightsPage() {
             }}
           >
             <h2 style={{ margin: "0 0 1rem", fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>
-              Export your data
+              {t("insightsPage.exportDataHeader")}
             </h2>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <ExportButton
-                label={`Habits (${rangeDays}d)`}
+                label={t("insightsPage.exportLabelHabits", { days: rangeDays })}
                 onClick={() =>
                   downloadCsv(
                     "habits_history.csv",
@@ -568,11 +569,12 @@ export default function InsightsPage() {
                       completed: d.completedCount,
                       total_habits: d.totalHabits,
                     })),
+                    t("insightsPage.exportEmptyAlert"),
                   )
                 }
               />
               <ExportButton
-                label={`Goals (${rangeDays}d)`}
+                label={t("insightsPage.exportLabelGoals", { days: rangeDays })}
                 onClick={() =>
                   downloadCsv(
                     "goals_history.csv",
@@ -580,11 +582,12 @@ export default function InsightsPage() {
                       date: d.date,
                       avg_progress: d.avgProgress,
                     })),
+                    t("insightsPage.exportEmptyAlert"),
                   )
                 }
               />
               <ExportButton
-                label={`Nutrition (${rangeDays}d)`}
+                label={t("insightsPage.exportLabelNutrition", { days: rangeDays })}
                 onClick={() =>
                   downloadCsv(
                     "nutrition_history.csv",
@@ -596,11 +599,12 @@ export default function InsightsPage() {
                       fats: d.fats,
                       meal_count: d.meal_count,
                     })),
+                    t("insightsPage.exportEmptyAlert"),
                   )
                 }
               />
               <ExportButton
-                label={`Supplements (${rangeDays}d)`}
+                label={t("insightsPage.exportLabelSupplements", { days: rangeDays })}
                 onClick={() =>
                   downloadCsv(
                     "supplements_history.csv",
@@ -609,6 +613,7 @@ export default function InsightsPage() {
                       taken: d.takenCount,
                       total_supplements: d.totalSupplements,
                     })),
+                    t("insightsPage.exportEmptyAlert"),
                   )
                 }
               />
@@ -616,7 +621,7 @@ export default function InsightsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }
 
@@ -654,6 +659,7 @@ function TrendChart({
   onPointClick?: (date: string) => void;
   fullWidth?: boolean;
 }) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [measuredWidth, setMeasuredWidth] = useState(840);
 
@@ -742,7 +748,11 @@ function TrendChart({
                   : undefined
               }
             >
-              <title>{`${data[i].date}: ${data[i].score}${onPointClick ? " — click to view day" : ""}`}</title>
+              <title>
+                {onPointClick
+                  ? t("insightsPage.pointTooltipClickable", { date: data[i].date, score: data[i].score })
+                  : t("insightsPage.pointTooltip", { date: data[i].date, score: data[i].score })}
+              </title>
             </circle>
           ))}
 
@@ -790,20 +800,25 @@ function formatShortDate(date: string) {
 }
 
 function ChartInsights({ data }: { data: { date: string; score: number }[] }) {
+  const { t } = useTranslation();
   const insights = getChartInsights(data);
   if (!insights) return null;
   return (
     <ul style={{ margin: "4px 0 0", padding: "0 0 0 16px", fontSize: 11.5, color: "#64748b", lineHeight: 1.6 }}>
       <li>
-        Best day: {formatShortDate(insights.best.date)} ({insights.best.score}%)
+        {t("insightsPage.bestDay", { date: formatShortDate(insights.best.date), score: insights.best.score })}
       </li>
       <li>
-        Lowest day: {formatShortDate(insights.worst.date)} ({insights.worst.score}%)
+        {t("insightsPage.lowestDay", { date: formatShortDate(insights.worst.date), score: insights.worst.score })}
       </li>
       <li>
         {insights.streak > 0
-          ? `Current streak: ${insights.streak} day${insights.streak === 1 ? "" : "s"} at ${STREAK_THRESHOLD}%+`
-          : `No active streak: last day was below ${STREAK_THRESHOLD}%`}
+          ? t("insightsPage.streakActive", {
+              days: insights.streak,
+              dayWord: insights.streak === 1 ? t("insightsPage.dayUnitSingular") : t("insightsPage.dayUnitPlural"),
+              threshold: STREAK_THRESHOLD,
+            })
+          : t("insightsPage.streakInactive", { threshold: STREAK_THRESHOLD })}
       </li>
     </ul>
   );
@@ -828,6 +843,7 @@ function TrendChartCard({
   onExport: () => void;
   onPointClick?: (date: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -845,8 +861,8 @@ function TrendChartCard({
         <div style={{ display: "flex", gap: 6 }}>
           <button
             onClick={onExport}
-            title="Export CSV"
-            aria-label={`Export ${label} data`}
+            title={t("insightsPage.exportCsvTooltip")}
+            aria-label={t("insightsPage.exportAriaLabel", { label })}
             style={{
               display: "flex",
               alignItems: "center",
@@ -864,8 +880,8 @@ function TrendChartCard({
           </button>
           <button
             onClick={() => onExpand(chartKey)}
-            title="Expand"
-            aria-label={`Expand ${label} chart`}
+            title={t("insightsPage.expandTooltip")}
+            aria-label={t("insightsPage.expandAriaLabel", { label })}
             style={{
               display: "flex",
               alignItems: "center",

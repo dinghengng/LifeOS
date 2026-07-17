@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Trash2, Moon } from "lucide-react";
+import { useTranslation } from "../../context/LanguageContext";
 
 export type Habit = {
   id: string;
@@ -50,7 +51,7 @@ export function computeStreak(
     if (completedDays[i]) {
       streak++;
     } else if (skippedDays?.[i]) {
-      continue; // rest day — preserve streak, keep walking back
+      continue;
     } else {
       break;
     }
@@ -71,14 +72,15 @@ export default function HabitRow({
   onEdit: (habit: Habit) => void;
   onDelete: (id: string) => void;
 }) {
+  const { t, locale } = useTranslation();
+  const dateLocale = locale === "zh" ? "zh-CN" : "en-SG";
   const todayIndex = getTodayIndexSGT();
   const skippedDays = habit.skippedDays ?? Array(7).fill(false);
   const todayDone = habit.completedDays[todayIndex];
   const todaySkipped = skippedDays[todayIndex];
   const sgtToday = getSGTDate();
-  const daysSoFar = todayIndex + 1; // only count days up to and including today
+  const daysSoFar = todayIndex + 1;
 
-  // Rest days are excused from the weekly ratio — they neither help nor hurt it.
   const consideredSoFar = Array.from({ length: daysSoFar }, (_, i) => i).filter(
     (i) => !skippedDays[i],
   );
@@ -100,61 +102,33 @@ export default function HabitRow({
       <span style={{ fontSize: 20, textAlign: "center" }}>{habit.icon}</span>
 
       <div style={{ minWidth: 0 }}>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 13,
-            fontWeight: 500,
-            color: "var(--color-text-primary)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {habit.name}
         </p>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "3px" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
-            <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Streak</span>
+            <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t("habitRow.streak")}</span>
             <span style={{ fontSize: 11, fontWeight: 600, color: habit.streak > 0 ? "#f97316" : "var(--color-text-secondary)" }}>
               🔥 {habit.streak}
             </span>
           </div>
-          <span
-            style={{
-              display: "block",
-              width: 0,
-              minWidth: 0,
-              height: 22,
-              minHeight: 22,
-              borderLeft: "1.5px solid #000000",
-              flexShrink: 0,
-              alignSelf: "center",
-            }}
-          />
+          <span style={{ display: "block", width: 0, minWidth: 0, height: 22, minHeight: 22, borderLeft: "1.5px solid #000000", flexShrink: 0, alignSelf: "center" }} />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
-            <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>Total</span>
+            <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t("habitRow.total")}</span>
             <span style={{ fontSize: 11, fontWeight: 600, color: (habit.totalDays || 0) > 0 ? "#eab308" : "var(--color-text-secondary)" }}>
               ⭐ {habit.totalDays || 0}
             </span>
           </div>
-          <span
-            style={{
-              display: "block",
-              width: 0,
-              minWidth: 0,
-              height: 22,
-              minHeight: 22,
-              borderLeft: "1.5px solid #000000",
-              flexShrink: 0,
-              alignSelf: "center",
-            }}
-          />
+          <span style={{ display: "block", width: 0, minWidth: 0, height: 22, minHeight: 22, borderLeft: "1.5px solid #000000", flexShrink: 0, alignSelf: "center" }} />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1px" }}>
-            <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>This wk</span>
+            <span style={{ fontSize: 9, fontWeight: 500, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{t("habitRow.thisWeek")}</span>
             <span
-              title={`${completedSoFar} of ${weeklyDenominator} day${weeklyDenominator === 1 ? "" : "s"} completed so far this week (rest days excluded)`}
+              title={t("habitRow.weeklyTooltip", {
+                done: completedSoFar,
+                total: weeklyDenominator,
+                plural: weeklyDenominator === 1 ? "" : "s",
+              })}
               style={{ fontSize: 11, fontWeight: 600, color: weeklyPct >= 70 ? "#1D9E75" : weeklyPct >= 40 ? "#eab308" : "var(--color-text-secondary)" }}
             >
               {completedSoFar}/{weeklyDenominator}
@@ -168,14 +142,14 @@ export default function HabitRow({
         const skipped = skippedDays[i];
         const targetDate = new Date(sgtToday);
         targetDate.setDate(targetDate.getDate() + (i - todayIndex));
-        const dayLabel = targetDate.toLocaleDateString("en-SG", {
+        const dayLabel = targetDate.toLocaleDateString(dateLocale, {
           weekday: "long",
         });
 
         return (
           <div
             key={i}
-            title={skipped ? `${dayLabel} · rest day` : dayLabel}
+            title={skipped ? t("habitRow.restDayTooltip", { day: dayLabel }) : dayLabel}
             style={{
               width: 18,
               height: 18,
@@ -200,51 +174,31 @@ export default function HabitRow({
       <button
         onClick={() => onToggleToday(habit.id)}
         style={{
-          width: 28,
-          height: 28,
-          borderRadius: "50%",
-          border: todayDone
-            ? "2px solid #000000"
-            : "2px solid #1e293b",
+          width: 28, height: 28, borderRadius: "50%",
+          border: todayDone ? "2px solid #000000" : "2px solid #1e293b",
           backgroundColor: todayDone ? habit.color : "transparent",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 14,
-          fontWeight: 700,
-          color: todayDone ? "#fff" : "#1e293b",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 14, fontWeight: 700, color: todayDone ? "#fff" : "#1e293b",
           transition: "all 0.15s ease",
-          boxShadow: todayDone
-            ? "0 0 0 2px " + habit.color + "33"
-            : "0 1px 2px rgba(0,0,0,0.08)",
+          boxShadow: todayDone ? "0 0 0 2px " + habit.color + "33" : "0 1px 2px rgba(0,0,0,0.08)",
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "scale(1.1)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "scale(1)";
-        }}
-        aria-label={todayDone ? "Mark incomplete" : "Mark complete"}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+        aria-label={todayDone ? t("habitRow.markIncomplete") : t("habitRow.markComplete")}
       >
         {todayDone ? "✓" : ""}
       </button>
       <button
         onClick={() => onToggleSkip(habit.id)}
-        title={todaySkipped ? "Undo rest day" : "Mark today as a rest day (streak-safe skip)"}
+        title={todaySkipped ? t("habitRow.undoRestDay") : t("habitRow.markRestDay")}
         style={{
-          width: 28,
-          height: 28,
-          borderRadius: "50%",
+          width: 28, height: 28, borderRadius: "50%",
           border: todaySkipped ? "2px dashed #64748b" : "1.5px dashed #cbd5e1",
           backgroundColor: todaySkipped ? "#f1f5f9" : "transparent",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
           color: todaySkipped ? "#475569" : "#94a3b8",
         }}
-        aria-label={todaySkipped ? "Undo rest day" : "Mark as rest day"}
+        aria-label={todaySkipped ? t("habitRow.undoRestDay") : t("habitRow.markRestDayAria")}
       >
         <Moon size={13} />
       </button>
@@ -252,37 +206,15 @@ export default function HabitRow({
       <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
         <button
           onClick={() => onEdit(habit)}
-          aria-label="Edit habit"
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: "50%",
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-text-secondary)",
-          }}
+          aria-label={t("habitRow.editAria")}
+          style={{ width: 24, height: 24, borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-secondary)" }}
         >
           <Pencil size={13} />
         </button>
         <button
           onClick={() => onDelete(habit.id)}
-          aria-label="Delete habit"
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: "50%",
-            border: "none",
-            background: "transparent",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-text-secondary)",
-          }}
+          aria-label={t("habitRow.deleteAria")}
+          style={{ width: 24, height: 24, borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-secondary)" }}
         >
           <Trash2 size={13} />
         </button>

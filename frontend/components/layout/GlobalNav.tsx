@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslation } from "../../context/LanguageContext";
 
 const NAV_ITEMS = [
   { label: "Tasks", href: "/" },
@@ -9,11 +10,18 @@ const NAV_ITEMS = [
   { label: "Nutrition", href: "/nutrition" },
   { label: "Insights", href: "/insights" },
   { label: "Challenges", href: "/challenges" },
+const NAV_ITEMS: { key: "tasks" | "dashboard" | "journal" | "nutrition" | "insights"; href: string }[] = [
+  { key: "tasks", href: "/" },
+  { key: "dashboard", href: "/dashboard" },
+  { key: "journal", href: "/journal" },
+  { key: "nutrition", href: "/nutrition" },
+  { key: "insights", href: "/insights" },
 ];
 
 export default function GlobalNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <nav className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white/80 p-1 backdrop-blur-sm">
@@ -31,7 +39,7 @@ export default function GlobalNav() {
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
             ].join(" ")}
           >
-            {item.label}
+            {t(`globalNav.${item.key}`)}
           </button>
         );
       })}

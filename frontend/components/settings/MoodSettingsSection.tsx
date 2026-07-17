@@ -4,16 +4,50 @@ import { useState, useEffect } from "react";
 import { MoodLevelConfig, EmojiPack, MoodLevel } from "../../../shared/types";
 import { fetchEmojiPacks, saveMoodConfig } from "../../../shared/api";
 import { useToastContext } from "../notifications/ToastContext";
+import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 import SettingsSectionCard from "./SettingsSectionCard";
 import SettingsActionFooter from "./SettingsActionFooter";
 
-const DEFAULT_LEVELS: Omit<MoodLevelConfig, "id">[] = [
-  { level: 1, label: "Awful", emoji: "😢", color: "#ef4444", displayOrder: 0 },
-  { level: 2, label: "Bad",   emoji: "😕", color: "#f97316", displayOrder: 1 },
-  { level: 3, label: "Okay",  emoji: "😐", color: "#eab308", displayOrder: 2 },
-  { level: 4, label: "Good",  emoji: "🙂", color: "#22c55e", displayOrder: 3 },
-  { level: 5, label: "Great", emoji: "😄", color: "#6366f1", displayOrder: 4 },
+const DEFAULT_LEVEL_META: Omit<MoodLevelConfig, "id" | "label">[] = [
+  { level: 1, emoji: "😢", color: "#ef4444", displayOrder: 0 },
+  { level: 2, emoji: "😕", color: "#f97316", displayOrder: 1 },
+  { level: 3, emoji: "😐", color: "#eab308", displayOrder: 2 },
+  { level: 4, emoji: "🙂", color: "#22c55e", displayOrder: 3 },
+  { level: 5, emoji: "😄", color: "#6366f1", displayOrder: 4 },
 ];
+
+const DEFAULT_LEVEL_KEYS: Record<number, TranslationKey> = {
+  1: "moodSettings.defaultLevels.awful",
+  2: "moodSettings.defaultLevels.bad",
+  3: "moodSettings.defaultLevels.okay",
+  4: "moodSettings.defaultLevels.good",
+  5: "moodSettings.defaultLevels.great",
+};
+
+
+const DEFAULT_ENGLISH_LABELS: Record<number, string> = {
+  1: "Awful",
+  2: "Bad",
+  3: "Okay",
+  4: "Good",
+  5: "Great",
+};
+
+// Emoji pack names come from the backend as fixed lowercase slugs.
+const EMOJI_PACK_KEYS: Record<string, TranslationKey> = {
+  classic: "emojiPack.classic",
+  energy: "emojiPack.energy",
+  animals: "emojiPack.animals",
+  food: "emojiPack.food",
+  weather: "emojiPack.weather",
+  minimalist: "emojiPack.minimalist",
+};
+
+function emojiPackLabel(pack: EmojiPack, t: (key: TranslationKey) => string): string {
+  const key = EMOJI_PACK_KEYS[pack.name.toLowerCase()];
+  return key ? t(key) : pack.name;
+}
 
 interface Props {
   initialConfig?: MoodLevelConfig[];
@@ -26,16 +60,27 @@ interface Props {
 export default function MoodSettingsSection({
   initialConfig,
   onSaved,
-  saveLabel = "Save Changes",
+  saveLabel,
   hideSaveButton = false,
   saveRef,
 }: Props) {
+  const { t } = useTranslation();
+  const resolvedSaveLabel = saveLabel ?? t("moodSettings.saveChanges");
   const [packs, setPacks] = useState<EmojiPack[]>([]);
   const [selectedPackId, setSelectedPackId] = useState<number | null>(null);
-  const [levels, setLevels] = useState<Omit<MoodLevelConfig, "id">[]>(
+  const [levels, setLevels] = useState<Omit<MoodLevelConfig, "id">[]>(() =>
     initialConfig
-      ? initialConfig.map(({ id: _id, ...rest }) => rest)
-      : DEFAULT_LEVELS
+      ? initialConfig.map(({ id: _id, ...rest }) => ({
+          ...rest,
+          label:
+            rest.label === DEFAULT_ENGLISH_LABELS[rest.level]
+              ? t(DEFAULT_LEVEL_KEYS[rest.level])
+              : rest.label,
+        }))
+      : DEFAULT_LEVEL_META.map((m) => ({
+          ...m,
+          label: t(DEFAULT_LEVEL_KEYS[m.level]),
+        }))
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -87,12 +132,12 @@ export default function MoodSettingsSection({
       });
       // setSaveSuccess(true);
       // setTimeout(() => setSaveSuccess(false), 2000);
-      showToast("Mood settings updated");
+      showToast(t("moodSettings.toastUpdated"));
       onSaved?.(saved);
       return saved;
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Save failed");
-      showToast("Failed to save mood settings.", "error");
+      setSaveError(err instanceof Error ? err.message : t("moodSettings.saveFailed"));
+      showToast(t("moodSettings.toastSaveFailed"), "error");
       return null;
     } finally {
       setSaving(false);
@@ -102,7 +147,7 @@ export default function MoodSettingsSection({
   return (
     <div className="space-y-6">
       {/*Mood Packs*/}
-      <SettingsSectionCard title="Emoji pack">
+      <SettingsSectionCard title={t("moodSettings.emojiPackTitle")}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {packs.map((pack) => (
             <button
@@ -114,7 +159,7 @@ export default function MoodSettingsSection({
                   : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
               }`}
             >
-              <span className="text-xs font-medium text-slate-600">{pack.name}</span>
+              <span className="text-xs font-medium text-slate-600">{emojiPackLabel(pack, t)}</span>
               <div className="flex w-full flex-wrap justify-center gap-0.5 text-base leading-none">
                 {pack.emojis.map((em, i) => <span key={i}>{em}</span>)}
               </div>
@@ -123,7 +168,7 @@ export default function MoodSettingsSection({
         </div>
       </SettingsSectionCard>
 
-      <SettingsSectionCard title="Customise each level">
+      <SettingsSectionCard title={t("moodSettings.customiseTitle")}>
         <div className="space-y-2">
           {levels.map((l, i) => (
             <div
@@ -164,7 +209,7 @@ export default function MoodSettingsSection({
         </div>
       </SettingsSectionCard>
 
-      <SettingsSectionCard title="Preview">
+      <SettingsSectionCard title={t("moodSettings.previewTitle")}>
         <div className="flex justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
           {levels.map((l) => (
             <div key={l.level} className="flex flex-col items-center gap-1">
@@ -181,7 +226,7 @@ export default function MoodSettingsSection({
       </SettingsSectionCard>
 
       {/*Save*/}
-      <SettingsActionFooter onSave={handleSave} saving={saving} label={saveLabel} error={saveError} hidden={hideSaveButton} />
+      <SettingsActionFooter onSave={handleSave} saving={saving} label={resolvedSaveLabel} error={saveError} hidden={hideSaveButton} />
     </div>
   );
 }

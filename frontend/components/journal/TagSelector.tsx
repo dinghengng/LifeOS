@@ -3,8 +3,32 @@
 import { useState } from "react";
 import { Tag, TagsResponse } from "../../../shared/types";
 import { createCustomTag, deleteCustomTag } from "../../../shared/api";
+import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 const tagKey = (tag: Tag) => `${tag.type}:${tag.id}`; //Unique keys to handle collisions
+
+export const SYSTEM_TAG_KEYS: Record<string, TranslationKey> = {
+  "bad habits": "tag.badHabits",
+  "beauty": "tag.beauty",
+  "exercise": "tag.exercise",
+  "family": "tag.family",
+  "food": "tag.food",
+  "friends": "tag.friends",
+  "health": "tag.health",
+  "hobbies": "tag.hobbies",
+  "relationships": "tag.relationships",
+  "school": "tag.school",
+  "sleep": "tag.sleep",
+  "weather": "tag.weather",
+  "work": "tag.work",
+};
+
+export function systemTagLabel(tag: Tag, t: (key: TranslationKey) => string): string {
+  if (tag.type !== "system") return tag.name;
+  const key = SYSTEM_TAG_KEYS[tag.name];
+  return key ? t(key) : tag.name;
+}
 
 interface TagSelectorProps {
   tags: TagsResponse;
@@ -21,6 +45,7 @@ export default function TagSelector({
   onCustomTagCreated,
   onCustomTagDeleted,
 }: TagSelectorProps) {
+  const { t } = useTranslation();
   const [otherInput, setOtherInput] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -36,7 +61,7 @@ export default function TagSelector({
       setOtherInput("");
       onCustomTagCreated(newTag);
     } catch (err: unknown) {
-      setCreateError(err instanceof Error ? err.message : "Could not create tag.");
+      setCreateError(err instanceof Error ? err.message : t("tagSelector.errorCreate"));
     } finally {
       setIsCreating(false);
     }
@@ -44,7 +69,7 @@ export default function TagSelector({
 
   const handleDeleteCustomTag = async (tag: Tag) => {
     if (tag.type !== "custom") return;
-    if (!confirm(`Delete "${tag.name}"?`)) return;
+    if (!confirm(t("tagSelector.confirmDelete").replace("{name}", tag.name))) return;
 
     setDeletingTagId(tag.id);
     setCreateError(null);
@@ -53,7 +78,7 @@ export default function TagSelector({
       await deleteCustomTag(tag.id);
       onCustomTagDeleted(tag.id);
     } catch (err: unknown) {
-      setCreateError(err instanceof Error ? err.message : "Could not delete tag.");
+      setCreateError(err instanceof Error ? err.message : t("tagSelector.errorDelete"));
     } finally {
       setDeletingTagId(null);
     }
@@ -78,7 +103,7 @@ export default function TagSelector({
                 : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300"
             }`}
           >
-            {tag.name}
+            {systemTagLabel(tag, t)}
           </button>
         ))}
       </div>
@@ -86,7 +111,7 @@ export default function TagSelector({
       {/*Custom tags*/}
       {tags.custom.length > 0 && (
         <div className="flex flex-wrap gap-2 justify-center">
-          <span className="text-xs text-slate-400 w-full text-center">Your tags</span>
+          <span className="text-xs text-slate-400 w-full text-center">{t("tagSelector.yourTags")}</span>
           {tags.custom.map((tag) => (
             <div
               key={tagKey(tag)}
@@ -114,8 +139,8 @@ export default function TagSelector({
                     ? "text-white/80 hover:text-white"
                     : "text-slate-400 hover:text-red-500"
                 }`}
-                aria-label={`Delete ${tag.name}`}
-                title={`Delete ${tag.name}`}
+                aria-label={t("tagSelector.deleteTag").replace("{name}", tag.name)}
+                title={t("tagSelector.deleteTag").replace("{name}", tag.name)}
               >
                 {deletingTagId === tag.id ? "…" : "✕"}
               </button>
@@ -131,7 +156,7 @@ export default function TagSelector({
           value={otherInput}
           onChange={(e) => setOtherInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Other (e.g. travel)"
+          placeholder={t("tagSelector.placeholder")}
           maxLength={50}
           className="text-xs border border-slate-200 rounded-full px-3 py-1.5 w-40 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 text-slate-700 placeholder:text-slate-400"
         />
@@ -144,7 +169,7 @@ export default function TagSelector({
               : "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700"
           }`}
         >
-          {isCreating ? "Adding..." : "+ Add"}
+          {isCreating ? t("tagSelector.adding") : t("tagSelector.add")}
         </button>
       </div>
 

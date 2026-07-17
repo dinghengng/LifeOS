@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Settings } from "lucide-react";
 import GlobalNav from "./GlobalNav";
 import NotificationBell from "../notifications/NotificationBell";
+import { useTranslation } from "../../context/LanguageContext";
 
 interface AppHeaderProps {
   rightActions?: React.ReactNode;
@@ -12,6 +13,7 @@ interface AppHeaderProps {
 export default function AppHeader({ rightActions }: AppHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
   const isSettingsActive = pathname === "/settings";
 
   return (
@@ -22,8 +24,8 @@ export default function AppHeader({ rightActions }: AppHeaderProps) {
             L
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">LifeOS</p>
-            <p className="text-xs text-slate-500">Your smart life hub</p>
+            <p className="text-sm font-semibold text-slate-900">{t("appHeader.brand")}</p>
+            <p className="text-xs text-slate-500">{t("appHeader.tagline")}</p>
           </div>
         </div>
 
@@ -36,8 +38,8 @@ export default function AppHeader({ rightActions }: AppHeaderProps) {
 
           <button
             onClick={() => router.push("/settings")}
-            title="Settings"
-            aria-label="Settings"
+            title={t("appHeader.settings")}
+            aria-label={t("appHeader.settings")}
             className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg border transition-colors"
             style={{
               borderColor: "var(--color-border-secondary)",
@@ -51,10 +53,10 @@ export default function AppHeader({ rightActions }: AppHeaderProps) {
           {rightActions ?? (
             <>
               <button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
-                Help
+                {t("appHeader.help")}
               </button>
               <button className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
-                Account
+                {t("appHeader.account")}
               </button>
             </>
           )}

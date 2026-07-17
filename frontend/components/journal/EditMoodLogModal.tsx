@@ -5,6 +5,8 @@ import { MoodLog, MoodLevel, StressLevel, Tag, TagsResponse, UpdateMoodLogPayloa
 import { updateMoodLog } from "../../../shared/api";
 import TagSelector from "./TagSelector";
 import { useToastContext } from "../notifications/ToastContext";
+import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 const FALLBACK_MOOD_CONFIG: MoodLevelConfig[] = [
   { id: 1, level: 1, emoji: "😢", label: "Awful", color: "#ef4444", displayOrder: 0 },
@@ -14,8 +16,12 @@ const FALLBACK_MOOD_CONFIG: MoodLevelConfig[] = [
   { id: 5, level: 5, emoji: "😄", label: "Great", color: "#6366f1", displayOrder: 4 },
 ];
 
-const STRESS_ANCHORS: Record<number, string> = {
-  1: "Calm", 3: "Relaxed", 5: "Neutral", 7: "Tense", 10: "Overwhelmed",
+const MOOD_LABEL_KEYS: Record<MoodLevel, TranslationKey> = {
+  1: "mood.awful",
+  2: "mood.bad",
+  3: "mood.okay",
+  4: "mood.good",
+  5: "mood.great",
 };
 
 interface EditMoodLogModalProps {
@@ -29,6 +35,7 @@ interface EditMoodLogModalProps {
 }
 
 export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClose, onCustomTagCreated, onCustomTagDeleted }: EditMoodLogModalProps) {
+  const { t } = useTranslation();
   const [selectedMood, setSelectedMood] = useState<MoodLevel>(log.moodLevel);
   const [stressLevel, setStressLevel] = useState<StressLevel>(log.stressLevel);
   const [selectedTagKeys, setSelectedTagKeys] = useState<string[]>(
@@ -37,6 +44,10 @@ export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showToast } = useToastContext();
+
+  const STRESS_ANCHORS: Record<number, string> = {
+    1: t("stress.calm"), 3: t("stress.relaxed"), 5: t("stress.neutral"), 7: t("stress.tense"), 10: t("stress.overwhelmed"),
+  };
 
   const resolvedMoodConfig = moodConfig?.length ? moodConfig : FALLBACK_MOOD_CONFIG;
 
@@ -68,12 +79,12 @@ export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClo
 
     try {
       await updateMoodLog(log.id, payload);
-      showToast("Mood entry updated");
+      showToast(t("editMoodLog.toastSuccess"));
       onSaved();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not save changes.");
-      showToast("Failed to update mood. Try again.", "error");
+      setError(err instanceof Error ? err.message : t("editMoodLog.errorDefault"));
+      showToast(t("editMoodLog.toastError"), "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -90,13 +101,13 @@ export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClo
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-bold text-slate-800">Edit Mood Entry</h2>
+          <h2 className="text-lg font-bold text-slate-800">{t("editMoodLog.title")}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-xl leading-none">✕</button>
         </div>
 
         {/*Mood picker*/}
         <div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Mood</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{t("editMoodLog.moodLabel")}</p>
           <div className="flex gap-2 justify-between">
             {resolvedMoodConfig.map((mood) => {
               const isSelected = selectedMood === mood.level;
@@ -113,7 +124,7 @@ export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClo
                   }}
                 >
                   <span className="text-2xl">{mood.emoji}</span>
-                  <span className="text-[10px] font-medium text-slate-700">{mood.label}</span>
+                  <span className="text-[10px] font-medium text-slate-700">{t(MOOD_LABEL_KEYS[mood.level])}</span>
                 </button>
               );
             })}
@@ -123,7 +134,7 @@ export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClo
         {/*Stress slider*/}
         <div>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-            Stress — <span className="text-slate-700">{STRESS_ANCHORS[stressLevel] || stressLevel} ({stressLevel}/10)</span>
+            {t("editMoodLog.stressLabel")} — <span className="text-slate-700">{STRESS_ANCHORS[stressLevel] || stressLevel} ({stressLevel}/10)</span>
           </p>
           <input
             type="range"
@@ -137,7 +148,7 @@ export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClo
 
         {/*Tag selector*/}
         <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Tags</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{t("editMoodLog.tagsLabel")}</p>
             <TagSelector
                 tags={tags}
                 selectedTagKeys={selectedTagKeys}
@@ -164,7 +175,7 @@ export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClo
             onClick={onClose}
             className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSave}
@@ -173,7 +184,7 @@ export default function EditMoodLogModal({ log, tags, moodConfig, onSaved, onClo
               isSubmitting ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
             }`}
           >
-            {isSubmitting ? "Saving..." : "Save Changes"}
+            {isSubmitting ? t("common.saving") : t("common.saveChanges")}
           </button>
         </div>
       </div>

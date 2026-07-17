@@ -12,6 +12,8 @@ import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
+import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 const SECTION_COMPONENTS: Record<
   string,
@@ -24,6 +26,7 @@ const SECTION_COMPONENTS: Record<
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { t, locale } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState(SETTINGS_SECTIONS[0].id);
@@ -54,7 +57,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f5f5f2] flex items-center justify-center">
-        <p className="text-slate-400 text-sm">Loading…</p>
+        <p className="text-slate-400 text-sm">{t("settings.loading")}</p>
       </div>
     );
   }
@@ -62,7 +65,7 @@ export default function SettingsPage() {
   const activeSection = SETTINGS_SECTIONS.find((s) => s.id === activeSectionId);
   const ActiveComponent = SECTION_COMPONENTS[activeSectionId] ?? null;
 
-  const tabItems = SETTINGS_SECTIONS.map((s) => ({ id: s.id, label: s.title }));
+  const tabItems = SETTINGS_SECTIONS.map((s) => ({ id: s.id, label: t(s.titleKey as TranslationKey) }));
 
   return (
     <AppShell>
@@ -72,27 +75,23 @@ export default function SettingsPage() {
               onClick={handleLogout}
               className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
             >
-              Logout
+              {t("common.logout")}
             </button>
         }
       />
 
       <PageHeader
-        eyebrow={new Date().toLocaleDateString("en-SG", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        })}
-        title="Settings"
-        description="Manage your Mood customisation, Notification preferences and Nutrition goals"
+        eyebrow={new Date().toLocaleDateString(locale === "zh" ? "zh-CN" : "en-SG", { weekday: "long", day: "numeric", month: "long" })}
+        title={t("settings.pageHeader.title")}
+        description={t("settings.pageHeader.description")}
       />
 
       <LocalTabs items={tabItems} activeId={activeSectionId} onChange={setActiveSectionId} />
       <div>
         {activeSection && activeSectionId !== "nutrition_goals" ? (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-slate-900">{activeSection.title}</h2>
-            <p className="mt-1 text-sm text-slate-500">{activeSection.description}</p>
+            <h2 className="text-lg font-semibold text-slate-900">{t(activeSection.titleKey as TranslationKey)}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t(activeSection.descriptionKey as TranslationKey)}</p>
           </div>
         ) : null}
 
@@ -101,7 +100,7 @@ export default function SettingsPage() {
             initialConfig={activeSectionId === "mood" ? moodConfig : undefined}
           />
         ) : (
-          <p className="text-sm text-slate-400">Section not found.</p>
+          <p className="text-sm text-slate-400">{t("settings.sectionNotFound")}</p>
         )}
       </div>
     </AppShell>

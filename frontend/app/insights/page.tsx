@@ -78,7 +78,7 @@ function downloadCsv(filename: string, rows: Record<string, unknown>[], emptyAle
 }
 
 export default function InsightsPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const [authLoading, setAuthLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
@@ -260,7 +260,7 @@ export default function InsightsPage() {
         }
       />
 
-      <PageHeader eyebrow={today} title={t("insightsPage.title")} />
+      <PageHeader eyebrow={new Date().toLocaleDateString(locale === "zh" ? "zh-CN" : "en-SG", { weekday: "long", day: "numeric", month: "long" })} title={t("insightsPage.title")} description={t("insightsPage.description")}/>
 
       {dataLoading ? (
         <p style={{ textAlign: "center", color: "#64748b" }}>{t("insightsPage.loadingInsights")}</p>

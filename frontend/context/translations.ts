@@ -882,9 +882,7 @@ export const translations = {
     "prompts.fn6": "If your pet kept a diary, they'd say this about you.",
     "prompts.fn7": "What's a totally ridiculous goal you secretly wish you could pursue?",
     "prompts.fn8": "What is your favourite conspiracy theory?",
- 
 
-    // Days of the Week (Short for Habit Grid)
     "day.monday.short": "M",
     "day.tuesday.short": "T",
     "day.wednesday.short": "W",
@@ -892,6 +890,20 @@ export const translations = {
     "day.friday.short": "F",
     "day.saturday.short": "S",
     "day.sunday.short": "S",
+
+    "notificationBell.title": "Notifications",
+    "notificationBell.ariaLabelUnread": "Notifications, {count} unread",
+    "notificationBell.newBadge": "{count} new",
+    "notificationBell.markAllRead": "Mark all read",
+    "notificationBell.loading": "Loading…",
+    "notificationBell.emptyTitle": "You're all caught up!",
+    "notificationBell.emptyBody": "Notifications will appear here when your tasks or habits need attention.",
+    "notificationBell.pushFailed": "(push failed)",
+    "notificationBell.showingCount": "Showing last {count} notifications",
+    "notificationBell.justNow": "just now",
+    "notificationBell.minutesAgo": "{count}m ago",
+    "notificationBell.hoursAgo": "{count}h ago",
+    "notificationBell.daysAgo": "{count}d ago",
 
 },
   zh: {
@@ -1790,6 +1802,20 @@ export const translations = {
     "dashboard.color.indigo": "靛蓝",
     "dashboard.color.orange": "橙色",
     "dashboard.color.oceanBlue": "海蓝",
+
+    "notificationBell.title": "通知",
+    "notificationBell.ariaLabelUnread": "通知，{count} 条未读",
+    "notificationBell.newBadge": "{count} 条新通知",
+    "notificationBell.markAllRead": "全部标为已读",
+    "notificationBell.loading": "加载中…",
+    "notificationBell.emptyTitle": "全部处理完毕！",
+    "notificationBell.emptyBody": "当任务或习惯需要关注时，通知会显示在这里。",
+    "notificationBell.pushFailed": "（推送失败）",
+    "notificationBell.showingCount": "显示最近 {count} 条通知",
+    "notificationBell.justNow": "刚刚",
+    "notificationBell.minutesAgo": "{count} 分钟前",
+    "notificationBell.hoursAgo": "{count} 小时前",
+    "notificationBell.daysAgo": "{count} 天前",
   }
 } as const satisfies Record<Locale, Record < string, string >>;
 

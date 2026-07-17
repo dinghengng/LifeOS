@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell } from "lucide-react";
+import { useTranslation } from "../../context/LanguageContext";
+import { TranslationKey } from "../../context/translations";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -15,15 +17,15 @@ interface NotificationItem {
   status: string;
 }
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (key: TranslationKey, vars?: Record<string, string | number>) => string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("notificationBell.justNow");
+  if (mins < 60) return t("notificationBell.minutesAgo", { count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t("notificationBell.hoursAgo", { count: hrs });
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return t("notificationBell.daysAgo", { count: days });
 }
 
 function typeIcon(type: string): string {
@@ -36,6 +38,7 @@ function typeIcon(type: string): string {
 }
 
 export default function NotificationBell() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -125,8 +128,8 @@ export default function NotificationBell() {
           justifyContent: "center",
           transition: "all 0.15s ease",
         }}
-        title="Notifications"
-        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+        title={t("notificationBell.title")}
+        aria-label={unreadCount > 0 ? t("notificationBell.ariaLabelUnread", { count: unreadCount }) : t("notificationBell.title")}
       >
         <Bell size={16} />
         {unreadCount > 0 && (
@@ -184,7 +187,7 @@ export default function NotificationBell() {
             }}
           >
             <span style={{ fontSize: "15px", fontWeight: 700, color: "#1e293b" }}>
-              Notifications
+              {t("notificationBell.title")}
               {unreadCount > 0 && (
                 <span
                   style={{
@@ -197,7 +200,7 @@ export default function NotificationBell() {
                     borderRadius: "999px",
                   }}
                 >
-                  {unreadCount} new
+                  {t("notificationBell.newBadge", { count: unreadCount })}
                 </span>
               )}
             </span>
@@ -214,7 +217,7 @@ export default function NotificationBell() {
                   padding: 0,
                 }}
               >
-                Mark all read
+                {t("notificationBell.markAllRead")}
               </button>
             )}
           </div>
@@ -222,7 +225,7 @@ export default function NotificationBell() {
           <div style={{ overflowY: "auto", flex: 1 }}>
             {loading ? (
               <div style={{ padding: "32px 16px", textAlign: "center", color: "#94a3b8", fontSize: "14px" }}>
-                Loading…
+                {t("notificationBell.loading")}
               </div>
             ) : notifications.length === 0 ? (
               <div
@@ -237,10 +240,10 @@ export default function NotificationBell() {
                 }}
               >
                 <span style={{ fontSize: "14px", fontWeight: 600, color: "#64748b" }}>
-                  You&apos;re all caught up!
+                  {t("notificationBell.emptyTitle")}
                 </span>
                 <span style={{ fontSize: "13px", textAlign: "center" }}>
-                  Notifications will appear here when your tasks or habits need attention.
+                  {t("notificationBell.emptyBody")}
                 </span>
               </div>
             ) : (
@@ -298,10 +301,10 @@ export default function NotificationBell() {
                       {n.body}
                     </div>
                     <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: 4 }}>
-                      {timeAgo(n.sent_at)}
+                      {timeAgo(n.sent_at, t)}
                       {n.status === "failed" && (
                         <span style={{ marginLeft: 6, color: "#f59e0b", fontSize: "10px", fontWeight: 600 }}>
-                          (push failed)
+                          {t("notificationBell.pushFailed")}
                         </span>
                       )}
                     </div>
@@ -314,7 +317,7 @@ export default function NotificationBell() {
           {notifications.length > 0 && (
             <div style={{ padding: "10px 16px", borderTop: "1px solid #f1f5f9", textAlign: "center" }}>
               <span style={{ fontSize: "12px", color: "#94a3b8" }}>
-                Showing last {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
+                {t("notificationBell.showingCount", { count: notifications.length })}
               </span>
             </div>
           )}

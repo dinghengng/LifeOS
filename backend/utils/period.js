@@ -3,30 +3,49 @@ function getSGTDateStr(date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Singapore" }).format(date);
 }
 
-function getWeekBoundsSGT() {
-  const sgtTodayStr = getSGTDateStr();
-  const sgtToday = new Date(`${sgtTodayStr}T00:00:00+08:00`);
-  const jsDayOfWeek = sgtToday.getUTCDay(); 
-  const todayIndexMon = (jsDayOfWeek + 6) % 7; 
+function calendarDate(y, m, d) {
+  return new Date(Date.UTC(y, m - 1, d));
+}
 
-  const monday = new Date(sgtToday);
-  monday.setUTCDate(sgtToday.getUTCDate() - todayIndexMon);
+function calendarToDateStr(calDate) {
+  return calDate.toISOString().split("T")[0];
+}
+
+function calendarToSGTInstant(calDate) {
+  return new Date(calDate.getTime() - 8 * 60 * 60 * 1000);
+}
+
+function getWeekBoundsSGT(date = new Date()) {
+  const [y, m, d] = getSGTDateStr(date).split("-").map(Number);
+  const today = calendarDate(y, m, d);
+  const dow = today.getUTCDay();
+  const mondayOffset = (dow + 6) % 7;
+
+  const monday = new Date(today);
+  monday.setUTCDate(today.getUTCDate() - mondayOffset);
 
   const nextMonday = new Date(monday);
   nextMonday.setUTCDate(monday.getUTCDate() + 7);
 
-  return { start: monday, end: nextMonday };
+  return {
+    startDateStr: calendarToDateStr(monday),
+    endDateStr: calendarToDateStr(nextMonday),
+    startInstant: calendarToSGTInstant(monday),
+    endInstant: calendarToSGTInstant(nextMonday),
+  };
 }
 
-function getMonthBoundsSGT() {
-  const sgtTodayStr = getSGTDateStr();
-  const [year, month] = sgtTodayStr.split("-").map(Number);
+function getMonthBoundsSGT(date = new Date()) {
+  const [y, m] = getSGTDateStr(date).split("-").map(Number);
+  const start = calendarDate(y, m, 1);
+  const nextMonth = calendarDate(y, m + 1, 1); // JS Date handles year rollover automatically
 
-  const start = new Date(`${year}-${String(month).padStart(2, "0")}-01T00:00:00+08:00`);
-  const nextMonth = new Date(start);
-  nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
-
-  return { start, end: nextMonth };
+  return {
+    startDateStr: calendarToDateStr(start),
+    endDateStr: calendarToDateStr(nextMonth),
+    startInstant: calendarToSGTInstant(start),
+    endInstant: calendarToSGTInstant(nextMonth),
+  };
 }
 
 function getPeriodBounds(periodType) {

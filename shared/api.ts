@@ -395,3 +395,16 @@ export const fetchEmojiPacks = async (): Promise<EmojiPack[]> => {
     })
   );
 };
+
+// challenges
+import { ChallengeDefinition } from "./types";
+
+export const fetchChallengeCatalogue = async (): Promise<ChallengeDefinition[]> => {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/api/challenges/catalogue`, {
+    credentials: "include",
+    headers,
+  });
+  if (!response.ok) throw new Error("Failed to fetch challenge catalogue");
+  return await response.json();
+};

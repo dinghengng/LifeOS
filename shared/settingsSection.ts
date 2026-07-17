@@ -5,28 +5,28 @@
 
 export interface SettingsSection {
   id: string;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
   includeInWizard: boolean;
 }
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: "mood",
-    title: "Mood",
-    description: "Choose your emoji pack and customise each mood level label and colour",
+    titleKey: "settingsSection.mood.title",
+    descriptionKey: "settingsSection.mood.description",
     includeInWizard: true,
   },
   {
     id: "notifications",
-    title: "Notifications",
-    description: "Manage how and when LifeOS notifies you about tasks, habits, and goals",
+    titleKey: "settingsSection.notifications.title",
+    descriptionKey: "settingsSection.notifications.description",
     includeInWizard: false,
   },
   {
     id: "nutrition_goals",
-    title: "Nutrition",
-    description: "Set your body metrics to personalise your goals",
+    titleKey: "nutritionGoals.title",
+    descriptionKey: "nutritionGoals.description",
     includeInWizard: false,
   },
 ];

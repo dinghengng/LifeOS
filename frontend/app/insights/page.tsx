@@ -13,6 +13,7 @@ import type { Habit } from "../../components/dashboard/HabitRow";
 import type { Goal } from "../../components/dashboard/GoalCard";
 import type { DayData } from "../../components/nutrition/NutritionChart";
 import type { Supplement } from "../../components/nutrition/SupplementTracker";
+import type { TranslationKey } from "../../context/translations";
 import { useTranslation } from "../../context/LanguageContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
@@ -37,7 +38,7 @@ const CATEGORY_COLORS: Record<keyof Omit<WellnessBreakdown, "overall">, string> 
   supplements: "#dc2626",
 };
 
-type TFunc = (key: string, params?: Record<string, string | number>) => string;
+type TFunc = (key: TranslationKey, params?: Record<string, string | number>) => string;
 
 // Returns color based on score. Defined outside the component (no hook access), so `t` is threaded in.
 function getScoreStyle(score: number, t: TFunc): { color: string; label: string } {
@@ -77,7 +78,7 @@ function downloadCsv(filename: string, rows: Record<string, unknown>[], emptyAle
 }
 
 export default function InsightsPage() {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
   const [authLoading, setAuthLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(true);
@@ -254,12 +255,12 @@ export default function InsightsPage() {
             onClick={handleLogout}
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
-            {t("common.logout")}
+            {t("appHeader.logout")}
           </button>
         }
       />
 
-      <PageHeader eyebrow={new Date().toLocaleDateString(locale === "zh" ? "zh-CN" : "en-SG", { weekday: "long", day: "numeric", month: "long" })} title={t("insightsPage.title")} />
+      <PageHeader eyebrow={today} title={t("insightsPage.title")} />
 
       {dataLoading ? (
         <p style={{ textAlign: "center", color: "#64748b" }}>{t("insightsPage.loadingInsights")}</p>

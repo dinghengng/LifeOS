@@ -22,6 +22,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import DailyQuoteCard from "../../components/nutrition/DailyQuoteCard";
 import LocalTabs from "../../components/layout/LocalTabs";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -48,7 +49,7 @@ type SavedMeal = {
 };
 // 4 Quests for now , pending changes
 function buildQuests(
-  t: (key: string, vars?: Record<string, string | number>) => string,
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string,
   meals: Meal[],
   totalCalories: number,
   totalProtein: number,
@@ -98,7 +99,7 @@ function buildQuests(
 }
 //manual craft insights but may change depending on scale of the free ai that can be used
 function generateInsight(
-  t: (key: string, vars?: Record<string, string | number>) => string,
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string,
   remainingCalories: number,
   remainingProtein: number,
   remainingCarbs: number,

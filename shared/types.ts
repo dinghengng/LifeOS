@@ -143,3 +143,19 @@ export interface SaveMoodConfigPayload {
     display_order: number;
   }[];
 }
+
+export type ChallengePeriodType = "weekly" | "monthly";
+export type ChallengeTier = "bronze" | "silver" | "gold";
+
+export interface ChallengeDefinition {
+  id: string;
+  title: string;
+  description: string;
+  period: ChallengePeriodType;
+  source: string;
+  tiers: {
+    bronze: number;
+    silver: number;
+    gold: number;
+  };
+}

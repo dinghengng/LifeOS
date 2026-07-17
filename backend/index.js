@@ -14,6 +14,7 @@ const {
   createNutritionRouter,
   createSupplementsRouter,
 } = require("./routes/nutrition");
+const { createChallengesRouter } = require("./routes/challenges");
 
 // Instantiating our application instance by calling the express function
 const app = express();
@@ -117,6 +118,9 @@ app.use("/api/supplements", createSupplementsRouter(requireAuth));
 
 // User profile 
 app.use("/api/user", createUserProfileRouter(requireAuth));
+
+// challenges
+app.use("/api/challenges", createChallengesRouter(requireAuth));
 
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, "0.0.0.0", () => {

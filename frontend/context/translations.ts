@@ -544,7 +544,6 @@ export const translations = {
     "insightsPage.emptyGoals": "No goal progress recorded yet — this fills in as milestones are checked off.",
     "insightsPage.emptyNutrition": "No logged nutrition days yet in the last {{days}} days — this fills in as you log meals.",
     "insightsPage.emptySupplements": "No supplement logs yet in the last {{days}} days — this fills in as you check them off.",
-    "nutrition.logout": "Logout",
     "nutrition.loading": "Loading...",
     "nutrition.loadingPanel": "Loading nutrition panel...",
     "nutrition.weeklyTrend": "Weekly Trend",
@@ -611,7 +610,6 @@ export const translations = {
     "nutrition.mealModal.save": "Save",
     "nutrition.mealModal.saveChanges": "Save Changes",
     "settings.loading": "Loading...",
-    "settings.logout": "Logout",
     "settings.sectionNotFound": "Section not found.",
 
     "settings.pageHeader.title": "Settings",
@@ -1426,7 +1424,6 @@ export const translations = {
     "insightsPage.emptyGoals": "暂无目标进度记录——完成里程碑后将显示数据。",
     "insightsPage.emptyNutrition": "过去{days}天暂无饮食记录——记录餐食后将显示数据。",
     "insightsPage.emptySupplements": "过去{days}天暂无补剂记录——勾选补剂后将显示数据。",
-    "nutrition.logout": "登出",
     "nutrition.loading": "加载中...",
     "nutrition.loadingPanel": "正在加载营养面板...",
     "nutrition.weeklyTrend": "每周趋势",
@@ -1493,7 +1490,6 @@ export const translations = {
     "nutrition.mealModal.save": "保存",
     "nutrition.mealModal.saveChanges": "保存修改",
     "settings.loading": "加载中...",
-    "settings.logout": "登出",
     "settings.sectionNotFound": "未找到该设置页面。",
 
     "settings.pageHeader.title": "设置",

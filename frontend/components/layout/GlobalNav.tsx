@@ -3,6 +3,13 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "../../context/LanguageContext";
 
+const NAV_ITEMS = [
+  { label: "Tasks", href: "/" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Journal", href: "/journal" },
+  { label: "Nutrition", href: "/nutrition" },
+  { label: "Insights", href: "/insights" },
+  { label: "Challenges", href: "/challenges" },
 const NAV_ITEMS: { key: "tasks" | "dashboard" | "journal" | "nutrition" | "insights"; href: string }[] = [
   { key: "tasks", href: "/" },
   { key: "dashboard", href: "/dashboard" },

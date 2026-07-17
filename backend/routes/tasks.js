@@ -46,7 +46,7 @@ function createTasksRouter(requireAuth) {
       const { isCompleted } = req.body;
 
       const updateTask = await pool.query(
-        "UPDATE tasks SET is_completed = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
+        "UPDATE tasks SET is_completed = $1, completed_at = CASE WHEN $1 = true THEN NOW() ELSE NULL END WHERE id = $2 AND user_id = $3 RETURNING *",
         [isCompleted, id, req.user.id],
       );
 

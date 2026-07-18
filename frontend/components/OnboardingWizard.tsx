@@ -4,19 +4,17 @@ import { useState, useRef } from "react";
 import { WIZARD_SECTIONS } from "../../shared/settingsSection";
 import { MoodLevelConfig } from "../../shared/types";
 import MoodSettingsSection from "./settings/MoodSettingsSection";
+import ProfileSettingsSection from "./settings/ProfileSettingsSection";
 import { useTranslation } from "../context/LanguageContext";
 import type { TranslationKey } from "../context/translations";
 
 
 const WIZARD_STEP_COMPONENTS: Record<
   string,
-  React.ComponentType<{
-    onSaved?: (saved: MoodLevelConfig[]) => void;
-    hideSaveButton?: boolean;
-    saveRef?: React.RefObject<(() => Promise<MoodLevelConfig[] | null>) | null>;
-  }>
+  React.ComponentType<any>
 > = {
   mood: MoodSettingsSection,
+  profile: ProfileSettingsSection,
 };
 
 type WizardStep = "welcome" | string | "complete";

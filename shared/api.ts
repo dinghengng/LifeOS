@@ -418,3 +418,84 @@ export const fetchChallenges = async (): Promise<ChallengeProgress[]> => {
   if (!response.ok) throw new Error("Failed to fetch challenges");
   return await response.json();
 };
+
+// social
+import { UserSearchResult, PublicProfile, ProfilePost } from "./types";
+
+export const searchUsers = async (query: string): Promise<UserSearchResult[]> => {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/api/social/users?query=${encodeURIComponent(query)}`, {
+    credentials: "include",
+    headers,
+  });
+  if (!response.ok) throw new Error("Failed to search users");
+  return await response.json();
+};
+
+export const fetchProfile = async (userId: string): Promise<PublicProfile> => {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/api/social/profiles/${userId}`, {
+    credentials: "include",
+    headers,
+  });
+  if (response.status === 404) throw new Error("Profile not found");
+  if (!response.ok) throw new Error("Failed to fetch profile");
+  return await response.json();
+};
+
+export const fetchProfilePosts = async (userId: string): Promise<ProfilePost[]> => {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/api/social/profiles/${userId}/posts`, {
+    credentials: "include",
+    headers,
+  });
+  if (response.status === 404) throw new Error("Profile not found");
+  if (!response.ok) throw new Error("Failed to fetch profile posts");
+  return await response.json();
+};
+
+export const fetchMyUsername = async (): Promise<{ username: string | null }> => {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/api/user/username`, {
+    credentials: "include",
+    headers,
+  });
+  if (!response.ok) throw new Error("Failed to fetch username");
+  return await response.json();
+};
+
+export const setUsername = async (username: string): Promise<PublicProfile> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await fetch(`${API_URL}/api/user/username`, {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: JSON.stringify({ username }),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to set username");
+  }
+  return await response.json();
+};
+
+export const createPost = async (
+  challengeId: string,
+  tier: "bronze" | "silver" | "gold",
+  periodStart: string,
+  periodEnd: string,
+): Promise<ProfilePost> => {
+  const headers = await getAuthHeaders();
+  headers["Content-Type"] = "application/json";
+  const response = await fetch(`${API_URL}/api/social/posts`, {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: JSON.stringify({ challengeId, tier, periodStart, periodEnd }),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error ?? "Failed to share achievement");
+  }
+  return await response.json();
+};

@@ -619,7 +619,7 @@ export const translations = {
     "globalNav.journal": "Journal",
     "globalNav.nutrition": "Nutrition",
     "globalNav.insights": "Insights",
-    "globalNav.challenges": "Challenges",
+    "globalNav.social": "Social",
     "settingsCommon.saving": "Saving...",
     "settingsCommon.saveChanges": "Save changes",
 
@@ -645,6 +645,8 @@ export const translations = {
     "settingsSection.mood.description": "Choose your emoji pack and customise each mood level label and colour",
     "settingsSection.notifications.title": "Notifications",
     "settingsSection.notifications.description": "Manage how and when LifeOS notifies you about tasks, habits, and goals",
+    "settingsSection.profile.title": "Profile",
+    "settingsSection.profile.description": "Set your username to be discovered by others",
 
     "notificationSettings.loading": "Loading preferences...",
     "notificationSettings.toastUpdated": "Settings updated",
@@ -930,7 +932,7 @@ export const translations = {
     "nav.journal": "日记",
     "nav.nutrition": "营养",
     "nav.insights": "洞察",
-    "nav.challenges": "挑战",
+    "nav.social": "社交",
     "nav.logout": "登出",
     "nutrition.track": "记录",
     "nutrition.progress": "进度",
@@ -1523,7 +1525,7 @@ export const translations = {
     "globalNav.journal": "日记",
     "globalNav.nutrition": "营养",
     "globalNav.insights": "洞察",
-    "globalNav.challenges": "挑战",
+    "globalNav.social": "社交",
     "settingsCommon.saving": "保存中...",
     "settingsCommon.saveChanges": "保存更改",
 
@@ -1549,6 +1551,8 @@ export const translations = {
     "settingsSection.mood.description": "选择你的表情包，并自定义每个心情等级的标签和颜色",
     "settingsSection.notifications.title": "通知",
     "settingsSection.notifications.description": "管理 LifeOS 何时以及如何就任务、习惯和目标向你发送通知",
+    "settingsSection.profile.title": "个人资料",
+    "settingsSection.profile.description": "设置你的显示名称和用户名，以便在社区中被发现。",
 
     "notificationSettings.loading": "正在加载偏好设置...",
     "notificationSettings.toastUpdated": "设置已更新",

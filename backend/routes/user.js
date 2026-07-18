@@ -230,6 +230,46 @@ function createUserProfileRouter(requireAuth) {
     }
   });
 
+  // GET user's username
+  router.get("/username", requireAuth, async (req, res) => {
+    try {
+      const result = await pool.query(
+        `SELECT username FROM users WHERE id = $1`,
+        [req.user.id],
+      );
+      res.json({ username: result.rows[0]?.username ?? null });
+    } catch (err) {
+      console.error("Fetch username error:", err.message);
+      res.status(500).send("Server Error");
+    }
+  });
+
+  // POST add or edit username
+  router.post("/username", requireAuth, async (req, res) => {
+    const { username } = req.body;
+    const trimmed = (username || "").trim().toLowerCase();
+
+    if (!/^[a-z0-9_]{3,30}$/.test(trimmed)) {
+      return res.status(400).json({
+        error: "Username must be 3-30 characters (letters, numbers, underscore only)",
+      });
+    }
+
+    try {
+      const result = await pool.query(
+        `UPDATE users SET username = $1 WHERE id = $2 RETURNING id, name, username`,
+        [trimmed, req.user.id],
+      );
+      res.json(result.rows[0]);
+    } catch (err) {
+      if (err.code === "23505") {
+        return res.status(409).json({ error: "Username already taken" });
+      }
+      console.error("Update username error:", err.message);
+      res.status(500).send("Server Error");
+    }
+  });
+
   return router;
 }
 

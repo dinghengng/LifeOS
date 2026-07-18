@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "../../context/LanguageContext";
 
 const NAV_ITEMS: {
-  key: "tasks" | "dashboard" | "journal" | "nutrition" | "insights" | "challenges";
+  key: "tasks" | "dashboard" | "journal" | "nutrition" | "insights" | "social";
   href: string;
 }[] = [
   { key: "tasks", href: "/" },
@@ -12,7 +12,7 @@ const NAV_ITEMS: {
   { key: "journal", href: "/journal" },
   { key: "nutrition", href: "/nutrition" },
   { key: "insights", href: "/insights" },
-  { key: "challenges", href: "/challenges" },
+  { key: "social", href: "/social" },
 ];
 
 export default function GlobalNav() {

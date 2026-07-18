@@ -8,6 +8,7 @@ import { SETTINGS_SECTIONS } from "../../../shared/settingsSection";
 import MoodSettingsSection from "../../components/settings/MoodSettingsSection";
 import NotificationSettingsSection from "../../components/settings/NotificationSettingsSection";
 import NutritionGoalsSection from "../../components/settings/NutritionGoalsSection";
+import ProfileSettingsSection from "../../components/settings/ProfileSettingsSection";
 import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
@@ -17,11 +18,12 @@ import type { TranslationKey } from "../../context/translations";
 
 const SECTION_COMPONENTS: Record<
   string,
-  React.ComponentType<{ initialConfig?: MoodLevelConfig[] }>
+  React.ComponentType<any>
 > = {
   mood: MoodSettingsSection,
   notifications: NotificationSettingsSection,
   nutrition_goals: NutritionGoalsSection,
+  profile: ProfileSettingsSection,
 };
 
 export default function SettingsPage() {

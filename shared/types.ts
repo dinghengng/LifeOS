@@ -169,3 +169,25 @@ export interface ChallengeProgress extends ChallengeDefinition {
   periodEnd: string;
   implemented: boolean;
 }
+
+export interface UserSearchResult {
+  id: number;
+  name: string | null;
+  username: string;
+}
+
+export interface PublicProfile {
+  id: number;
+  name: string | null;
+  username: string;
+}
+
+export interface ProfilePost {
+  id: number;
+  challengeId: string;
+  tier: "bronze" | "silver" | "gold";
+  periodStart: string;
+  periodEnd: string;
+  createdAt: string;
+  kudosCount: number;
+}

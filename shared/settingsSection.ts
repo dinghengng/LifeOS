@@ -29,6 +29,12 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     descriptionKey: "nutritionGoals.description",
     includeInWizard: false,
   },
+  {
+    id: "profile",
+    titleKey: "settingsSection.profile.title",
+    descriptionKey: "settingsSection.profile.description",
+    includeInWizard: true,
+  },
 ];
 
 export const WIZARD_SECTIONS = SETTINGS_SECTIONS.filter((s) => s.includeInWizard);

@@ -185,6 +185,7 @@ export interface PublicProfile {
 export interface ProfilePost {
   id: number;
   challengeId: string;
+  challengeTitle: string;
   tier: "bronze" | "silver" | "gold";
   periodStart: string;
   periodEnd: string;

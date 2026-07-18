@@ -478,3 +478,24 @@ export const setUsername = async (username: string): Promise<PublicProfile> => {
   }
   return await response.json();
 };
+
+export const createPost = async (
+  challengeId: string,
+  tier: "bronze" | "silver" | "gold",
+  periodStart: string,
+  periodEnd: string,
+): Promise<ProfilePost> => {
+  const headers = await getAuthHeaders();
+  headers["Content-Type"] = "application/json";
+  const response = await fetch(`${API_URL}/api/social/posts`, {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: JSON.stringify({ challengeId, tier, periodStart, periodEnd }),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error ?? "Failed to share achievement");
+  }
+  return await response.json();
+};

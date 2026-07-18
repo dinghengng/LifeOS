@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../db");
+const { getChallengeById } = require("../config/challenges");
 
 function createSocialRouter(requireAuth) {
   const router = express.Router();
@@ -28,16 +29,12 @@ function createSocialRouter(requireAuth) {
   });
 
   // Profile lookup
-  router.get("/profiles/:userId", requireAuth, async (req, res) => {
-    const { userId } = req.params;
-    if (!/^\d+$/.test(userId)) {
-      return res.status(404).json({ error: "Profile not found" });
-    }
-
+  router.get("/profiles/:id", requireAuth, async (req, res) => {
+    const { id } = req.params;
     try {
       const result = await pool.query(
         `SELECT id, name, username FROM users WHERE id = $1 AND username IS NOT NULL`,
-        [userId],
+        [id],
       );
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "Profile not found" });
@@ -50,20 +47,17 @@ function createSocialRouter(requireAuth) {
   });
 
   // get shared completion posts
-  router.get("/profiles/:userId/posts", requireAuth, async (req, res) => {
-    const { userId } = req.params;
-    if (!/^\d+$/.test(userId)) {
-      return res.status(404).json({ error: "Profile not found" });
-    }
-
+  router.get("/profiles/:id/posts", requireAuth, async (req, res) => {
+    const { id } = req.params;
     try {
       const userCheck = await pool.query(
         `SELECT id FROM users WHERE id = $1 AND username IS NOT NULL`,
-        [userId],
+        [id],
       );
       if (userCheck.rows.length === 0) {
         return res.status(404).json({ error: "Profile not found" });
       }
+      const userId = userCheck.rows[0].id;
 
       const result = await pool.query(
         `SELECT cp.id, cp.challenge_id, cp.tier, cp.period_start, cp.period_end, cp.created_at,
@@ -77,21 +71,62 @@ function createSocialRouter(requireAuth) {
         [userId],
       );
       res.json(
-        result.rows.map((r) => ({
-          id: r.id,
-          challengeId: r.challenge_id,
-          tier: r.tier,
-          periodStart: r.period_start,
-          periodEnd: r.period_end,
-          createdAt: r.created_at,
-          kudosCount: parseInt(r.kudos_count, 10),
-        })),
+        result.rows.map((r) => {
+          const challenge = getChallengeById(r.challenge_id);
+          return {
+            id: r.id,
+            challengeId: r.challenge_id,
+            challengeTitle: challenge?.title ?? r.challenge_id, // NEW
+            tier: r.tier,
+            periodStart: r.period_start,
+            periodEnd: r.period_end,
+            createdAt: r.created_at,
+            kudosCount: parseInt(r.kudos_count, 10),
+          };
+        }),
       );
     } catch (err) {
       console.error("Profile posts fetch error:", err.message);
       res.status(500).json({ error: "Failed to fetch profile posts" });
     }
   });
+
+  // post completion post
+  router.post("/posts", requireAuth, async (req, res) => {
+    const { challengeId, tier, periodStart, periodEnd } = req.body;
+
+    if (!challengeId || !tier || !periodStart || !periodEnd) {
+        return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (!["bronze", "silver", "gold"].includes(tier)) {
+        return res.status(400).json({ error: "Invalid tier" });
+    }
+
+    try {
+        const result = await pool.query(
+        `INSERT INTO challenge_posts (user_id, challenge_id, tier, period_start, period_end)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, challenge_id, tier, period_start, period_end, created_at`,
+        [req.user.id, challengeId, tier, periodStart, periodEnd],
+        );
+        const r = result.rows[0];
+        res.status(201).json({
+        id: r.id,
+        challengeId: r.challenge_id,
+        tier: r.tier,
+        periodStart: r.period_start,
+        periodEnd: r.period_end,
+        createdAt: r.created_at,
+        kudosCount: 0,
+        });
+    } catch (err) {
+        if (err.code === "23505") {
+        return res.status(409).json({ error: "Already shared this tier for this period" });
+        }
+        console.error("Create post error:", err.message);
+        res.status(500).json({ error: "Failed to share achievement" });
+    }
+    });
 
   return router;
 }

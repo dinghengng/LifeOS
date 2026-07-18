@@ -18,7 +18,6 @@ export default function ProfileSettingsSection({
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const showToast = useToastContext();
 
   useEffect(() => {
     fetchMyUsername().then((res) => {
@@ -38,13 +37,12 @@ export default function ProfileSettingsSection({
     try {
       const result = await apiSetUsername(trimmed);
       setCurrentUsername(result.username);
-      showToast(`Username set to @${result.username}`, "success"); 
       onSaved?.({ username: result.username });
       return { username: result.username };
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save username");
       return null;
-    } finally {
+    } finally {//
       setSaving(false);
     }
   };

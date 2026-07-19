@@ -9,6 +9,7 @@ import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import { checkAuthStatus, logoutUser } from "../../../shared/api";
 import { computeWellnessScore, WellnessBreakdown } from "../../components/insights/WellnessScore";
+import AIDigestCard, { AIDigest } from "../../components/insights/AIDigestCard";
 import type { Habit } from "../../components/dashboard/HabitRow";
 import type { Goal } from "../../components/dashboard/GoalCard";
 import type { DayData } from "../../components/nutrition/NutritionChart";
@@ -27,6 +28,7 @@ const ENDPOINTS = {
   supplements: `${API_BASE}/api/supplements`,
   supplementsHistory: (days: number) => `${API_BASE}/api/supplements/history?days=${days}`,
   metrics: `${API_BASE}/api/user/metrics`,
+  aiDigest: `${API_BASE}/api/insights`,
 };
 
 const RANGE_OPTIONS = [7, 14, 30, 90] as const;
@@ -92,6 +94,7 @@ export default function InsightsPage() {
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
   const [rangeDays, setRangeDays] = useState<number>(30);
   const [mounted, setMounted] = useState(false);
+  const [aiDigest, setAiDigest] = useState<AIDigest | null>(null);
 
 
   useEffect(() => setMounted(true), []);
@@ -127,7 +130,7 @@ export default function InsightsPage() {
   const fetchInsightsData = useCallback(async () => {
     setDataLoading(true);
     try {
-      const [habitsRes, goalsRes, historyRes, suppsRes, metricsRes, habitsHistRes, goalsHistRes, suppsHistRes] = await Promise.all([
+      const [habitsRes, goalsRes, historyRes, suppsRes, metricsRes, habitsHistRes, goalsHistRes, suppsHistRes, aiDigestRes] = await Promise.all([
         fetch(ENDPOINTS.habits, { credentials: "include" }),
         fetch(ENDPOINTS.goals, { credentials: "include" }),
         fetch(ENDPOINTS.nutritionHistory(rangeDays), { credentials: "include" }),
@@ -136,12 +139,17 @@ export default function InsightsPage() {
         fetch(ENDPOINTS.habitsHistory(rangeDays), { credentials: "include" }),
         fetch(ENDPOINTS.goalsHistory(rangeDays), { credentials: "include" }),
         fetch(ENDPOINTS.supplementsHistory(rangeDays), { credentials: "include" }),
+        fetch(ENDPOINTS.aiDigest, { credentials: "include" }),
       ]);
       if (habitsHistRes.ok) setHabitsHistory(await habitsHistRes.json());
       if (goalsHistRes.ok) setGoalsHistory(await goalsHistRes.json());
       if (suppsHistRes.ok) setSupplementsHistory(await suppsHistRes.json());
       if (habitsRes.ok) setHabits(await habitsRes.json());
       if (goalsRes.ok) setGoals(await goalsRes.json());
+      if (aiDigestRes.ok) {
+        const digestData = await aiDigestRes.json();
+        setAiDigest(digestData); // endpoint returns null if no digest generated yet — handled by AIDigestCard's empty state
+      }
       if (historyRes.ok) setNutritionHistory(await historyRes.json());
       if (suppsRes.ok) {
         const suppsData = await suppsRes.json();
@@ -266,6 +274,9 @@ export default function InsightsPage() {
         <p style={{ textAlign: "center", color: "#64748b" }}>{t("insightsPage.loadingInsights")}</p>
       ) : (
         <div style={{ maxWidth: 1000, margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          {/* AI-narrated weekly digest */}
+          <AIDigestCard digest={aiDigest} loading={dataLoading} t={t} />
+
           {/* Overall wellness score + category breakdown */}
           <div
             style={{

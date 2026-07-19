@@ -7,6 +7,7 @@ const { runGoalDeadlineAlerts }    = require('./goalDeadlineAlerts');
 const { runHabitStreakRiskAlerts } = require('./habitStreakRiskAlerts');
 const { runStreakMilestones }      = require('./streakMilestones');
 const { runJournalNudge }          = require('./journalNudge');
+const { runWeeklyDigest }          = require('./weeklyDigest');
 
 function startReminderJobs() {
   cron.schedule('* * * * *', async () => {
@@ -85,6 +86,9 @@ function startReminderJobs() {
   cron.schedule('0 20 * * *', runHabitStreakRiskAlerts); //8pm
   cron.schedule('0 21 * * *', runStreakMilestones);      //9pm
   cron.schedule('0 22 * * *', runJournalNudge);          //10pm
+
+  // Weekly digest on Sunday 6pm SGT. 
+  cron.schedule('0 18 * * 0', runWeeklyDigest, { timezone: 'Asia/Singapore' });
 }
 
 module.exports = { startReminderJobs };

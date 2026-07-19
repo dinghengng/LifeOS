@@ -5,6 +5,7 @@ const cors = require("cors");
 const pool = require("./db");
 require("dotenv").config();
 const { createNotificationRouter } = require("./routes/notifications");
+const { createInsightsRouter } = require("./routes/ai");
 const { startReminderJobs } = require("./jobs/reminderJob");
 const { createAuthRouter, createUserProfileRouter } = require("./routes/user");
 const { createTasksRouter } = require("./routes/tasks");
@@ -98,6 +99,7 @@ const requireAuth = async (req, res, next) => {
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 app.use("/api/notifications", createNotificationRouter(requireAuth));
+app.use("/api/insights", createInsightsRouter(requireAuth));
 
 // Auth (register/login/logout/me)
 app.use("/auth", createAuthRouter(requireAuth));

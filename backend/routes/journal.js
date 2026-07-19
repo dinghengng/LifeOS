@@ -1,5 +1,6 @@
 const express = require("express");
 const pool = require("../db");
+const { runAndStoreAnalysis } = require("../services/journalAnalysis");
 
 function createMoodRouter(requireAuth) {
   const router = express.Router();
@@ -378,6 +379,10 @@ function createJournalRouter(requireAuth) {
          je.title,
          je.created_at,
          je.updated_at,
+         je.ai_mood_score,
+         je.ai_themes,
+         je.ai_confidence,
+         je.ai_analyzed_at,
          ml.mood_level,
          ml.stress_level,
          ml.logged_at AS mood_logged_at
@@ -437,6 +442,13 @@ function createJournalRouter(requireAuth) {
 
       await client.query("COMMIT");
       res.status(201).json(result.rows[0]);
+
+      // Fire-and-forget: entry is already saved and the response already
+      // sent, so a slow/failed Groq call here can never block or break
+      // the user's save. Result gets written back to the row when ready.
+      runAndStoreAnalysis(result.rows[0].id, req.user.id, content).catch((err) =>
+        console.error("[journal] Background analysis error:", err.message),
+      );
     } catch (err) {
       await client.query("ROLLBACK");
       console.error(err.message);
@@ -489,6 +501,14 @@ function createJournalRouter(requireAuth) {
 
       await client.query("COMMIT");
       res.json(result.rows[0]);
+
+      // Only re-analyze if the content actually changed — editing just the
+      // title/mood link shouldn't waste a Groq call on unchanged text.
+      if (content) {
+        runAndStoreAnalysis(result.rows[0].id, req.user.id, content).catch((err) =>
+          console.error("[journal] Background re-analysis error:", err.message),
+        );
+      }
     } catch (err) {
       await client.query("ROLLBACK");
       console.error(err.message);

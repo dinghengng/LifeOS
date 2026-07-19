@@ -90,6 +90,10 @@ export interface DBJournalEntry {
   mood_level: MoodLevel | null;
   stress_level: StressLevel | null;
   mood_logged_at: string | null;
+  ai_mood_score: number | null;
+  ai_themes: string[] | null;
+  ai_confidence: "low" | "medium" | "high" | null;
+  ai_analyzed_at: string | null;
 }
 
 export interface JournalEntry {
@@ -103,6 +107,10 @@ export interface JournalEntry {
   stressLevel: StressLevel | null;
   moodLoggedAt: string | null;
   title?: string | null;
+  aiMoodScore: number | null;
+  aiThemes: string[] | null;
+  aiConfidence: "low" | "medium" | "high" | null;
+  aiAnalyzedAt: string | null;
 }
 
 export interface CreateJournalEntryPayload {

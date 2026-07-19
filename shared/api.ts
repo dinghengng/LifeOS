@@ -276,6 +276,10 @@ const mapJournalEntry = (raw: DBJournalEntry): JournalEntry => ({
   moodLevel: raw.mood_level,
   stressLevel: raw.stress_level,
   moodLoggedAt: raw.mood_logged_at,
+  aiMoodScore: raw.ai_mood_score ?? null,
+  aiThemes: raw.ai_themes ?? null,
+  aiConfidence: raw.ai_confidence ?? null,
+  aiAnalyzedAt: raw.ai_analyzed_at ?? null,
 });
 
 // GET journal entries

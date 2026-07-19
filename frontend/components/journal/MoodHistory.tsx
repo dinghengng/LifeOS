@@ -7,6 +7,7 @@ import EditMoodLogModal from "./EditMoodLogModal";
 import EditJournalEntryModal from "./EditJournalEntryModal";
 import JournalEditor from "./JournalEditor";
 import { systemTagLabel } from "./TagSelector";
+import AIThemeChips from "../insights/AIThemeChips";
 import { useTranslation } from "../../context/LanguageContext";
 import type { TranslationKey } from "../../context/translations";
 
@@ -304,9 +305,12 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
                 {/*Journal*/}
                 <div className="border-t border-slate-100 px-4 py-3 bg-slate-50/60">
                   {linkedEntry ? (
-                    <p className="text-sm text-slate-600 line-clamp-2">
-                      {stripHtml(linkedEntry.content ?? "") || t("moodHistory.noJournalText")}
-                    </p>
+                    <>
+                      <p className="text-sm text-slate-600 line-clamp-2">
+                        {stripHtml(linkedEntry.content ?? "") || t("moodHistory.noJournalText")}
+                      </p>
+                      <AIThemeChips entry={linkedEntry} />
+                    </>
                   ) : log.note ? (
                     <p className="text-sm text-slate-600 whitespace-pre-wrap break-words">
                       {stripHtml(log.note)}
@@ -350,6 +354,7 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
                         {stripHtml(entry.content ?? "").slice(0, 120)}
                       </p>
                     )}
+                    <AIThemeChips entry={entry} />
                   </div>
 
                   <div className="flex flex-col gap-1.5 shrink-0">

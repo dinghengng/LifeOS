@@ -930,6 +930,8 @@ export const translations = {
     "insightsPage.aiDigestHabitsLabel": "Habit completion",
     "insightsPage.aiDigestMoodLabel": "Avg. mood",
     "insightsPage.aiDigestGoalsLabel": "Goal progress",
+    "insightsPage.aiDigestTitle": "AI Digest",
+    "insightsPage.aiDigestThemesLabel": "Top themes",
 
 },
   zh: {
@@ -1870,6 +1872,8 @@ export const translations = {
     "insightsPage.aiDigestHabitsLabel": "习惯完成率",
     "insightsPage.aiDigestMoodLabel": "平均心情",
     "insightsPage.aiDigestGoalsLabel": "目标进度",
+    "insightsPage.aiDigestTitle": "AI 摘要",
+    "insightsPage.aiDigestThemesLabel": "主要主题",
   }
 } as const satisfies Record<Locale, Record < string, string >>;
 

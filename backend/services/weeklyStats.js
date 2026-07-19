@@ -181,18 +181,39 @@ async function getMoodHabitCorrelation(userId) {
   return { correlation: Math.round((num / denom) * 100) / 100, sample_size: n };
 }
 
+// Top journal themes this week, from Groq's per-entry analysis
+async function getWeeklyJournalThemes(userId, startDateStr, endDateStr) {
+  const { rows } = await pool.query(
+    `SELECT theme, COUNT(*) AS count
+     FROM journal_entries, jsonb_array_elements_text(ai_themes) AS theme
+     WHERE user_id = $1
+       AND ai_analyzed_at IS NOT NULL
+       AND created_at >= $2 AND created_at < $3
+     GROUP BY theme
+     ORDER BY count DESC
+     LIMIT 5`,
+    [userId, startDateStr, endDateStr],
+  );
+  if (rows.length === 0) return null;
+
+  return {
+    top_themes: rows.map((r) => ({ theme: r.theme, count: Number(r.count) })),
+  };
+}
+
 async function composeWeeklyInsights(userId) {
   const { startDateStr, endDateStr } = getWeekBoundsSGT();
   const prevWeekStart = new Date(startDateStr);
   prevWeekStart.setUTCDate(prevWeekStart.getUTCDate() - 7);
   const prevStartDateStr = prevWeekStart.toISOString().split("T")[0];
 
-  const [habits, mood, goals, tasks, correlation] = await Promise.all([
+  const [habits, mood, goals, tasks, correlation, journal] = await Promise.all([
     getWeeklyHabitStats(userId, startDateStr, endDateStr),
     getWeeklyMoodStats(userId, startDateStr, endDateStr, prevStartDateStr),
     getGoalsSnapshot(userId),
     getTasksSnapshot(userId, startDateStr, endDateStr),
     getMoodHabitCorrelation(userId),
+    getWeeklyJournalThemes(userId, startDateStr, endDateStr),
   ]);
 
   // If there's nothing meaningful at all, just skip
@@ -206,6 +227,7 @@ async function composeWeeklyInsights(userId) {
     goals,
     tasks,
     mood_habit_correlation: correlation,
+    journal,
   };
 }
 

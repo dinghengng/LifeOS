@@ -140,6 +140,7 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
   const [error, setError] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<JournalEntry | null>(null);
   const [deletingEntryId, setDeletingEntryId] = useState<number | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: "log" | "entry"; id: number } | null>(null);
 
   const currentLocale = locale === "zh" ? "zh-CN" : "en-SG";
 
@@ -156,32 +157,37 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
       .map((e) => e.moodLogId as number)
   );
 
-  const handleDelete = async (id: number) => {
-    if (!confirm(t("moodHistory.confirmDeleteMood"))) return;
-    setDeletingId(id);
-    setError(null);
-    try {
-      await deleteMoodLog(id);
-      onRefresh();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("moodHistory.errorDelete"));
-    } finally {
-      setDeletingId(null);
-    }
+  const requestDelete = (type: "log" | "entry", id: number) => {
+    setConfirmAction({ type, id });
   };
 
-  const handleDeleteEntry = async (id: number) => {
-    if (!confirm(t("moodHistory.confirmDeleteEntry"))) return;
-    setDeletingEntryId(id);
+  const confirmDelete = async () => {
+    if (!confirmAction) return;
+    const { type, id } = confirmAction;
     setError(null);
-    try {
-      await deleteJournalEntry(id);
-      onRefresh();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("moodHistory.errorDelete"));
-    } finally {
-      setDeletingEntryId(null);
+
+    if (type === "log") {
+      setDeletingId(id);
+      try {
+        await deleteMoodLog(id);
+        onRefresh();
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : t("moodHistory.errorDelete"));
+      } finally {
+        setDeletingId(null);
+      }
+    } else {
+      setDeletingEntryId(id);
+      try {
+        await deleteJournalEntry(id);
+        onRefresh();
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : t("moodHistory.errorDelete"));
+      } finally {
+        setDeletingEntryId(null);
+      }
     }
+    setConfirmAction(null);
   };
 
   const unlinkedEntries = (entries ?? []).filter((e) => e.moodLogId === null);
@@ -217,6 +223,33 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
           onSaved={onRefresh}
           onClose={() => setEditingEntry(null)}
         />
+      )}
+
+      {/*Delete confirmation changed to in app*/}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5">
+            <p className="text-sm text-slate-700 mb-4">
+              {confirmAction.type === "log"
+                ? t("moodHistory.confirmDeleteMood")
+                : t("moodHistory.confirmDeleteEntry")}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="text-xs px-3 py-1.5 rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100"
+              >
+                {t("common.delete")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="w-full max-w-3xl mt-6">
@@ -289,7 +322,7 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
                       {t("common.edit")}
                     </button>
                     <button
-                      onClick={() => handleDelete(log.id)}
+                      onClick={() => requestDelete("log", log.id)}
                       disabled={deletingId === log.id}
                       className={`text-xs px-3 py-1 rounded-lg border transition ${
                         deletingId === log.id
@@ -365,7 +398,7 @@ export default function MoodHistory({ logs, tags, entries, moodConfig, onRefresh
                       {t("common.edit")}
                     </button>
                     <button
-                      onClick={() => handleDeleteEntry(entry.id)}
+                      onClick={() => requestDelete("entry", entry.id)}
                       disabled={deletingEntryId === entry.id}
                       className={`text-xs px-3 py-1 rounded-lg border transition ${
                         deletingEntryId === entry.id

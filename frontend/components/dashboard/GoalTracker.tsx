@@ -31,6 +31,14 @@ export default function GoalTracker({
 }) {
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const pendingGoal = goals.find((g) => g.id === confirmDeleteId) ?? null;
+
+  const confirmDelete = () => {
+    if (confirmDeleteId === null) return;
+    onDeleteGoal(confirmDeleteId);
+    setConfirmDeleteId(null);
+  };
 
   const categories = Array.from(new Set(goals.map((g) => g.category)));
   const visibleGoals = activeCategory
@@ -53,6 +61,45 @@ export default function GoalTracker({
 
   return (
     <div style={outerStyle}>
+      {/*Delete confirmation modal */}
+      {confirmDeleteId !== null && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 50,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(0,0,0,0.4)", backdropFilter: "blur(2px)", padding: 16,
+        }}>
+          <div style={{
+            background: "white", borderRadius: 16, boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+            maxWidth: 360, width: "100%", padding: 20,
+          }}>
+            <p style={{ margin: "0 0 16px", fontSize: 14, color: "#334155" }}>
+              {t("goalTracker.confirmDeleteGoal", { title: pendingGoal?.title ?? "" })}
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                style={{
+                  fontSize: 12, padding: "6px 12px", borderRadius: 8,
+                  border: "0.5px solid var(--color-border-tertiary)",
+                  background: "white", color: "#475569", cursor: "pointer",
+                }}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  fontSize: 12, padding: "6px 12px", borderRadius: 8,
+                  border: "1px solid #fca5a5", background: "#fef2f2",
+                  color: "#dc2626", cursor: "pointer", fontWeight: 600,
+                }}
+              >
+                {t("common.delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {!bare && (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h2 style={{ margin: 0, fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>
@@ -122,7 +169,7 @@ export default function GoalTracker({
             goal={goal}
             onMilestoneToggle={onMilestoneToggle}
             onEdit={onEditGoal}
-            onDelete={onDeleteGoal}
+            onDelete={(goalId: string) => setConfirmDeleteId(goalId)}
           />
         ))
       )}

@@ -1,5 +1,6 @@
 "use client"; // Tells Next.js this component is interactive (checkboxes/buttons)
 
+import { useState } from "react";
 import { Task, type Priority } from "../../shared/types";
 import { useTranslation } from "../context/LanguageContext";
 
@@ -60,6 +61,14 @@ export default function TaskList({
   onEditTask,
 }: TaskListProps) {
   const { t } = useTranslation();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const pendingTask = tasks.find((task) => task.id === confirmDeleteId) ?? null;
+
+  const confirmDelete = () => {
+    if (confirmDeleteId === null) return;
+    onDeleteTask(confirmDeleteId);
+    setConfirmDeleteId(null);
+  };
 
   // Shows a friendly message if the user has a clear schedule.
   if (tasks.length === 0) {
@@ -73,6 +82,31 @@ export default function TaskList({
   const remainingCount = tasks.filter((task) => !task.isCompleted).length;
   return (
     <div className="mt-6">
+      {/*Delete confirmation modal*/}
+      {confirmDeleteId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5">
+            <p className="text-sm text-slate-700 mb-4">
+              {t("taskList.confirmDeleteTask", { title: pendingTask?.title ?? "" })}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="text-xs px-3 py-1.5 rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100"
+              >
+                {t("common.delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-end justify-between mb-4 border-b border-slate-200 pb-2">
         <h2 className="text-xl font-bold text-slate-800">{t("taskList.heading")}</h2>
         <span className="text-sm font-medium text-slate-500">
@@ -158,7 +192,7 @@ export default function TaskList({
                     ✎
                   </button>
                   <button
-                    onClick={() => onDeleteTask(task.id)}
+                    onClick={() => setConfirmDeleteId(task.id)}
                     className="text-slate-400 hover:text-red-500 transition-colors p-2 text-xl"
                     title={t("taskList.deleteTitle")}
                   >

@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { SquarePen, Trash2 } from "lucide-react";
 import { useTranslation } from "../../context/LanguageContext";
 
@@ -36,9 +37,61 @@ export default function NutritionTracker({
   const { t } = useTranslation();
   const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
   const totalProtein = meals.reduce((sum, m) => sum + m.protein, 0);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const confirmDelete = () => {
+    if (confirmDeleteId === null) return;
+    onDeleteMealClick(confirmDeleteId);
+    setConfirmDeleteId(null);
+  };
+
+  const pendingMeal = meals.find((m) => m.id === confirmDeleteId) ?? null;
 
   return (
     <div>
+      {/*Delete confirmation*/}
+      {confirmDeleteId !== null && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 50,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.4)", backdropFilter: "blur(2px)", padding: 16,
+          }}
+        >
+          <div style={{
+            background: "white", borderRadius: 16, boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+            maxWidth: 360, width: "100%", padding: 20,
+          }}>
+            <p style={{ margin: "0 0 16px", fontSize: 14, color: "#334155" }}>
+              {t("nutritionTracker.confirmDeleteMeal", {
+                name: pendingMeal ? (pendingMeal.mealName || pendingMeal.meal_name || "") : "",
+              })}
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                style={{
+                  fontSize: 12, padding: "6px 12px", borderRadius: 8,
+                  border: "0.5px solid var(--color-border-tertiary)",
+                  background: "white", color: "#475569", cursor: "pointer",
+                }}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  fontSize: 12, padding: "6px 12px", borderRadius: 8,
+                  border: "1px solid #fca5a5", background: "#fef2f2",
+                  color: "#dc2626", cursor: "pointer", fontWeight: 600,
+                }}
+              >
+                {t("common.delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div
         style={{
           display: "flex",
@@ -303,7 +356,7 @@ export default function NutritionTracker({
                 >
                   <SquarePen size={16} strokeWidth={2} />
                 </button>
-                <button onClick={() => onDeleteMealClick(meal.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#ef4444", display: "flex", alignItems: "center" }} title={t("nutritionTracker.deleteMealTitle")}>
+                <button onClick={() => setConfirmDeleteId(meal.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: "#ef4444", display: "flex", alignItems: "center" }} title={t("nutritionTracker.deleteMealTitle")}>
                     <Trash2 size={16} strokeWidth={2} />
                   </button>
               </div>

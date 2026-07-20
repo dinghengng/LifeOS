@@ -117,7 +117,7 @@ const RoutineBlock = ({
   prefix,
   checkedIds,
   onToggle,
-  onDelete,
+  onRequestDelete,
   onRefill,
   t,
 }: {
@@ -127,7 +127,7 @@ const RoutineBlock = ({
   prefix: "AM" | "PM";
   checkedIds: Set<string>;
   onToggle: (key: string) => void;
-  onDelete: (id: string | number) => void;
+  onRequestDelete: (supp: Supplement) => void;
   onRefill: (id: string | number) => void;
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }) => {
@@ -238,7 +238,7 @@ const RoutineBlock = ({
               </div>
 
               <button
-                onClick={(e) => { e.stopPropagation(); onDelete(supp.id); }}
+                onClick={(e) => { e.stopPropagation(); onRequestDelete(supp); }}
                 style={{
                   background: "none", border: "none", cursor: "pointer",
                   color: "#cbd5e1", padding: 2, display: "flex",
@@ -305,6 +305,14 @@ export default function SupplementTracker({
   };
   const [refillingId, setRefillingId] = useState<string | number | null>(null);
   const [refillAmount, setRefillAmount] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<Supplement | null>(null);
+
+  const requestDelete = (supp: Supplement) => setPendingDelete(supp);
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    onDelete(pendingDelete.id);
+    setPendingDelete(null);
+  };
   const openRefillPopover = (id: string | number) => {
     setRefillingId(id);
     setRefillAmount("");
@@ -330,6 +338,48 @@ export default function SupplementTracker({
 
   return (
     <div>
+      {/*Delete confirmation modal*/}
+      {pendingDelete && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 50,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.4)", backdropFilter: "blur(2px)", padding: 16,
+          }}
+        >
+          <div style={{
+            background: "white", borderRadius: 16, boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+            maxWidth: 360, width: "100%", padding: 20,
+          }}>
+            <p style={{ margin: "0 0 16px", fontSize: 14, color: "#334155" }}>
+              {t("supplementTracker.confirmDeleteSupplement", { name: pendingDelete.name })}
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => setPendingDelete(null)}
+                style={{
+                  fontSize: 12, padding: "6px 12px", borderRadius: 8,
+                  border: "0.5px solid var(--color-border-tertiary)",
+                  background: "white", color: "#475569", cursor: "pointer",
+                }}
+              >
+                {t("supplementTracker.cancelBtn")}
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  fontSize: 12, padding: "6px 12px", borderRadius: 8,
+                  border: "1px solid #fca5a5", background: "#fef2f2",
+                  color: "#dc2626", cursor: "pointer", fontWeight: 600,
+                }}
+              >
+                {t("common.delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)" }}>
@@ -496,11 +546,10 @@ export default function SupplementTracker({
             position: "relative",
           }}>
             <RoutineBlock label={t("supplementTracker.morningLabel")} color={timingColor.AM} items={amSupps} prefix="AM"
-              checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} onRefill={openRefillPopover} t={t} />
+              checkedIds={checkedIds} onToggle={onToggle} onRequestDelete={requestDelete} onRefill={openRefillPopover} t={t} />
             <RoutineBlock label={t("supplementTracker.eveningLabel")} color={timingColor.PM} items={pmSupps} prefix="PM"
-              checkedIds={checkedIds} onToggle={onToggle} onDelete={onDelete} onRefill={openRefillPopover} t={t} />
+              checkedIds={checkedIds} onToggle={onToggle} onRequestDelete={requestDelete} onRefill={openRefillPopover} t={t} />
 
-            {/* Inline refill card — replaces window.prompt with a styled, on-brand input */}
             {refillingId !== null && (() => {
               const target = supplements.find((s) => s.id === refillingId);
               if (!target) return null;

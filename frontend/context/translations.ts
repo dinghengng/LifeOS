@@ -932,8 +932,14 @@ export const translations = {
     "insightsPage.aiDigestGoalsLabel": "Goal progress",
     "insightsPage.aiDigestTitle": "AI Digest",
     "insightsPage.aiDigestThemesLabel": "Top themes",
+    "nutritionTracker.confirmDeleteMeal": "Delete {name} from today's log?",
+    "supplementTracker.confirmDeleteSupplement": "Remove {name} from your routine?",
+    "taskList.confirmDeleteTask": "Delete \"{title}\"?",
+    "goalTracker.confirmDeleteGoal": "Delete \"{title}\"? This can't be undone.",
+    "habitTracker.confirmDeleteHabit": "Delete \"{name}\"? This will remove its history too.",
 
-},
+
+  },
   zh: {
     "nav.tasks": "任务",
     "nav.dashboard": "仪表盘",
@@ -1874,7 +1880,12 @@ export const translations = {
     "insightsPage.aiDigestGoalsLabel": "目标进度",
     "insightsPage.aiDigestTitle": "AI 摘要",
     "insightsPage.aiDigestThemesLabel": "主要主题",
+    "nutritionTracker.confirmDeleteMeal": "确定要从今日记录中删除「{name}」吗？",
+    "supplementTracker.confirmDeleteSupplement": "确定要从日常计划中移除「{name}」吗？",
+    "taskList.confirmDeleteTask": "确定要删除「{title}」吗？",
+    "goalTracker.confirmDeleteGoal": "确定要删除「{title}」吗？此操作无法撤销。",
+    "habitTracker.confirmDeleteHabit": "确定要删除「{name}」吗？其历史记录也会被删除。",
   }
-} as const satisfies Record<Locale, Record < string, string >>;
+} as const satisfies Record<Locale, Record<string, string>>;
 
 export type TranslationKey = keyof typeof translations.en;

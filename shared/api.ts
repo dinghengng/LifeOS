@@ -503,3 +503,17 @@ export const createPost = async (
   }
   return await response.json();
 };
+
+export const toggleKudos = async (postId: number): Promise<{ kudosCount: number; hasKudosed: boolean }> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await fetch(`${API_URL}/api/social/posts/${postId}/kudos`, {
+    method: "POST",
+    credentials: "include",
+    headers,
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to toggle kudos");
+  }
+  return await response.json();
+};

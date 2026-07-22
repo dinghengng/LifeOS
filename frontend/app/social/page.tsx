@@ -2,16 +2,18 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { checkAuthStatus, logoutUser, fetchChallenges, searchUsers } from "../../../shared/api";
-import { User, ChallengeProgress, UserSearchResult } from "../../../shared/types";
+import { checkAuthStatus, logoutUser, fetchChallenges, searchUsers, fetchProfile, fetchProfilePosts, } from "../../../shared/api";
+import { User, ChallengeProgress, UserSearchResult, PublicProfile, ProfilePost, } from "../../../shared/types";
 import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
 import ChallengeCard from "../../components/challenges/ChallengeCard";
+import ProfileCard from "../../components/social/ProfileCard";
 
 const SOCIAL_TABS = [
   { id: "challenges", label: "Challenges" },
+  { id: "profile", label: "Profile" },
   { id: "community", label: "Community" },
 ];
 
@@ -28,6 +30,10 @@ export default function ChallengesPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  const [myProfile, setMyProfile] = useState<PublicProfile | null>(null);
+  const [myPosts, setMyPosts] = useState<ProfilePost[]>([]);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     const init = async () => {
@@ -59,6 +65,33 @@ export default function ChallengesPage() {
   useEffect(() => {
     if (!authLoading && activeTab === "challenges") loadChallenges();
   }, [authLoading, activeTab, loadChallenges]);
+
+  const loadMyProfile = useCallback(async () => {
+    if (!user) return;
+    setProfileLoading(true);
+    try {
+      const [profileData, postsData] = await Promise.all([
+        fetchProfile(String(user.id)),
+        fetchProfilePosts(String(user.id)),
+      ]);
+      setMyProfile(profileData);
+      setMyPosts(postsData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!authLoading && activeTab === "profile") loadMyProfile();
+  }, [authLoading, activeTab, loadMyProfile]);
+
+  const handleKudosChange = (postId: number, kudosCount: number, hasKudosed: boolean) => {
+    setMyPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, kudosCount, hasKudosed } : p))
+    );
+  };
 
   const handleSearch = async (value: string) => {
     setQuery(value);
@@ -158,7 +191,28 @@ export default function ChallengesPage() {
           </>
         )}
 
-        {/* NEW: Community tab content (search UI, was community/page.tsx) */}
+        {/* Profile tab */}
+        {activeTab === "profile" && (
+          <>
+            {profileLoading ? (
+              <p className="text-center text-sm text-slate-500 mt-4">Loading your profile...</p>
+            ) : myProfile ? (
+              <ProfileCard
+                name={myProfile.name}
+                username={myProfile.username}
+                posts={myPosts}
+                isOwnProfile={true}
+                onKudosChange={handleKudosChange}
+              />
+            ) : (
+              <p className="text-center text-sm text-slate-500 mt-4">
+                Set a username in Settings to enable your profile.
+              </p>
+            )}
+          </>
+        )}
+
+        {/* Community tab */}
         {activeTab === "community" && (
           <div>
             <input

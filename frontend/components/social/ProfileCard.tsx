@@ -1,18 +1,15 @@
 import { ProfilePost } from "../../../shared/types";
+import { AchievementPost } from "./AchievementPost";
 
 interface ProfileCardProps {
   name: string | null;
   username: string;
   posts: ProfilePost[];
+  isOwnProfile: boolean;
+  onKudosChange: (postId: number, kudosCount: number, hasKudosed: boolean) => void;
 }
 
-const TIER_COLORS: Record<string, string> = {
-  bronze: "#B08D57",
-  silver: "#9CA3AF",
-  gold: "#D4AF37",
-};
-
-export default function ProfileCard({ name, username, posts }: ProfileCardProps) {
+export default function ProfileCard({ name, username, posts, isOwnProfile, onKudosChange }: ProfileCardProps) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-center gap-3">
@@ -29,18 +26,7 @@ export default function ProfileCard({ name, username, posts }: ProfileCardProps)
           <p className="text-sm text-slate-400">No achievements shared yet.</p>
         ) : (
           posts.map((post) => (
-            <div
-              key={post.id}
-              className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
-            >
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: TIER_COLORS[post.tier] }} />
-                <span className="text-sm font-medium capitalize text-slate-700">
-                  {post.tier} — {post.challengeTitle}
-                </span>
-              </div>
-              <span className="text-xs text-slate-400">{post.kudosCount} kudos</span>
-            </div>
+            <AchievementPost key={post.id} post={post} isOwnPost={isOwnProfile} onKudosChange={onKudosChange} />
           ))
         )}
       </div>

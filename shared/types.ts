@@ -199,4 +199,5 @@ export interface ProfilePost {
   periodEnd: string;
   createdAt: string;
   kudosCount: number;
+  hasKudosed: boolean;
 }

@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { checkAuthStatus, logoutUser, fetchChallenges, searchUsers } from "../../../shared/api";
-import { User, ChallengeProgress, UserSearchResult } from "../../../shared/types";
+import { checkAuthStatus, logoutUser, fetchChallenges, searchUsers, fetchProfile, fetchProfilePosts, } from "../../../shared/api";
+import { User, ChallengeProgress, UserSearchResult, PublicProfile, ProfilePost } from "../../../shared/types";
 import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
@@ -12,6 +12,7 @@ import ChallengeCard from "../../components/challenges/ChallengeCard";
 
 const SOCIAL_TABS = [
   { id: "challenges", label: "Challenges" },
+  { id: "profile", label: "Profile" },
   { id: "community", label: "Community" },
 ];
 

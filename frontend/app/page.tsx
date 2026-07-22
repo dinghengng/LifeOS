@@ -8,6 +8,7 @@ import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import { useRouter } from "next/navigation";
 import HelpCentre from "../components/GuidedTour";
+import TaskCalendar from "../components/TaskCalendar";
 
 import AppShell from "../components/layout/AppShell";
 import AppHeader from "../components/layout/AppHeader";
@@ -346,20 +347,21 @@ export default function Page() {
 
           <div className="flex flex-col gap-6">
             <section id="tour-add-task" className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-base font-semibold text-slate-900 mb-3">{t("tasks.addTask")}</h2>
-              <NewTaskForm onAddTask={handleAddTask} />
-            </section>
-
-            {editingTask && (
-              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-base font-semibold text-slate-900 mb-3">{t("tasks.editTask")}</h2>
+              <h2 className="text-base font-semibold text-slate-900 mb-3">
+                {editingTask ? t("tasks.editTask") : t("tasks.addTask")}
+              </h2>
+              {editingTask ? (
                 <EditTaskForm
                   task={editingTask}
                   onSave={(updates) => saveTaskEdits(editingTask.id, updates)}
                   onCancel={() => setEditingTask(null)}
                 />
-              </section>
-            )}
+              ) : (
+                <NewTaskForm onAddTask={handleAddTask} />
+              )}
+            </section>
+
+            <TaskCalendar tasks={tasks} />
           </div>
         </div>
       )}

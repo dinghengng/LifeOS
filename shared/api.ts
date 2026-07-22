@@ -51,12 +51,12 @@ export const loginUser = async (email: string, password: string, rememberMe: boo
 };
 
 // Register a new user
-export const registerUser = async (email: string, password: string, name: string): Promise<User & { token?: string }> => {
+export const registerUser = async (email: string, password: string, name: string, username: string,): Promise<User & { token?: string }> => {
   const response = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email, password, name, username }),
   });
 
   if (!response.ok) {

@@ -9,7 +9,7 @@ function createAuthRouter(requireAuth) {
 
   // REGISTER A NEW USER ACCOUNT
   router.post("/register", async (req, res) => {
-    const { email, password, name } = req.body;
+    const { email, password, name, username } = req.body;
 
     if (!email || !password) {
       return res
@@ -20,6 +20,13 @@ function createAuthRouter(requireAuth) {
       return res
         .status(400)
         .json({ error: "Password must be at least 8 characters" });
+    }
+
+    const trimmedUsername = (username || "").trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,30}$/.test(trimmedUsername)) {
+      return res.status(400).json({
+        error: "Username must be 3-30 characters (letters, numbers, underscore only)",
+      });
     }
 
     try {
@@ -34,10 +41,10 @@ function createAuthRouter(requireAuth) {
       const passwordHash = await bcrypt.hash(password, 10);
 
       const userResult = await pool.query(
-        `INSERT INTO users (email, password_hash, name)
-       VALUES ($1, $2, $3)
-       RETURNING id, email, name`,
-        [email.toLowerCase().trim(), passwordHash, name || null],
+        `INSERT INTO users (email, password_hash, name, username)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, email, name, username`,
+        [email.toLowerCase().trim(), passwordHash, name || null, trimmedUsername],
       );
       const newUser = userResult.rows[0];
 
@@ -62,9 +69,13 @@ function createAuthRouter(requireAuth) {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
+        username: newUser.username,
         token: sessionId,
       });
     } catch (err) {
+      if (err.code === "23505") {
+      return res.status(409).json({ error: "Username already taken" });
+    }
       console.error("Register error:", err);
       res.status(500).json({ error: "Internal server error" });
     }

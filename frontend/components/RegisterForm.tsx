@@ -4,15 +4,18 @@ import { useState } from "react";
 import { useTranslation } from "../context/LanguageContext";
 
 interface RegisterFormProps {
-  onRegister: (email: string, password: string, name: string) => Promise<void>;
+  onRegister: (email: string, password: string, name: string, username: string) => Promise<void>;
   onSwitchToLogin: () => void;
   error: string | null;
 }
+
+const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/;
 
 export default function RegisterForm({ onRegister, onSwitchToLogin, error }: RegisterFormProps) {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   //password checking
@@ -21,9 +24,18 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const handleUsernameChange = (value: string) => {
+    setUsername(value.toLowerCase().replace(/[^a-z0-9_]/g, ""));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
+
+    if (!USERNAME_REGEX.test(username)) {
+      setLocalError(t("register.errorUsernameFormat"));
+      return;
+    }
 
     if (password.length < 8) {
       setLocalError(t("register.errorPasswordLength"));
@@ -35,7 +47,7 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
     }
 
     setIsSubmitting(true);
-    await onRegister(email, password, name);
+    await onRegister(email, password, name, username);
     setIsSubmitting(false);
   };
 
@@ -74,6 +86,25 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
             />
           </div>
 
+          {/* username field */}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-slate-700">
+              {t("register.usernameLabel")}
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => handleUsernameChange(e.target.value)}
+              placeholder={t("register.usernamePlaceholder")}
+              required
+              maxLength={30}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <span className="text-xs text-slate-400">
+              {t("register.usernameHelper")}
+            </span>
+          </div>
+
           {/* Email field */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700">{t("register.email")}</label>
@@ -89,77 +120,77 @@ export default function RegisterForm({ onRegister, onSwitchToLogin, error }: Reg
 
           {/* Password field */}
           <div className="flex flex-col gap-1">
-  <label className="text-sm font-medium text-slate-700">{t("register.password")}</label>
-  <div className="relative">
-    <input
-      type={showPassword ? "text" : "password"}
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-      placeholder={t("register.passwordPlaceholder")}
-      required
-      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    />
-    <button
-      type="button"
-      onClick={() => setShowPassword((prev) => !prev)}
-      className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-700"
-      aria-label={showPassword ? t("register.hidePassword") : t("register.showPassword")}
-    >
-      {/* Simple eye icon as inline SVG */}
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-4 w-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path d="M1.5 12S4.5 5.5 12 5.5 22.5 12 22.5 12 19.5 18.5 12 18.5 1.5 12 1.5 12z" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
-    </button>
-  </div>
-</div>
+            <label className="text-sm font-medium text-slate-700">{t("register.password")}</label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={t("register.passwordPlaceholder")}
+                required
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-700"
+                aria-label={showPassword ? t("register.hidePassword") : t("register.showPassword")}
+              >
+                {/* Simple eye icon as inline SVG */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path d="M1.5 12S4.5 5.5 12 5.5 22.5 12 22.5 12 19.5 18.5 12 18.5 1.5 12 1.5 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
+          </div>
 
           {/* Confirm password field */}
           <div className="flex flex-col gap-1">
-  <label className="text-sm font-medium text-slate-700">
-    {t("register.confirmPassword")}
-  </label>
-  <div className="relative">
-    <input
-      type={showConfirm ? "text" : "password"}
-      value={confirm}
-      onChange={(e) => setConfirm(e.target.value)}
-      placeholder={t("register.confirmPlaceholder")}
-      required
-      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    />
-    <button
-      type="button"
-      onClick={() => setShowConfirm((prev) => !prev)}
-      className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-700"
-      aria-label={showConfirm ? t("register.hidePassword") : t("register.showPassword")}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-4 w-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path d="M1.5 12S4.5 5.5 12 5.5 22.5 12 22.5 12 19.5 18.5 12 18.5 1.5 12 1.5 12z" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
-    </button>
-  </div>
-</div>
+            <label className="text-sm font-medium text-slate-700">
+              {t("register.confirmPassword")}
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirm ? "text" : "password"}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder={t("register.confirmPlaceholder")}
+                required
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm((prev) => !prev)}
+                className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-700"
+                aria-label={showConfirm ? t("register.hidePassword") : t("register.showPassword")}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path d="M1.5 12S4.5 5.5 12 5.5 22.5 12 22.5 12 19.5 18.5 12 18.5 1.5 12 1.5 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
+          </div>
 
           {/* Submit button */}
           <button
             type="submit"
-            disabled={isSubmitting || !email || !password || !confirm}
+            disabled={isSubmitting || !email || !password || !confirm || !username}
             className={`rounded-xl px-4 py-2.5 font-semibold text-white transition-colors ${
               isSubmitting || !email || !password || !confirm
                 ? "bg-indigo-300 cursor-not-allowed"

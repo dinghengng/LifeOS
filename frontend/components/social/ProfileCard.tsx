@@ -4,17 +4,22 @@ import { AchievementPost } from "./AchievementPost";
 interface ProfileCardProps {
   name: string | null;
   username: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
   posts: ProfilePost[];
   isOwnProfile: boolean;
   onKudosChange: (postId: number, kudosCount: number, hasKudosed: boolean) => void;
 }
 
-export default function ProfileCard({ name, username, posts, isOwnProfile, onKudosChange }: ProfileCardProps) {
+export default function ProfileCard({ name, username, avatarColor, avatarEmoji, posts, isOwnProfile, onKudosChange }: ProfileCardProps) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-lg font-semibold text-white">
-          {(name || username).charAt(0).toUpperCase()}
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-semibold text-white"
+          style={{ background: avatarColor }}
+        >
+          {avatarEmoji || username.charAt(0).toUpperCase()}
         </div>
         <div>
           <p className="text-base font-semibold text-slate-900">{name || username}</p>

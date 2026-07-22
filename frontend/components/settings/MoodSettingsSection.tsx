@@ -69,7 +69,7 @@ export default function MoodSettingsSection({
   const [packs, setPacks] = useState<EmojiPack[]>([]);
   const [selectedPackId, setSelectedPackId] = useState<number | null>(null);
   const [levels, setLevels] = useState<Omit<MoodLevelConfig, "id">[]>(() =>
-    initialConfig
+    initialConfig && initialConfig.length > 0
       ? initialConfig.map(({ id: _id, ...rest }) => ({
           ...rest,
           label:
@@ -230,3 +230,4 @@ export default function MoodSettingsSection({
     </div>
   );
 }
+

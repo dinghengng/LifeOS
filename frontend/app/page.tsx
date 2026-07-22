@@ -187,10 +187,11 @@ export default function Page() {
     email: string,
     password: string,
     name: string,
+    username: string
   ) => {
     setAuthError(null);
     try {
-      const user = await registerUser(email, password, name);
+      const user = await registerUser(email, password, name, username);
       setCurrentUser(user);
     } catch (err: unknown) {
       if (err instanceof Error) {

@@ -30,8 +30,13 @@ export default function ChallengeCard({ challenge }: ChallengeCardProps) {
       await createPost(challenge.id, challenge.tier, challenge.periodStart, challenge.periodEnd);
       showToast(`Shared your ${challenge.tier} tier on ${challenge.title}!`, "success");
     } catch (err) {
-      console.error(err);
-      showToast("Could not share achievement. Please try again.", "error");
+      console.warn(err);
+      const message = err instanceof Error ? err.message : "";
+      if (message === "Already shared this tier for this period") {
+        showToast(`You've already shared your ${challenge.tier} achievement this week.`, "error");
+      } else {
+        showToast("Could not share achievement. Please try again.", "error");
+      }
     }
   };
 

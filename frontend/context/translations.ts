@@ -611,7 +611,7 @@ export const translations = {
     "settings.sectionNotFound": "Section not found.",
 
     "settings.pageHeader.title": "Settings",
-    "settings.pageHeader.description": "Manage your Mood customisation, Notification preferences and Nutrition goals",
+    "settings.pageHeader.description": "Customise settings based on your preferences",
     "appHeader.brand": "LifeOS",
     "appHeader.tagline": "Your smart life hub",
     "appHeader.settings": "Settings",
@@ -1535,7 +1535,7 @@ export const translations = {
     "settings.sectionNotFound": "未找到该设置页面。",
 
     "settings.pageHeader.title": "设置",
-    "settings.pageHeader.description": "管理你的心情主题、通知偏好和营养目标",
+    "settings.pageHeader.description": "根据您的喜好自定义设置",
     "appHeader.brand": "LifeOS",
     "appHeader.tagline": "你的智能生活中心",
     "appHeader.settings": "设置",

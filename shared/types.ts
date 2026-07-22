@@ -20,6 +20,8 @@ export interface User {
   id: number;
   email: string;
   name: string | null;
+  avatarColor?: string;
+  avatarEmoji?: string | null;
 }
 
 export type StressLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
@@ -182,12 +184,16 @@ export interface UserSearchResult {
   id: number;
   name: string | null;
   username: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
 }
 
 export interface PublicProfile {
   id: number;
   name: string | null;
   username: string;
+  avatarColor: string;
+  avatarEmoji: string | null;
 }
 
 export interface ProfilePost {

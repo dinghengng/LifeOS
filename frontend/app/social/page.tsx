@@ -200,6 +200,8 @@ export default function ChallengesPage() {
               <ProfileCard
                 name={myProfile.name}
                 username={myProfile.username}
+                avatarColor={myProfile.avatarColor}
+                avatarEmoji={myProfile.avatarEmoji}
                 posts={myPosts}
                 isOwnProfile={true}
                 onKudosChange={handleKudosChange}
@@ -230,8 +232,11 @@ export default function ChallengesPage() {
                   onClick={() => router.push(`/profile/${u.id}`)}
                   className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left hover:bg-slate-50"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-                    {(u.name || u.username).charAt(0).toUpperCase()}
+                  <div
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white"
+                    style={{ background: u.avatarColor }}
+                  >
+                    {u.avatarEmoji || u.username.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-slate-900">{u.name || u.username}</p>

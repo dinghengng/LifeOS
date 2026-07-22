@@ -517,3 +517,33 @@ export const toggleKudos = async (postId: number): Promise<{ kudosCount: number;
   }
   return await response.json();
 };
+
+export interface AvatarSettings {
+  avatarColor: string;
+  avatarEmoji: string | null;
+}
+
+export const fetchMyAvatar = async (): Promise<AvatarSettings> => {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`${API_URL}/api/user/avatar`, {
+    credentials: "include",
+    headers,
+  });
+  if (!response.ok) throw new Error("Failed to fetch avatar");
+  return await response.json();
+};
+
+export const setAvatar = async (avatarColor: string, avatarEmoji: string | null): Promise<AvatarSettings> => {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
+  const response = await fetch(`${API_URL}/api/user/avatar`, {
+    method: "POST",
+    credentials: "include",
+    headers,
+    body: JSON.stringify({ avatarColor, avatarEmoji }),
+  });
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Failed to save avatar");
+  }
+  return await response.json();
+};

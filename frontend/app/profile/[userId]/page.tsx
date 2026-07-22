@@ -49,6 +49,8 @@ export default function ProfilePage() {
         <ProfileCard
           name={profile.name}
           username={profile.username}
+          avatarColor={profile.avatarColor}
+          avatarEmoji={profile.avatarEmoji}
           posts={posts}
           isOwnProfile={currentUser?.id === profile.id}
           onKudosChange={handleKudosChange}

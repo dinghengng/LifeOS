@@ -281,6 +281,50 @@ function createUserProfileRouter(requireAuth) {
     }
   });
 
+  const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
+
+  // GET logo avatar settings
+  router.get("/avatar", requireAuth, async (req, res) => {
+    try {
+      const result = await pool.query(
+        `SELECT avatar_color, avatar_emoji FROM users WHERE id = $1`,
+        [req.user.id],
+      );
+      const row = result.rows[0] ?? {};
+      res.json({
+        avatarColor: row.avatar_color ?? "#4f46e5",
+        avatarEmoji: row.avatar_emoji ?? null,
+      });
+    } catch (err) {
+      console.error("Fetch avatar error:", err.message);
+      res.status(500).send("Server Error");
+    }
+  });
+
+  // POST update logo avatar
+  router.post("/avatar", requireAuth, async (req, res) => {
+    const { avatarColor, avatarEmoji } = req.body;
+
+    if (!HEX_COLOR_REGEX.test(avatarColor || "")) {
+      return res.status(400).json({ error: "Avatar colour must be a valid hex code" });
+    }
+
+    const cleanedEmoji = avatarEmoji ? String(avatarEmoji).trim().slice(0, 10) : null;
+
+    try {
+      const result = await pool.query(
+        `UPDATE users SET avatar_color = $1, avatar_emoji = $2 WHERE id = $3
+        RETURNING id, avatar_color, avatar_emoji`,
+        [avatarColor, cleanedEmoji, req.user.id],
+      );
+      const row = result.rows[0];
+      res.json({ avatarColor: row.avatar_color, avatarEmoji: row.avatar_emoji });
+    } catch (err) {
+      console.error("Update avatar error:", err.message);
+      res.status(500).send("Server Error");
+    }
+  });
+
   return router;
 }
 

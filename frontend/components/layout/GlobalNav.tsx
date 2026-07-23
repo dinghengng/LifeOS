@@ -28,6 +28,7 @@ export default function GlobalNav() {
         return (
           <button
             key={item.href}
+            id={`tour-nav-${item.key}`}
             onClick={() => router.push(item.href)}
             className={[
               "rounded-xl px-3 py-2 text-sm font-medium transition-colors",

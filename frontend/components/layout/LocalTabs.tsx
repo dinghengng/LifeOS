@@ -26,6 +26,7 @@ export default function LocalTabs({
           return (
             <button
               key={item.id}
+              id={`tour-${item.id}-tab`}
               onClick={() => onChange(item.id)}
               className={[
                 "relative pb-2 text-sm font-medium transition-colors",

@@ -7,7 +7,6 @@ import EditTaskForm from "../components/EditTaskForm";
 import LoginForm from "../components/LoginForm";
 import RegisterForm from "../components/RegisterForm";
 import { useRouter } from "next/navigation";
-import HelpCentre from "../components/GuidedTour";
 import TaskCalendar from "../components/TaskCalendar";
 
 import AppShell from "../components/layout/AppShell";
@@ -29,7 +28,7 @@ import {
   logoutUser,
 } from "../../shared/api";
 
-const BACKGROUNDS = ["/bg-1.jpg", "/bg-2.jpg", "/bg-3.webp", "/bg-4.avif"];
+
 
 const priorityRank: Record<Priority, number> = {
   critical: 1,
@@ -56,10 +55,6 @@ export default function Page() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authView, setAuthView] = useState<"login" | "register">("login");
 
-  const [currentBg, setCurrentBg] = useState<string>("");
-  useEffect(() => {
-    setCurrentBg(BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)]);
-  }, []);
 
   // Check if user has an active session cookie on mount
   useEffect(() => {
@@ -236,10 +231,7 @@ export default function Page() {
   // Display verification loading block
   if (authLoading) {
     return (
-      <main
-        className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center"
-        style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
-      >
+      <main className="min-h-screen flex items-center justify-center">
         <p className="text-white text-lg font-medium drop-shadow">{t("tasks.loading")}</p>
       </main>
     );
@@ -248,10 +240,7 @@ export default function Page() {
   // Display registration or access authentication views
   if (!currentUser) {
     return (
-      <main
-        className="min-h-screen bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: currentBg ? `url('${currentBg}')` : "none" }}
-      >
+      <main className="min-h-screen">
         {authView === "login" ? (
           <LoginForm
             onLogin={handleLogin}
@@ -287,8 +276,6 @@ export default function Page() {
           </button>
         }
       />
-
-      <HelpCentre />
 
       <PageHeader
         eyebrow={t("tasks.welcomeBack", { name: currentUser.name || currentUser.email })}

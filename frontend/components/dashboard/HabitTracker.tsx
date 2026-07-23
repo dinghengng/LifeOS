@@ -96,7 +96,7 @@ export default function HabitTracker({
       };
 
   return (
-    <div style={outerStyle}>
+    <div id="tour-habit-tracker" style={outerStyle}>
       {/*Delete confirmation*/}
       {confirmDeleteId !== null && (
         <div style={{

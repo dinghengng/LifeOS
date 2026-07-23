@@ -51,6 +51,7 @@ export default function AppHeader({ rightActions }: AppHeaderProps) {
         <div className="flex items-center gap-2">
           <NotificationBell />
           <button
+            id="tour-nav-settings"
             onClick={() => router.push("/settings")}
             title={t("appHeader.settings")}
             aria-label={t("appHeader.settings")}

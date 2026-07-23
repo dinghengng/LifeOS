@@ -60,7 +60,7 @@ export default function GoalTracker({
   };
 
   return (
-    <div style={outerStyle}>
+    <div id="tour-goal-tracker" style={outerStyle}>
       {/*Delete confirmation modal */}
       {confirmDeleteId !== null && (
         <div style={{

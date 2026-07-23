@@ -5,6 +5,7 @@ import "./globals.css";
 import NotificationInitializer from "../components/notifications/NotificationInitializer";
 import { ToastProvider } from "../components/notifications/ToastContext";
 import GoogleTranslate from "../components/LanguageToggle";
+import HelpCentre from "../components/GuidedTour";
 import { LanguageProvider } from "../context/LanguageContext";
 
 const geistSans = Geist({
@@ -36,6 +37,7 @@ export default function RootLayout({
             <NotificationInitializer />
             {children}
             <GoogleTranslate />
+            <HelpCentre />
           </LanguageProvider>
         </ToastProvider>
       </body>

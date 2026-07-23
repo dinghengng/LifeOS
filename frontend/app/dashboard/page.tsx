@@ -602,13 +602,10 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {dataLoading ? (
-        <div className="flex gap-6 w-full items-start">
+      <div className="flex gap-6 w-full items-start">
+        {dataLoading ? (
           <div className="flex-1 min-w-0 h-[380px] rounded-3xl border border-slate-200 bg-white shadow-sm animate-pulse" />
-            <div className="w-[180px] flex-shrink-0 h-[380px] rounded-3xl border border-slate-200 bg-white shadow-sm animate-pulse" />
-        </div>
-      ) : (
-        <div className="flex gap-6 w-full items-start">
+        ) : (
           <section className="flex-1 min-w-0 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <LocalTabs
               items={[
@@ -650,18 +647,17 @@ export default function DashboardPage() {
               />
             )}
           </section>
+        )}
 
-          <StatsSummary
-            completedToday={completedToday}
-            totalHabits={habits.length}
-            totalStreak={totalStreak}
-            avgGoalProgress={avgGoalProgress}
-          />
-        </div>
-      )}
+        <StatsSummary
+          loading={dataLoading}
+          completedToday={completedToday}
+          totalHabits={habits.length}
+          totalStreak={totalStreak}
+          avgGoalProgress={avgGoalProgress}
+        />
+      </div>
 
-
-      {/* HABIT FORM pending changes for the categories */}
       {showHabitModal && (
         <div
           style={{
@@ -803,7 +799,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* GOAL CREATION FORM under maintenance */}
+      {/* GOAL CREATION */}
       {showGoalModal && (
         <div
           style={{
@@ -825,7 +821,7 @@ export default function DashboardPage() {
               backgroundColor: "white",
               padding: "1.5rem",
               borderRadius: "12px",
-              width: "500px", // Increased from 400px so the target date text actually fits!
+              width: "500px", 
               maxWidth: "100%", 
               boxSizing: "border-box", 
               display: "flex",

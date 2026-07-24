@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import NewTaskForm from "../components/NewTaskForm";
 import TaskList from "../components/TaskList";
 import EditTaskForm from "../components/EditTaskForm";
-import LoginForm from "../components/LoginForm";
-import RegisterForm from "../components/RegisterForm";
 import { useRouter } from "next/navigation";
 import TaskCalendar from "../components/TaskCalendar";
 
@@ -13,19 +11,16 @@ import AppShell from "../components/layout/AppShell";
 import AppHeader from "../components/layout/AppHeader";
 import PageHeader from "../components/layout/PageHeader";
 import { useTranslation } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 
 // Import types and unified API functions from the shared folder
-import { Task, Priority, User } from "../../shared/types";
+import { Task, Priority } from "../../shared/types";
 import {
   fetchTasks,
   addTask as apiAddTask,
   toggleTask as apiToggleTask,
   deleteTask as apiDeleteTask,
   editTask as apiEditTask,
-  checkAuthStatus,
-  loginUser,
-  registerUser,
-  logoutUser,
 } from "../../shared/api";
 
 
@@ -39,9 +34,10 @@ const priorityRank: Record<Priority, number> = {
 
 const hasDueTime = (dueDate: string | null) => !!dueDate;
 
-export default function Page() {
+export default function TasksPage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { user, loading: authLoading, logout } = useAuth();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -49,33 +45,15 @@ export default function Page() {
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // Authentication & session management states
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState<boolean>(true);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authView, setAuthView] = useState<"login" | "register">("login");
-
-
-  // Check if user has an active session cookie on mount
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const user = await checkAuthStatus();
-        if (user) {
-          setCurrentUser(user);
-        }
-      } catch (err) {
-        console.error("Auth check failed:", err);
-      } finally {
-        setAuthLoading(false);
-      }
-    };
-    checkAuth();
-  }, []);
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
 
   // Fetch tasks only when an authenticated user is active
   useEffect(() => {
-    if (!currentUser) {
+    if (!user) {
       setLoading(false);
       return;
     }
@@ -94,7 +72,7 @@ export default function Page() {
       }
     };
     loadTasks();
-  }, [currentUser, t]);
+  }, [user, t]);
 
   // Task Handlers using API
   const handleAddTask = async (
@@ -159,52 +137,10 @@ export default function Page() {
     }
   };
 
-  // Authentication Flow via Shared API Layer
-  const handleLogin = async (
-    email: string,
-    password: string,
-    rememberMe: boolean,
-  ) => {
-    setAuthError(null);
-    try {
-      const user = await loginUser(email, password, rememberMe);
-      setCurrentUser(user);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setAuthError(err.message);
-      } else {
-        setAuthError("Could not connect to server.");
-      }
-    }
-  };
-
-  const handleRegister = async (
-    email: string,
-    password: string,
-    name: string,
-    username: string
-  ) => {
-    setAuthError(null);
-    try {
-      const user = await registerUser(email, password, name, username);
-      setCurrentUser(user);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setAuthError(err.message);
-      } else {
-        setAuthError("Could not connect to server.");
-      }
-    }
-  };
-
   const handleLogout = async () => {
-    try {
-      await logoutUser();
-    } catch (err) {
-      console.error("Logout error:", err);
-    }
-    setCurrentUser(null);
+    await logout();
     setTasks([]);
+    router.push("/login");
   };
 
   // Sorting and structural presentation filtering logic
@@ -228,8 +164,8 @@ export default function Page() {
     return a.id - b.id;
   });
 
-  // Display verification loading block
-  if (authLoading) {
+
+  if (authLoading || !user) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <p className="text-white text-lg font-medium drop-shadow">{t("tasks.loading")}</p>
@@ -237,32 +173,6 @@ export default function Page() {
     );
   }
 
-  // Display registration or access authentication views
-  if (!currentUser) {
-    return (
-      <main className="min-h-screen">
-        {authView === "login" ? (
-          <LoginForm
-            onLogin={handleLogin}
-            onSwitchToRegister={() => {
-              setAuthView("register");
-              setAuthError(null);
-            }}
-            error={authError}
-          />
-        ) : (
-          <RegisterForm
-            onRegister={handleRegister}
-            onSwitchToLogin={() => {
-              setAuthView("login");
-              setAuthError(null);
-            }}
-            error={authError}
-          />
-        )}
-      </main>
-    );
-  }
 // Display Core App Dashboard Interface
  return (
     <AppShell>
@@ -278,7 +188,7 @@ export default function Page() {
       />
 
       <PageHeader
-        eyebrow={t("tasks.welcomeBack", { name: currentUser.name || currentUser.email })}
+        eyebrow={t("tasks.welcomeBack", { name: user.name || user.email })}
         title={t("tasks.title")}
         description={t("tasks.description")}
       />

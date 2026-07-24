@@ -13,6 +13,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { useTranslation } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 
 interface TourStep {
   target: string;
@@ -179,6 +180,7 @@ export default function HelpCentre() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<View>("home");
@@ -562,16 +564,21 @@ export default function HelpCentre() {
     },
   ];
 
-  // auto-start for first-time users
   useEffect(() => {
     setMounted(true);
-    if (!localStorage.getItem(TOUR_DONE_KEY)) {
-      localStorage.setItem(TOUR_DONE_KEY, "1");
-      const startIdx = TOUR_ROUTE_ORDER.indexOf(pathname);
-      setRouteIndex(startIdx >= 0 ? startIdx : 0);
-      setRun(true);
-    }
   }, []);
+
+  // auto-start for first-time users who are logged in
+  useEffect(() => {
+    if (authLoading) return; 
+    if (!user) return; // never auto-start on login/register/landing pages
+    if (localStorage.getItem(TOUR_DONE_KEY)) return; // not first-time
+
+    localStorage.setItem(TOUR_DONE_KEY, "1");
+    const startIdx = TOUR_ROUTE_ORDER.indexOf(pathname);
+    setRouteIndex(startIdx >= 0 ? startIdx : 0);
+    setRun(true);
+  }, [authLoading, user, pathname]);
 
   // Freeze page scroll while tour overlay is active
   useEffect(() => {
@@ -720,7 +727,8 @@ export default function HelpCentre() {
     setOpenFaq(null);
   };
 
-  if (!mounted) return null;
+  // Don't render the help button unless logged in
+  if (!mounted || authLoading || !user) return null;
 
   return (
     <>

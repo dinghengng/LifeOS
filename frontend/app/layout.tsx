@@ -7,6 +7,7 @@ import { ToastProvider } from "../components/notifications/ToastContext";
 import GoogleTranslate from "../components/LanguageToggle";
 import HelpCentre from "../components/GuidedTour";
 import { LanguageProvider } from "../context/LanguageContext";
+import { AuthProvider } from "../context/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,10 +35,12 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ToastProvider>
           <LanguageProvider>
-            <NotificationInitializer />
-            {children}
-            <GoogleTranslate />
-            <HelpCentre />
+            <AuthProvider>
+              <NotificationInitializer />
+              {children}
+              <GoogleTranslate />
+              <HelpCentre />
+            </AuthProvider>
           </LanguageProvider>
         </ToastProvider>
       </body>

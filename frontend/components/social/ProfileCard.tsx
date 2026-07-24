@@ -1,5 +1,5 @@
 import { ProfilePost } from "../../../shared/types";
-import { AchievementPost } from "./AchievementPost";
+import AchievementHeatmap from "./AchievementHeatMap";
 
 interface ProfileCardProps {
   name: string | null;
@@ -26,14 +26,8 @@ export default function ProfileCard({ name, username, avatarColor, avatarEmoji, 
           <p className="text-sm text-slate-500">@{username}</p>
         </div>
       </div>
-      <div className="mt-6 flex flex-col gap-3">
-        {posts.length === 0 ? (
-          <p className="text-sm text-slate-400">No achievements shared yet.</p>
-        ) : (
-          posts.map((post) => (
-            <AchievementPost key={post.id} post={post} isOwnPost={isOwnProfile} onKudosChange={onKudosChange} />
-          ))
-        )}
+      <div className="mt-6">
+        <AchievementHeatmap posts={posts} isOwnProfile={isOwnProfile} onKudosChange={onKudosChange} />
       </div>
     </div>
   );

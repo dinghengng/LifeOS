@@ -125,8 +125,8 @@ function createChallengesRouter(requireAuth) {
             tier,
             nextTier,
             remainingToNext,
-            periodStart: bounds.startInstant.toISOString(),
-            periodEnd: bounds.endInstant.toISOString(),
+            periodStart: bounds.startDateStr,
+            periodEnd: bounds.endDateStr,
             implemented: IMPLEMENTED_IDS.includes(challenge.id),
           };
         }),

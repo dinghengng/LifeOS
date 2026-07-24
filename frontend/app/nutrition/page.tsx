@@ -10,7 +10,6 @@ import QuestPanel, { Quest } from "../../components/nutrition/QuestPanel";
 import SupplementTracker, {
   Supplement,
 } from "../../components/nutrition/SupplementTracker";
-import { checkAuthStatus, logoutUser } from "../../../shared/api";
 import { UtensilsCrossed, Dumbbell, Target, Sunrise } from "lucide-react";
 import NutritionChart, {
   DayData,
@@ -22,6 +21,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import DailyQuoteCard from "../../components/nutrition/DailyQuoteCard";
 import LocalTabs from "../../components/layout/LocalTabs";
 import { useTranslation } from "../../context/LanguageContext";
+import { useAuth } from "../../context/AuthContext"; // adjust path if this file lives elsewhere
 import type { TranslationKey } from "../../context/translations";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
@@ -166,7 +166,7 @@ function generateInsight(
 export default function NutritionPage() {
   const router = useRouter();
   const { t, locale } = useTranslation();
-  const [authLoading, setAuthLoading] = useState(true);
+  const { user, loading: authLoading, logout } = useAuth();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -320,17 +320,12 @@ export default function NutritionPage() {
     setTargets({ calories: calcCalories, protein: calcProtein });
   };
 
+
   useEffect(() => {
-    const init = async () => {
-      const currentUser = await checkAuthStatus();
-      if (!currentUser) {
-        router.push("/");
-        return;
-      }
-      setAuthLoading(false);
-    };
-    init();
-  }, [router]);
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
 
   const fetchNutritionData = useCallback(async () => {
     setDataLoading(true);
@@ -406,8 +401,8 @@ export default function NutritionPage() {
   }, [t]);
 
   useEffect(() => {
-    if (!authLoading) fetchNutritionData();
-  }, [authLoading, fetchNutritionData]);
+    if (!authLoading && user) fetchNutritionData();
+  }, [authLoading, user, fetchNutritionData]);
 
   const handleToggleSupp = async (key: string) => {
     setCheckedSupps((prev) => {
@@ -767,13 +762,10 @@ export default function NutritionPage() {
     }
   }
 
+  // Uses the shared AuthContext logout
   const handleLogout = async () => {
-    try {
-      await logoutUser();
-    } catch (err) {
-      console.error(err);
-    }
-    router.push("/");
+    await logout();
+    router.push("/login");
   };
 
   const today = new Date().toLocaleDateString("en-SG", {
@@ -782,7 +774,7 @@ export default function NutritionPage() {
     month: "long",
   });
 
-  if (authLoading) {
+  if (authLoading || !user) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-(--color-background-tertiary,#f5f5f2)]">
         <p className="text-slate-500">{t("nutrition.loading")}</p>

@@ -8,9 +8,6 @@ import GoalTracker from "../../components/dashboard/GoalTracker";
 import { Habit, getTodayIndexSGT, computeStreak } from "../../components/dashboard/HabitRow";
 import { HeatmapDay } from "../../components/dashboard/HabitHeatmap";
 import { Goal } from "../../components/dashboard/GoalCard";
-import { User } from "../../../shared/types";
-import { checkAuthStatus, logoutUser } from "../../../shared/api";
-
 import { useToastContext } from "../../components/notifications/ToastContext";
 
 import AppShell from "../../components/layout/AppShell";
@@ -18,6 +15,7 @@ import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
 import { useTranslation } from "../../context/LanguageContext";
+import { useAuth } from "../../context/AuthContext";
 import { TranslationKey } from "../../context/translations";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
@@ -75,8 +73,7 @@ function parseDueDate(dueDate: string): { month: string; year: string } {
 export default function DashboardPage() {
   const router = useRouter();
   const { t, locale } = useTranslation();
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const { user, loading: authLoading, logout } = useAuth();
 
   const [habits, setHabits] = useState<Habit[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -107,19 +104,12 @@ export default function DashboardPage() {
 
   const { showToast } = useToastContext();
 
-  // Auth check on mount
+  // Redirect to landing if AuthContext finishes loading with no active session
   useEffect(() => {
-    const init = async () => {
-      const currentUser = await checkAuthStatus();
-      if (!currentUser) {
-        router.push("/");
-        return;
-      }
-      setUser(currentUser);
-      setAuthLoading(false);
-    };
-    init();
-  }, [router]);
+    if (!authLoading && !user) {
+      router.push("/");
+    }
+  }, [authLoading, user, router]);
 
   // Fetch habits + goals
   const fetchDashboardData = useCallback(async () => {
@@ -143,8 +133,8 @@ export default function DashboardPage() {
   }, [t]);
 
   useEffect(() => {
-    if (!authLoading) fetchDashboardData();
-  }, [authLoading, fetchDashboardData]);
+    if (!authLoading && user) fetchDashboardData();
+  }, [authLoading, user, fetchDashboardData]);
 
   const STREAK_MILESTONES = [7, 30, 100];
 
@@ -548,9 +538,11 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
-      await logoutUser();
+      await logout();
     } catch (err) {
       console.error(err);
+      showToast(t("dashboard.toast.genericError"), "error");
+      return;
     }
     router.push("/");
   };

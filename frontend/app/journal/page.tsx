@@ -8,8 +8,8 @@ import JournalEditor from "../../components/journal/JournalEditor";
 import PromptSection from "../../components/journal/PromptSection";
 import { MoodScienceCard, MoodLinkTip } from "../../components/journal/MoodInsightPanel";
 import OnboardingWizard from "../../components/OnboardingWizard";
-import { MoodLog, User, TagsResponse, JournalEntry, MoodLevelConfig, Tag } from "../../../shared/types";
-import { fetchMoodLogs, checkAuthStatus, fetchTags, fetchJournalEntries, logoutUser, fetchMoodConfig } from "../../../shared/api";
+import { MoodLog, TagsResponse, JournalEntry, MoodLevelConfig, Tag } from "../../../shared/types";
+import { fetchMoodLogs, fetchTags, fetchJournalEntries, fetchMoodConfig } from "../../../shared/api";
 import { Prompt } from "../../../shared/prompts";
 
 import AppShell from "../../components/layout/AppShell";
@@ -17,23 +17,24 @@ import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
 import { useTranslation } from "../../context/LanguageContext";
-
+import { useAuth } from "../../context/AuthContext"; 
 type Tab = "mood" | "write" | "history";
 
 export default function JournalPage() {
   const { t, locale } = useTranslation();
+  const router = useRouter();
+  const { user, loading: authLoading, logout } = useAuth();
+
   const [logs, setLogs] = useState<MoodLog[]>([]);
   const [tags, setTags] = useState<TagsResponse>({ system: [], custom: [] });
   const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("mood");
   const [pendingMoodLogId, setPendingMoodLogId] = useState<number | null>(null);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
   const [promptJumpToken, setPromptJumpToken] = useState(0);
   const [moodConfig, setMoodConfig] = useState<MoodLevelConfig[]>([]);
-  const router = useRouter();
 
   const JOURNAL_TABS: { id: Tab; label: string }[] = [
     { id: "mood", label: t("journal.tabs.mood") },
@@ -42,23 +43,27 @@ export default function JournalPage() {
   ];
 
   useEffect(() => {
-    const init = async () => {
-      const currentUser = await checkAuthStatus();
-      if (!currentUser) {
-        router.push("/");
-        return;
-      }
-      setUser(currentUser);
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
 
+  // Load mood-config + data once we actually have an authenticated user
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    const init = async () => {
+      setDataLoading(true);
       const config = await fetchMoodConfig();
       if (config.length === 0) setShowOnboarding(true);
       else setMoodConfig(config);
 
       await loadData();
-      setLoading(false);
+      setDataLoading(false);
     };
     init();
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
 
   const loadData = async () => {
     try {
@@ -83,9 +88,10 @@ export default function JournalPage() {
     await loadData();
   };
 
+
   const handleLogout = async () => {
-    try { await logoutUser(); } catch (err) { console.error(err); }
-    router.push("/");
+    await logout();
+    router.push("/login");
   };
 
   const handleSelectPrompt = (prompt: Prompt) => {
@@ -109,7 +115,7 @@ export default function JournalPage() {
     (log) => !usedMoodLogIds.has(log.id) || log.id === pendingMoodLogId
   );
 
-  if (loading) {
+  if (authLoading || !user || dataLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <p className="text-sm text-slate-400">{t("journal.loading")}</p>

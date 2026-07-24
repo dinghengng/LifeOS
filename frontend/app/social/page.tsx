@@ -2,14 +2,15 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { checkAuthStatus, logoutUser, fetchChallenges, searchUsers, fetchProfile, fetchProfilePosts, } from "../../../shared/api";
-import { User, ChallengeProgress, UserSearchResult, PublicProfile, ProfilePost, } from "../../../shared/types";
+import { fetchChallenges, searchUsers, fetchProfile, fetchProfilePosts, } from "../../../shared/api";
+import { ChallengeProgress, UserSearchResult, PublicProfile, ProfilePost, } from "../../../shared/types";
 import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
 import ChallengeCard from "../../components/challenges/ChallengeCard";
 import ProfileCard from "../../components/social/ProfileCard";
+import { useAuth } from "../../context/AuthContext"; 
 
 const SOCIAL_TABS = [
   { id: "challenges", label: "Challenges" },
@@ -19,8 +20,7 @@ const SOCIAL_TABS = [
 
 export default function ChallengesPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const { user, loading: authLoading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<string>(SOCIAL_TABS[0].id);
 
   const [challenges, setChallenges] = useState<ChallengeProgress[]>([]);
@@ -35,18 +35,12 @@ export default function ChallengesPage() {
   const [myPosts, setMyPosts] = useState<ProfilePost[]>([]);
   const [profileLoading, setProfileLoading] = useState(true);
 
+  // Same redirect pattern as TasksPage 
   useEffect(() => {
-    const init = async () => {
-      const currentUser = await checkAuthStatus();
-      if (!currentUser) {
-        router.push("/");
-        return;
-      }
-      setUser(currentUser);
-      setAuthLoading(false);
-    };
-    init();
-  }, [router]);
+    if (!authLoading && !user) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
 
   const loadChallenges = useCallback(async () => {
     setDataLoading(true);
@@ -63,8 +57,8 @@ export default function ChallengesPage() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && activeTab === "challenges") loadChallenges();
-  }, [authLoading, activeTab, loadChallenges]);
+    if (!authLoading && user && activeTab === "challenges") loadChallenges();
+  }, [authLoading, user, activeTab, loadChallenges]);
 
   const loadMyProfile = useCallback(async () => {
     if (!user) return;
@@ -84,8 +78,8 @@ export default function ChallengesPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!authLoading && activeTab === "profile") loadMyProfile();
-  }, [authLoading, activeTab, loadMyProfile]);
+    if (!authLoading && user && activeTab === "profile") loadMyProfile();
+  }, [authLoading, user, activeTab, loadMyProfile]);
 
   const handleKudosChange = (postId: number, kudosCount: number, hasKudosed: boolean) => {
     setMyPosts((prev) =>
@@ -111,15 +105,11 @@ export default function ChallengesPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      await logoutUser();
-    } catch (err) {
-      console.error(err);
-    }
-    router.push("/");
+    await logout();
+    router.push("/login");
   };
 
-  if (authLoading) {
+  if (authLoading || !user) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <p className="text-sm text-slate-400">Loading…</p>

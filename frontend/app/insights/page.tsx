@@ -7,7 +7,6 @@ import { Download, TrendingUp, Maximize2, X } from "lucide-react";
 import AppShell from "../../components/layout/AppShell";
 import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
-import { checkAuthStatus, logoutUser } from "../../../shared/api";
 import { computeWellnessScore, WellnessBreakdown } from "../../components/insights/WellnessScore";
 import AIDigestCard, { AIDigest } from "../../components/insights/AIDigestCard";
 import type { Habit } from "../../components/dashboard/HabitRow";
@@ -16,6 +15,7 @@ import type { DayData } from "../../components/nutrition/NutritionChart";
 import type { Supplement } from "../../components/nutrition/SupplementTracker";
 import type { TranslationKey } from "../../context/translations";
 import { useTranslation } from "../../context/LanguageContext";
+import { useAuth } from "../../context/AuthContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
 
@@ -82,7 +82,7 @@ function downloadCsv(filename: string, rows: Record<string, unknown>[], emptyAle
 export default function InsightsPage() {
   const { t, locale } = useTranslation();
   const router = useRouter();
-  const [authLoading, setAuthLoading] = useState(true);
+  const { user, loading: authLoading, logout } = useAuth();
   const [dataLoading, setDataLoading] = useState(true);
 
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -115,17 +115,12 @@ export default function InsightsPage() {
   const [goalsHistory, setGoalsHistory] = useState<{ date: string; avgProgress: number }[]>([]);
   const [supplementsHistory, setSupplementsHistory] = useState<{ date: string; takenCount: number; totalSupplements: number }[]>([]);
 
+  // Redirect to landing if AuthContext finishes loading with no active session
   useEffect(() => {
-    const init = async () => {
-      const currentUser = await checkAuthStatus();
-      if (!currentUser) {
-        router.push("/");
-        return;
-      }
-      setAuthLoading(false);
-    };
-    init();
-  }, [router]);
+    if (!authLoading && !user) {
+      router.push("/");
+    }
+  }, [authLoading, user, router]);
 
   const fetchInsightsData = useCallback(async () => {
     setDataLoading(true);
@@ -183,14 +178,15 @@ export default function InsightsPage() {
   }, [rangeDays]);
 
   useEffect(() => {
-    if (!authLoading) fetchInsightsData();
-  }, [authLoading, fetchInsightsData]);
+    if (!authLoading && user) fetchInsightsData();
+  }, [authLoading, user, fetchInsightsData]);
 
   const handleLogout = async () => {
     try {
-      await logoutUser();
+      await logout();
     } catch (err) {
       console.error(err);
+      return;
     }
     router.push("/");
   };

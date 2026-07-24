@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { checkAuthStatus, fetchMoodConfig, logoutUser } from "../../../shared/api";
-import { User, MoodLevelConfig } from "../../../shared/types";
+import { fetchMoodConfig } from "../../../shared/api";
+import { MoodLevelConfig } from "../../../shared/types";
 import { SETTINGS_SECTIONS } from "../../../shared/settingsSection";
 import MoodSettingsSection from "../../components/settings/MoodSettingsSection";
 import NotificationSettingsSection from "../../components/settings/NotificationSettingsSection";
@@ -14,6 +14,7 @@ import AppHeader from "../../components/layout/AppHeader";
 import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
 import { useTranslation } from "../../context/LanguageContext";
+import { useAuth } from "../../context/AuthContext";
 import type { TranslationKey } from "../../context/translations";
 
 const SECTION_COMPONENTS: Record<
@@ -29,30 +30,41 @@ const SECTION_COMPONENTS: Record<
 export default function SettingsPage() {
   const router = useRouter();
   const { t, locale } = useTranslation();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading, logout } = useAuth();
+  const [configLoading, setConfigLoading] = useState(true);
   const [activeSectionId, setActiveSectionId] = useState(SETTINGS_SECTIONS[0].id);
   const [moodConfig, setMoodConfig] = useState<MoodLevelConfig[]>([]);
-  
+  const loading = authLoading || configLoading;
+
+  // Redirect to landing if AuthContext finishes loading with no active session
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/");
+    }
+  }, [authLoading, user, router]);
 
   useEffect(() => {
-    const init = async () => {
-      const currentUser = await checkAuthStatus();
-      if (!currentUser) { router.push("/"); return; }
-      setUser(currentUser);
+    if (authLoading || !user) return;
+    const loadMoodConfig = async () => {
       try {
         const config = await fetchMoodConfig();
         setMoodConfig(config);
       } catch (err) {
         console.error("Failed to load mood config:", err);
+      } finally {
+        setConfigLoading(false);
       }
-      setLoading(false);
     };
-    init();
-  }, [router]);
+    loadMoodConfig();
+  }, [authLoading, user]);
 
   const handleLogout = async () => {
-    try { await logoutUser(); } catch {}
+    try {
+      await logout();
+    } catch (err) {
+      console.error(err);
+      return;
+    }
     router.push("/");
   };
 

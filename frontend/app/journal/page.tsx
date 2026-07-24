@@ -132,7 +132,6 @@ export default function JournalPage() {
 
       {showOnboarding && user && (
         <OnboardingWizard
-          userName={user.name}
           onComplete={async () => {
             setShowOnboarding(false);
             const config = await fetchMoodConfig();

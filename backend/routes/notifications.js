@@ -34,7 +34,7 @@ function createNotificationRouter(requireAuth) {
   router.get('/preferences', requireAuth, async (req, res) => {
     try {
       const { rows: [prefs] } = await pool.query(
-        `SELECT np.*, u.email 
+        `SELECT np.*, u.email, u.notifications_enabled AS notifications_enabled
         FROM notification_preferences np 
         JOIN users u ON u.id = np.user_id 
         WHERE np.user_id = $1`,

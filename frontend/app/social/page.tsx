@@ -10,6 +10,7 @@ import PageHeader from "../../components/layout/PageHeader";
 import LocalTabs from "../../components/layout/LocalTabs";
 import ChallengeCard from "../../components/challenges/ChallengeCard";
 import ProfileCard from "../../components/social/ProfileCard";
+import ProfileSetupModal from "../../components/social/ProfileSetupModal";
 import { useAuth } from "../../context/AuthContext"; 
 
 const SOCIAL_TABS = [
@@ -34,6 +35,7 @@ export default function ChallengesPage() {
   const [myProfile, setMyProfile] = useState<PublicProfile | null>(null);
   const [myPosts, setMyPosts] = useState<ProfilePost[]>([]);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
 
   // Same redirect pattern as TasksPage 
   useEffect(() => {
@@ -65,11 +67,16 @@ export default function ChallengesPage() {
     setProfileLoading(true);
     try {
       const [profileData, postsData] = await Promise.all([
-        fetchProfile(String(user.id)),
-        fetchProfilePosts(String(user.id)),
+        fetchProfile(String(user.id)).catch(() => null),
+      fetchProfilePosts(String(user.id)).catch(() => []),
       ]);
       setMyProfile(profileData);
       setMyPosts(postsData);
+      const isDefaultAvatar =
+      !profileData ||
+      (profileData.avatarColor === "#4f46e5" && !profileData.avatarEmoji);
+
+      if (isDefaultAvatar) setShowProfileSetup(true);
     } catch (err) {
       console.error(err);
     } finally {
@@ -184,6 +191,15 @@ export default function ChallengesPage() {
         {/* Profile tab */}
         {activeTab === "profile" && (
           <>
+            {showProfileSetup && (
+              <ProfileSetupModal
+                onComplete={() => {
+                  setShowProfileSetup(false);
+                  loadMyProfile();
+                }}
+                onSkip={() => setShowProfileSetup(false)}
+              />
+            )}
             {profileLoading ? (
               <p className="text-center text-sm text-slate-500 mt-4">Loading your profile...</p>
             ) : myProfile ? (

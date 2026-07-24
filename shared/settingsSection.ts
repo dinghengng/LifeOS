@@ -33,7 +33,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     id: "profile",
     titleKey: "settingsSection.profile.title",
     descriptionKey: "settingsSection.profile.description",
-    includeInWizard: true,
+    includeInWizard: false,
   },
 ];
 

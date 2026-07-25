@@ -121,6 +121,7 @@ export default function NotificationBell() {
 
   useEffect(() => {
     fetchInbox();
+    // change the polling interval here for testing
     const interval = setInterval(fetchInbox, 60000);
     return () => clearInterval(interval);
   }, [fetchInbox]);

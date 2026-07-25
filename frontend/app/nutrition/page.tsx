@@ -629,7 +629,6 @@ export default function NutritionPage() {
 
   // Delete Daily Log
   const handleDeleteLog = async (id: string) => {
-    if (!confirm(t("nutrition.confirm.deleteLog"))) return;
     try {
       const res = await fetch(`${API_BASE}/api/nutrition/${id}`, {
         method: "DELETE",
@@ -665,7 +664,6 @@ export default function NutritionPage() {
   // Delete Quick Add Meal
   const handleDeleteSaved = async (id: string | number | undefined) => {
     if (!id) return;
-    if (!confirm(t("nutrition.confirm.deleteSaved"))) return;
     try {
       const res = await fetch(`${API_BASE}/api/nutrition/saved/${id}`, {
         method: "DELETE",

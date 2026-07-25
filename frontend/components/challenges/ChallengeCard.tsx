@@ -3,12 +3,13 @@ import { createPost } from "../../../shared/api";
 import { useToastContext } from "../notifications/ToastContext";
 import ChallengeTier from "./ChallengeTier";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 interface ChallengeCardProps {
   challenge: ChallengeProgress;
 }
 
-function formatTimeRemaining(periodEnd: string, t: (key: string, params?: Record<string, string | number>) => string): string {
+function formatTimeRemaining(periodEnd: string, t: (key: TranslationKey, params?: Record<string, string | number>) => string): string {
   const end = new Date(periodEnd).getTime();
   const now = Date.now();
   const diffMs = end - now;
@@ -24,12 +25,12 @@ function formatTimeRemaining(periodEnd: string, t: (key: string, params?: Record
 // Challenge titles/descriptions are fixed, known ids defined server-side (config/challenges.js).
 // Falls back to the API-provided text if a challenge id has no translation yet.
 function localizeChallengeField(
-  t: (key: string, params?: Record<string, string | number>) => string,
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string,
   challengeId: string,
   field: "title" | "description",
   fallback: string,
 ): string {
-  const key = `challenge.${challengeId}.${field}`;
+  const key = `challenge.${challengeId}.${field}` as TranslationKey;
   const translated = t(key);
   return translated === key ? fallback : translated;
 }
@@ -88,7 +89,7 @@ export default function ChallengeCard({ challenge }: ChallengeCardProps) {
                 <span>
                   {(() => {
                     const tierLabel = t(`tier.${challenge.nextTier}`);
-                    const fullText = t("challengeCard.moreForTier", { count: challenge.remainingToNext, tier: tierLabel });
+                    const fullText = t("challengeCard.moreForTier", { count: challenge.remainingToNext ?? 0, tier: tierLabel });
                     const idx = fullText.indexOf(tierLabel);
                     if (idx === -1) return fullText;
                     return (

@@ -30,6 +30,7 @@ export default function ProfileSettingsSection({
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const { showToast } = useToastContext();
   const [avatarColor, setAvatarColor] = useState("#4f46e5");
   const [avatarEmoji, setAvatarEmojiState] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export default function ProfileSettingsSection({
     fetchMyUsername().then((res) => {
       setCurrentUsername(res.username);
       if (res.username) setUsernameInput(res.username);
-    });
+    }).finally(() => setProfileLoading(false));
     fetchMyAvatar().then((res) => {
       setAvatarColor(res.avatarColor);
       setAvatarEmojiState(res.avatarEmoji);
@@ -85,10 +86,9 @@ export default function ProfileSettingsSection({
           type="text"
           value={username}
           onChange={(e) => setUsernameInput(e.target.value)}
-          placeholder="e.g. jane_doe"
+          placeholder="e.g. john_tan"
           className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
-        {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
       </SettingsSectionCard>
 
       <SettingsSectionCard title="Avatar colour">
@@ -151,7 +151,7 @@ export default function ProfileSettingsSection({
 
       <SettingsActionFooter
         onSave={handleSave}
-        saving={saving}
+        saving={saving || profileLoading}
         label={currentUsername ? "Update profile" : "Save profile"}
         error={error}
         hidden={hideSaveButton}

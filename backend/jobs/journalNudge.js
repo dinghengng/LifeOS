@@ -9,7 +9,7 @@ async function runJournalNudge() {
 
     //find users who have not written journal today
     const { rows: users } = await pool.query(`
-      SELECT DISTINCT u.id
+      SELECT DISTINCT u.id, u.email, np.quiet_start, np.quiet_end
       FROM users u
       LEFT JOIN notification_preferences np ON u.id = np.user_id
       WHERE COALESCE(np.journal_nudge, true) = true

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ThumbsUp } from "lucide-react";
 import { ProfilePost } from "../../../shared/types";
 import { toggleKudos } from "../../../shared/api";
+import { useTranslation } from "../../context/LanguageContext";
 
 const TIER_COLORS: Record<string, string> = {
   bronze: "#B08D57",
@@ -18,6 +19,7 @@ interface AchievementPostProps {
 }
 
 export function AchievementPost({ post, isOwnPost, onKudosChange }: AchievementPostProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleKudos = async () => {
@@ -47,7 +49,7 @@ export function AchievementPost({ post, isOwnPost, onKudosChange }: AchievementP
       <div className="flex items-center gap-2">
         <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: TIER_COLORS[post.tier] }} />
         <span className="text-sm font-medium capitalize text-slate-700">
-          {post.tier} — {post.challengeTitle}
+          {t(`tier.${post.tier}`)} — {post.challengeTitle}
         </span>
       </div>
       <button
@@ -56,7 +58,7 @@ export function AchievementPost({ post, isOwnPost, onKudosChange }: AchievementP
         className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
           post.hasKudosed ? "bg-indigo-100 text-indigo-700" : "bg-white text-slate-500 hover:bg-slate-100"
         } ${isOwnPost ? "cursor-not-allowed opacity-50" : ""}`}
-        title={isOwnPost ? "You can't kudos your own post" : post.hasKudosed ? "Remove kudos" : "Give kudos"}
+        title={isOwnPost ? t("achievementPost.cantKudosOwnPost") : post.hasKudosed ? t("achievementPost.removeKudos") : t("achievementPost.giveKudos")}
       >
         <ThumbsUp size={14} fill={post.hasKudosed ? "currentColor" : "none"} />
         {post.kudosCount}

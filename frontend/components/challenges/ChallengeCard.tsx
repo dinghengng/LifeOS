@@ -2,40 +2,55 @@ import { ChallengeProgress } from "../../../shared/types";
 import { createPost } from "../../../shared/api";
 import { useToastContext } from "../notifications/ToastContext";
 import ChallengeTier from "./ChallengeTier";
+import { useTranslation } from "../../context/LanguageContext";
 
 interface ChallengeCardProps {
   challenge: ChallengeProgress;
 }
 
-function formatTimeRemaining(periodEnd: string): string {
+function formatTimeRemaining(periodEnd: string, t: (key: string, params?: Record<string, string | number>) => string): string {
   const end = new Date(periodEnd).getTime();
   const now = Date.now();
   const diffMs = end - now;
-  if (diffMs <= 0) return "Resetting soon";
+  if (diffMs <= 0) return t("challengeCard.resettingSoon");
 
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
-  if (days > 0) return `${days}d ${hours}h left`;
-  return `${hours}h left`;
+  if (days > 0) return t("challengeCard.daysHoursLeft", { days, hours });
+  return t("challengeCard.hoursLeft", { hours });
+}
+
+// Challenge titles/descriptions are fixed, known ids defined server-side (config/challenges.js).
+// Falls back to the API-provided text if a challenge id has no translation yet.
+function localizeChallengeField(
+  t: (key: string, params?: Record<string, string | number>) => string,
+  challengeId: string,
+  field: "title" | "description",
+  fallback: string,
+): string {
+  const key = `challenge.${challengeId}.${field}`;
+  const translated = t(key);
+  return translated === key ? fallback : translated;
 }
 
 export default function ChallengeCard({ challenge }: ChallengeCardProps) {
+  const { t } = useTranslation();
   const { showToast } = useToastContext();
-  const periodLabel = challenge.period === "weekly" ? "Weekly" : "Monthly";
+  const periodLabel = challenge.period === "weekly" ? t("social.weekly") : t("social.monthly");
 
   const handleShare = async () => {
     if (!challenge.tier) return;
     try {
       await createPost(challenge.id, challenge.tier, challenge.periodStart, challenge.periodEnd);
-      showToast(`Shared your ${challenge.tier} tier on ${challenge.title}!`, "success");
+      showToast(t("challengeCard.sharedToast", { tier: t(`tier.${challenge.tier}`), title: localizeChallengeField(t, challenge.id, "title", challenge.title) }), "success");
     } catch (err) {
       console.warn(err);
       const message = err instanceof Error ? err.message : "";
       if (message === "Already shared this tier for this period") {
-        showToast(`You've already shared your ${challenge.tier} achievement this week.`, "error");
+        showToast(t("challengeCard.alreadySharedToast", { tier: t(`tier.${challenge.tier}`) }), "error");
       } else {
-        showToast("Could not share achievement. Please try again.", "error");
+        showToast(t("challengeCard.shareErrorToast"), "error");
       }
     }
   };
@@ -48,32 +63,45 @@ export default function ChallengeCard({ challenge }: ChallengeCardProps) {
             {periodLabel}
           </p> */}
           <h3 className="mt-1 text-base font-semibold text-slate-900">
-            {challenge.title}
+            {localizeChallengeField(t, challenge.id, "title", challenge.title)}
           </h3>
-          <p className="mt-1 text-sm text-slate-600">{challenge.description}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            {localizeChallengeField(t, challenge.id, "description", challenge.description)}
+          </p>
         </div>
 
         {challenge.tier ? (
           <span className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-700">
-            {challenge.tier}
+            {t(`tier.${challenge.tier}`)}
           </span>
         ) : null}
       </div>
 
       {!challenge.implemented ? (
-        <p className="mt-4 text-sm italic text-slate-400">Coming soon</p>
+        <p className="mt-4 text-sm italic text-slate-400">{t("challengeCard.comingSoon")}</p>
       ) : (
         <>
           <ChallengeTier count={challenge.count} tiers={challenge.tiers} currentTier={challenge.tier} />
             <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
-              <span>{formatTimeRemaining(challenge.periodEnd)}</span>
+              <span>{formatTimeRemaining(challenge.periodEnd, t)}</span>
               {challenge.nextTier ? (
                 <span>
-                  {challenge.remainingToNext} more for{" "}
-                  <span className="font-medium capitalize text-slate-700">{challenge.nextTier}</span>
+                  {(() => {
+                    const tierLabel = t(`tier.${challenge.nextTier}`);
+                    const fullText = t("challengeCard.moreForTier", { count: challenge.remainingToNext, tier: tierLabel });
+                    const idx = fullText.indexOf(tierLabel);
+                    if (idx === -1) return fullText;
+                    return (
+                      <>
+                        {fullText.slice(0, idx)}
+                        <span className="font-medium capitalize text-slate-700">{tierLabel}</span>
+                        {fullText.slice(idx + tierLabel.length)}
+                      </>
+                    );
+                  })()}
                 </span>
               ) : (
-                <span className="font-medium text-slate-700">Congratulations!</span>
+                <span className="font-medium text-slate-700">{t("challengeCard.congratulations")}</span>
               )}
             </div>
 
@@ -82,7 +110,7 @@ export default function ChallengeCard({ challenge }: ChallengeCardProps) {
                 onClick={handleShare}
                 className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
               >
-                Share achievement
+                {t("challengeCard.shareAchievement")}
               </button>
             ) : null}
           </>

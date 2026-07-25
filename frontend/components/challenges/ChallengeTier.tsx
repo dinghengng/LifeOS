@@ -1,3 +1,5 @@
+import { useTranslation } from "../../context/LanguageContext";
+
 interface ChallengeTierProps {
   count: number;
   tiers: { bronze: number; silver: number; gold: number };
@@ -13,14 +15,15 @@ const TIER_COLORS: Record<"bronze" | "silver" | "gold", string> = {
 const TIER_ORDER: Array<"bronze" | "silver" | "gold"> = ["bronze", "silver", "gold"];
 
 export default function ChallengeTier({ count, tiers, currentTier }: ChallengeTierProps) {
+  const { t } = useTranslation();
   const maxTarget = tiers.gold;
   const pct = Math.min(100, Math.round((count / maxTarget) * 100));
 
   return (
     <div className="mt-3">
       <div className="mb-2 flex items-center justify-between text-xs font-medium text-slate-500">
-        <span>{count} logged</span>
-        <span>{maxTarget} for Gold</span>
+        <span>{t("challengeTier.logged", { count })}</span>
+        <span>{t("challengeTier.forTier", { count: maxTarget, tier: t("tier.gold") })}</span>
       </div>
 
       <div className="h-2 w-full rounded-full bg-slate-100">
@@ -53,7 +56,7 @@ export default function ChallengeTier({ count, tiers, currentTier }: ChallengeTi
                   isEarned ? "font-semibold text-slate-800" : "text-slate-400",
                 ].join(" ")}
               >
-                {tier} ({tiers[tier]})
+                {t(`tier.${tier}`)} ({tiers[tier]})
               </span>
             </div>
           );

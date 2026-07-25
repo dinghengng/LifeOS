@@ -11,17 +11,20 @@ import LocalTabs from "../../components/layout/LocalTabs";
 import ChallengeCard from "../../components/challenges/ChallengeCard";
 import ProfileCard from "../../components/social/ProfileCard";
 import ProfileSetupModal from "../../components/social/ProfileSetupModal";
-import { useAuth } from "../../context/AuthContext"; 
-
-const SOCIAL_TABS = [
-  { id: "challenges", label: "Challenges" },
-  { id: "profile", label: "Profile" },
-  { id: "community", label: "Community" },
-];
+import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LanguageContext";
 
 export default function ChallengesPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
+  const { t, locale } = useTranslation();
+
+  const SOCIAL_TABS = [
+    { id: "challenges", label: t("social.tabChallenges") },
+    { id: "profile", label: t("social.tabProfile") },
+    { id: "community", label: t("social.tabCommunity") },
+  ];
+
   const [activeTab, setActiveTab] = useState<string>(SOCIAL_TABS[0].id);
 
   const [challenges, setChallenges] = useState<ChallengeProgress[]>([]);
@@ -52,11 +55,11 @@ export default function ChallengesPage() {
       setChallenges(data);
     } catch (err) {
       console.error(err);
-      setError("Failed to load challenges. Please try again.");
+      setError(t("social.errorLoadChallenges"));
     } finally {
       setDataLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!authLoading && user && activeTab === "challenges") loadChallenges();
@@ -119,7 +122,7 @@ export default function ChallengesPage() {
   if (authLoading || !user) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-sm text-slate-400">Loading…</p>
+        <p className="text-sm text-slate-400">{t("social.loading")}</p>
       </main>
     );
   }
@@ -135,15 +138,15 @@ export default function ChallengesPage() {
             onClick={handleLogout}
             className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-600 hover:bg-red-50"
           >
-            Logout
+            {t("nav.logout")}
           </button>
         }
       />
 
       <PageHeader
-        eyebrow={new Date().toLocaleDateString("en-SG", { weekday: "long", day: "numeric", month: "long" })}
-        title="Social"
-        description="Complete challenges, connect with friends and share achievements"
+        eyebrow={new Date().toLocaleDateString(locale === "zh" ? "zh-CN" : "en-SG", { weekday: "long", day: "numeric", month: "long" })}
+        title={t("social.title")}
+        description={t("social.description")}
       />
 
       <LocalTabs items={SOCIAL_TABS} activeId={activeTab} onChange={setActiveTab} />
@@ -152,17 +155,17 @@ export default function ChallengesPage() {
           <>
             {error && <p className="mb-4 text-sm text-red-600 text-center">{error}</p>}
             {dataLoading ? (
-              <p className="text-center text-sm text-slate-500 mt-4">Loading challenges...</p>
+              <p className="text-center text-sm text-slate-500 mt-4">{t("social.loadingChallenges")}</p>
             ) : challenges.length === 0 ? (
               <p className="text-center text-sm text-slate-500 mt-4">
-                No challenges available right now.
+                {t("social.noChallenges")}
               </p>
             ) : (
               <div className="flex flex-col gap-8">
                 {weeklyChallenges.length > 0 && (
                   <section>
                     <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      Weekly
+                      {t("social.weekly")}
                     </h2>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {weeklyChallenges.map((c) => (
@@ -174,7 +177,7 @@ export default function ChallengesPage() {
                 {monthlyChallenges.length > 0 && (
                   <section>
                     <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-                      Monthly
+                      {t("social.monthly")}
                     </h2>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {monthlyChallenges.map((c) => (
@@ -201,7 +204,7 @@ export default function ChallengesPage() {
               />
             )}
             {profileLoading ? (
-              <p className="text-center text-sm text-slate-500 mt-4">Loading your profile...</p>
+              <p className="text-center text-sm text-slate-500 mt-4">{t("social.loadingProfile")}</p>
             ) : myProfile ? (
               <ProfileCard
                 name={myProfile.name}
@@ -214,7 +217,7 @@ export default function ChallengesPage() {
               />
             ) : (
               <p className="text-center text-sm text-slate-500 mt-4">
-                Set a username in Settings to enable your profile.
+                {t("social.setUsernamePrompt")}
               </p>
             )}
           </>
@@ -227,11 +230,11 @@ export default function ChallengesPage() {
               type="text"
               value={query}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search by username..."
+              placeholder={t("social.searchPlaceholder")}
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <div className="mt-4 flex flex-col gap-2">
-              {searchLoading && <p className="text-sm text-slate-400">Searching...</p>}
+              {searchLoading && <p className="text-sm text-slate-400">{t("social.searching")}</p>}
               {results.map((u) => (
                 <button
                   key={u.id}
@@ -251,7 +254,7 @@ export default function ChallengesPage() {
                 </button>
               ))}
               {!searchLoading && query.trim() && results.length === 0 && (
-                <p className="text-sm text-slate-400">No users found.</p>
+                <p className="text-sm text-slate-400">{t("social.noUsersFound")}</p>
               )}
             </div>
           </div>

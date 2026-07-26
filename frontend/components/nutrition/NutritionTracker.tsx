@@ -2,6 +2,32 @@
 import { useState } from "react";
 import { SquarePen, Trash2 } from "lucide-react";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
+
+const FITNESS_GOAL_KEY_MAP: Record<string, TranslationKey> = {
+  fat_loss: "nutritionTracker.goal.lose_weight",
+  lose_weight: "nutritionTracker.goal.lose_weight",
+
+  maintain: "nutritionTracker.goal.maintain",
+  maintain_weight: "nutritionTracker.goal.maintain",
+
+  muscle_gain: "nutritionTracker.goal.gain_muscle",
+  gain_muscle: "nutritionTracker.goal.gain_muscle",
+};
+
+function translateFitnessGoal(
+  goal: string,
+  t: (key: TranslationKey) => string
+): string {
+  const normalisedGoal = goal
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+  const key = FITNESS_GOAL_KEY_MAP[normalisedGoal];
+
+  return key ? t(key) : goal.replaceAll("_", " ");
+}
 
 export type Meal = {
   id: string;
@@ -22,7 +48,7 @@ interface NutritionTrackerProps {
   onDeleteMealClick: (id: string) => void;
   calorieTarget: number;
   proteinTarget: number;
-  fitnessGoal: string; // Add this
+  fitnessGoal: string;
 }
 
 export default function NutritionTracker({
@@ -121,7 +147,7 @@ export default function NutritionTracker({
           >
             {t("nutritionTracker.goalLabel")}{" "}
             <span style={{ color: "#4f46e5", textTransform: "capitalize" }}>
-              {fitnessGoal.replace("_", " ")}
+              {translateFitnessGoal(fitnessGoal, t)}
             </span>
           </p>
           <p

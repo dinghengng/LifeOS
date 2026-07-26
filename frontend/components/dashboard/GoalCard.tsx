@@ -1,6 +1,7 @@
 "use client";
 import { Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 export type Goal = {
   id: string;
@@ -18,6 +19,45 @@ const MONTH_INDEX: Record<string, number> = {
   January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
   July: 6, August: 7, September: 8, October: 9, November: 10, December: 11,
 };
+
+const CATEGORY_KEY_MAP: Record<string, TranslationKey> = {
+  Fitness: "category.fitness",
+  Spiritual: "category.spiritual",
+  Relationship: "category.relationship",
+  Career: "category.career",
+  Finance: "category.finance",
+};
+
+function getTranslatedCategory(cat: string, t: (key: TranslationKey) => string): string {
+  return CATEGORY_KEY_MAP[cat] ? t(CATEGORY_KEY_MAP[cat]) : cat;
+}
+
+const MONTH_KEY_MAP: Record<string, TranslationKey> = {
+  January: "month.january",
+  February: "month.february",
+  March: "month.march",
+  April: "month.april",
+  May: "month.may",
+  June: "month.june",
+  July: "month.july",
+  August: "month.august",
+  September: "month.september",
+  October: "month.october",
+  November: "month.november",
+  December: "month.december",
+};
+
+function formatDueDate(
+  dueDate: string,
+  locale: string,
+  t: (key: TranslationKey) => string
+): string {
+  const match = dueDate.trim().match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if (!match || !(match[1] in MONTH_KEY_MAP)) return dueDate;
+  const monthLabel = t(MONTH_KEY_MAP[match[1]]);
+  const year = match[2];
+  return locale === "zh" ? `${year}年${monthLabel}` : `${monthLabel} ${year}`;
+}
 
 function getDaysUntilDue(dueDate: string): number | null {
   const match = dueDate.trim().match(/^([A-Za-z]+)\s+(\d{4})$/);
@@ -48,7 +88,7 @@ export default function GoalCard({
   onEdit: (goal: Goal) => void;
   onDelete: (goalId: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const doneMilestones = goal.milestones.filter((m) => m.done).length;
   const urgencyColor = getDueDateUrgencyColor(goal.dueDate);
 
@@ -61,7 +101,7 @@ export default function GoalCard({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
         <div>
           <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.04em", textTransform: "uppercase", color: goal.color, display: "block", marginBottom: 2 }}>
-            {goal.category}
+            {getTranslatedCategory(goal.category, t)}
           </span>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "var(--color-text-primary)" }}>
             {goal.title}
@@ -69,7 +109,7 @@ export default function GoalCard({
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: 8, flexShrink: 0 }}>
           <span style={{ fontSize: 11, color: urgencyColor || "var(--color-text-secondary)", fontWeight: urgencyColor ? 700 : 400, whiteSpace: "nowrap" }}>
-            {t("goalCard.due", { date: goal.dueDate })}
+            {t("goalCard.due", { date: formatDueDate(goal.dueDate, locale, t) })}
           </span>
           <button
             onClick={() => onEdit(goal)}

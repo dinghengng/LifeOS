@@ -5,6 +5,7 @@ import { useToastContext } from "../notifications/ToastContext";
 import SettingsSectionCard from "./SettingsSectionCard";
 import SettingsActionFooter from "./SettingsActionFooter";
 import { useAvatar } from "../../context/AvatarContext";
+import { useTranslation } from "../../context/LanguageContext";
 
 const PEOPLE_EMOJIS = [
   "👨🏻", "👨🏼", "👨🏽", "👨🏾", "👨🏿",
@@ -35,6 +36,7 @@ export default function ProfileSettingsSection({
   const [avatarColor, setAvatarColor] = useState("#4f46e5");
   const [avatarEmoji, setAvatarEmojiState] = useState<string | null>(null);
   const { setAvatarLocal } = useAvatar();
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchMyUsername().then((res) => {
@@ -51,7 +53,7 @@ export default function ProfileSettingsSection({
     setError(null);
     const trimmed = username.trim().toLowerCase();
     if (!/^[a-z0-9_]{2,30}$/.test(trimmed)) {
-      setError("Username must be 2-30 characters (letters, numbers, underscore only)");
+      setError(t("profileSettings.usernameError"));
       return null;
     }
     setSaving(true);
@@ -59,13 +61,13 @@ export default function ProfileSettingsSection({
       const result = await apiSetUsername(trimmed);
       setCurrentUsername(result.username);
       await apiSetAvatar(avatarColor, avatarEmoji);
-      showToast("Profile updated");
+      showToast(t("profileSettings.toastUpdated"));
       setAvatarLocal(avatarColor, avatarEmoji);
       onSaved?.({ username: result.username });
       return { username: result.username };
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save username");
-      showToast("Failed to save profile", "error");
+      setError(err instanceof Error ? err.message : t("profileSettings.errorDefault"));
+      showToast(t("profileSettings.toastSaveFailed"), "error");
       return null;
     } finally {
       setSaving(false);
@@ -78,22 +80,22 @@ export default function ProfileSettingsSection({
 
   return (
     <div className="space-y-6">
-      <SettingsSectionCard title="Username">
+      <SettingsSectionCard title={t("profileSettings.usernameTitle")}>
         <p className="mt-1 text-xs text-slate-500">
-          This is how other users will find and see you in Community search.
+          {t("profileSettings.usernameDescription")}
         </p>
         <input
           type="text"
           value={username}
           onChange={(e) => setUsernameInput(e.target.value)}
-          placeholder="e.g. john_tan"
+          placeholder={t("profileSettings.usernamePlaceholder")}
           className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </SettingsSectionCard>
 
-      <SettingsSectionCard title="Avatar colour">
+      <SettingsSectionCard title={t("profileSettings.avatarColourTitle")}>
         <p className="mt-1 text-xs text-slate-500">
-          Pick any colour for your avatar background.
+          {t("profileSettings.avatarColourDescription")}
         </p>
         <div className="mt-3 flex items-center gap-3">
           <label className="relative h-14 w-14 flex-shrink-0 cursor-pointer overflow-hidden rounded-full border-2 border-white shadow">
@@ -109,9 +111,9 @@ export default function ProfileSettingsSection({
         </div>
       </SettingsSectionCard>
 
-      <SettingsSectionCard title="Avatar emoji">
+      <SettingsSectionCard title={t("profileSettings.avatarEmojiTitle")}>
         <p className="mt-1 text-xs text-slate-500">
-          Pick an emoji to replace your initial, or leave blank to use your first letter.
+          {t("profileSettings.avatarEmojiDescription")}
         </p>
         <div className="mt-3 grid grid-cols-8 gap-2 sm:grid-cols-10">
           {[...PEOPLE_EMOJIS, ...ANIMAL_EMOJIS].map((em) => (
@@ -133,12 +135,12 @@ export default function ProfileSettingsSection({
             onClick={() => setAvatarEmojiState(null)}
             className="mt-3 text-xs font-medium text-slate-500 hover:text-slate-700"
           >
-            Clear emoji (use initial instead)
+            {t("profileSettings.clearEmoji")}
           </button>
         )}
       </SettingsSectionCard>
 
-      <SettingsSectionCard title="Preview">
+      <SettingsSectionCard title={t("profileSettings.previewTitle")}>
         <div className="flex justify-center rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div
             className="flex h-12 w-12 items-center justify-center rounded-2xl text-xl font-semibold text-white"
@@ -152,7 +154,7 @@ export default function ProfileSettingsSection({
       <SettingsActionFooter
         onSave={handleSave}
         saving={saving || profileLoading}
-        label={currentUsername ? "Update profile" : "Save profile"}
+        label={currentUsername ? t("profileSettings.updateProfile") : t("profileSettings.saveProfile")}
         error={error}
         hidden={hideSaveButton}
       />

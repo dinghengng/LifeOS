@@ -17,7 +17,6 @@ const {
 } = require("./routes/nutrition");
 const { createChallengesRouter } = require("./routes/challenges");
 const { createSocialRouter } = require("./routes/social");
-const { createDevTestRouter } = require('./routes/devTest');
 
 // Instantiating our application instance by calling the express function
 const app = express();
@@ -129,8 +128,6 @@ app.use("/api/challenges", createChallengesRouter(requireAuth));
 // social
 app.use("/api/social", createSocialRouter(requireAuth));
 
-// noti test
-app.use('/api/dev', createDevTestRouter(requireAuth));
 
 //Explicitly listen on local host '0.0.0.0' to receive outside network connections
 app.listen(PORT, "0.0.0.0", () => {

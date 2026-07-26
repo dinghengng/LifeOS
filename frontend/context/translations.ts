@@ -1062,7 +1062,8 @@ export const translations = {
     "taskList.confirmDeleteTask": "Delete \"{title}\"?",
     "goalTracker.confirmDeleteGoal": "Delete \"{title}\"? This can't be undone.",
     "habitTracker.confirmDeleteHabit": "Delete \"{name}\"? This will remove its history too.",
-
+    "taskCalendar.noTasksDue": "No tasks due this day.",
+    "taskCalendar.tasksDueTooltip": "{count} task(s) due",
 
   },
   zh: {
@@ -2134,6 +2135,8 @@ export const translations = {
     "taskList.confirmDeleteTask": "确定要删除「{title}」吗？",
     "goalTracker.confirmDeleteGoal": "确定要删除「{title}」吗？此操作无法撤销。",
     "habitTracker.confirmDeleteHabit": "确定要删除「{name}」吗？其历史记录也会被删除。",
+    "taskCalendar.noTasksDue": "这一天没有到期的任务。",
+    "taskCalendar.tasksDueTooltip": "{count} 项任务到期",
   }
 } as const satisfies Record<Locale, Record<string, string>>;
 

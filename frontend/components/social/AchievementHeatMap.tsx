@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { ProfilePost } from "../../../shared/types";
 import { AchievementPost } from "./AchievementPost";
 import { useTranslation } from "../../context/LanguageContext";
+import type { TranslationKey } from "../../context/translations";
 
 const TIER_COLORS: Record<string, string> = {
   bronze: "#E8965A",
@@ -20,7 +21,9 @@ const TIER_GLOW: Record<string, string> = {
 const EMPTY_COLOR = "#EDF1F5";
 
 function getSGTDateStr(date: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Singapore" }).format(date);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Singapore",
+  }).format(date);
 }
 
 function getWeekStartSGT(date: Date): Date {
@@ -44,7 +47,9 @@ function formatRange(start: string, end: string, locale: string): string {
 function getMondaysInMonth(year: number, month: number): Date[] {
   const mondays: Date[] = [];
   const cursor = new Date(Date.UTC(year, month, 1));
-  const nextMonthStart = new Date(Date.UTC(month === 11 ? year + 1 : year, month === 11 ? 0 : month + 1, 1));
+  const nextMonthStart = new Date(
+    Date.UTC(month === 11 ? year + 1 : year, month === 11 ? 0 : month + 1, 1),
+  );
   while (cursor < nextMonthStart) {
     if (cursor.getUTCDay() === 1) mondays.push(new Date(cursor));
     cursor.setUTCDate(cursor.getUTCDate() + 1);
@@ -72,10 +77,18 @@ interface ChallengeRow {
 interface AchievementHeatmapProps {
   posts: ProfilePost[];
   isOwnProfile: boolean;
-  onKudosChange: (postId: number, kudosCount: number, hasKudosed: boolean) => void;
+  onKudosChange: (
+    postId: number,
+    kudosCount: number,
+    hasKudosed: boolean,
+  ) => void;
 }
 
-export default function AchievementHeatmap({ posts, isOwnProfile, onKudosChange }: AchievementHeatmapProps) {
+export default function AchievementHeatmap({
+  posts,
+  isOwnProfile,
+  onKudosChange,
+}: AchievementHeatmapProps) {
   const { t, locale } = useTranslation();
   const [viewMode, setViewMode] = useState<"month" | "year">("month");
   const [selectedPost, setSelectedPost] = useState<ProfilePost | null>(null);
@@ -89,33 +102,48 @@ export default function AchievementHeatmap({ posts, isOwnProfile, onKudosChange 
   }, [viewMode, currentYear, currentMonth]);
 
   const rows: ChallengeRow[] = useMemo(() => {
-    const byChallenge = new Map<string, { title: string; posts: ProfilePost[] }>();
+    const byChallenge = new Map<
+      string,
+      { title: string; posts: ProfilePost[] }
+    >();
     for (const post of posts) {
       const existing = byChallenge.get(post.challengeId);
       if (existing) {
         existing.posts.push(post);
       } else {
-        byChallenge.set(post.challengeId, { title: post.challengeTitle, posts: [post] });
+        byChallenge.set(post.challengeId, {
+          title: post.challengeTitle,
+          posts: [post],
+        });
       }
     }
 
-    return Array.from(byChallenge.entries()).map(([challengeId, { title, posts: challengePosts }]) => {
-      const cells = weekStarts.map((weekStart) => {
-        const match = challengePosts.find((p) => {
-          const postWeekStart = getWeekStartSGT(new Date(p.periodStart));
-          return postWeekStart.getTime() === weekStart.getTime();
+    return Array.from(byChallenge.entries()).map(
+      ([challengeId, { title, posts: challengePosts }]) => {
+        const cells = weekStarts.map((weekStart) => {
+          const match = challengePosts.find((p) => {
+            const postWeekStart = getWeekStartSGT(new Date(p.periodStart));
+            return postWeekStart.getTime() === weekStart.getTime();
+          });
+          return match ?? null;
         });
-        return match ?? null;
-      });
-      return { challengeId, challengeTitle: title, cells };
-    });
+        return { challengeId, challengeTitle: title, cells };
+      },
+    );
   }, [posts, weekStarts]);
 
   if (rows.length === 0) {
-    return <p className="text-sm text-slate-400">{t("achievementHeatmap.noAchievements")}</p>;
+    return (
+      <p className="text-sm text-slate-400">
+        {t("achievementHeatmap.noAchievements")}
+      </p>
+    );
   }
 
-  const monthLabel = now.toLocaleDateString(locale === "zh" ? "zh-CN" : undefined, { month: "long", timeZone: "Asia/Singapore" });
+  const monthLabel = now.toLocaleDateString(
+    locale === "zh" ? "zh-CN" : undefined,
+    { month: "long", timeZone: "Asia/Singapore" },
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -127,7 +155,9 @@ export default function AchievementHeatmap({ posts, isOwnProfile, onKudosChange 
           <button
             onClick={() => setViewMode("month")}
             className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-              viewMode === "month" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"
+              viewMode === "month"
+                ? "bg-slate-900 text-white"
+                : "text-slate-500 hover:bg-slate-100"
             }`}
           >
             {t("achievementHeatmap.thisMonth")}
@@ -135,7 +165,9 @@ export default function AchievementHeatmap({ posts, isOwnProfile, onKudosChange 
           <button
             onClick={() => setViewMode("year")}
             className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
-              viewMode === "year" ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"
+              viewMode === "year"
+                ? "bg-slate-900 text-white"
+                : "text-slate-500 hover:bg-slate-100"
             }`}
           >
             {t("achievementHeatmap.year")}
@@ -146,8 +178,11 @@ export default function AchievementHeatmap({ posts, isOwnProfile, onKudosChange 
       <div className="flex flex-col gap-2 overflow-x-auto">
         {rows.map((row) => (
           <div key={row.challengeId} className="flex items-center gap-2">
-            <span className="w-28 shrink-0 truncate text-xs font-medium text-slate-600" title={row.challengeTitle}>
-              {row.challengeTitle}
+            <span
+              className="w-28 shrink-0 truncate text-xs font-medium text-slate-600"
+              title={t(`challenge.${row.challengeId}.title` as TranslationKey)}
+            >
+              {t(`challenge.${row.challengeId}.title` as TranslationKey)}
             </span>
             <div className="flex gap-[3px]">
               {row.cells.map((post, i) => {
@@ -158,11 +193,21 @@ export default function AchievementHeatmap({ posts, isOwnProfile, onKudosChange 
                     type="button"
                     disabled={isEmpty}
                     onClick={() => post && setSelectedPost(post)}
-                    title={post ? `${t(`tier.${post.tier}`)} · ${formatRange(post.periodStart, post.periodEnd, locale)}` : undefined}
+                    title={
+                      post
+                        ? `${t(`tier.${post.tier}`)} · ${formatRange(post.periodStart, post.periodEnd, locale)}`
+                        : undefined
+                    }
                     className={`h-3.5 w-3.5 shrink-0 rounded-sm transition-transform ${
-                      isEmpty ? "cursor-default" : "cursor-pointer hover:scale-125"
+                      isEmpty
+                        ? "cursor-default"
+                        : "cursor-pointer hover:scale-125"
                     }`}
-                    style={{ backgroundColor: post ? TIER_COLORS[post.tier] : EMPTY_COLOR }}
+                    style={{
+                      backgroundColor: post
+                        ? TIER_COLORS[post.tier]
+                        : EMPTY_COLOR,
+                    }}
                   />
                 );
               })}
@@ -182,7 +227,11 @@ export default function AchievementHeatmap({ posts, isOwnProfile, onKudosChange 
               isOwnPost={isOwnProfile}
               onKudosChange={(postId, kudosCount, hasKudosed) => {
                 onKudosChange(postId, kudosCount, hasKudosed);
-                setSelectedPost((prev) => (prev && prev.id === postId ? { ...prev, kudosCount, hasKudosed } : prev));
+                setSelectedPost((prev) =>
+                  prev && prev.id === postId
+                    ? { ...prev, kudosCount, hasKudosed }
+                    : prev,
+                );
               }}
             />
           </div>

@@ -13,15 +13,16 @@ interface TaskListProps {
 }
 
 // helper function for deadline formatting
-function formatDeadline(isoString: string): string {
+function formatDeadline(isoString: string, locale: string): string {
   const date = new Date(isoString);
-  return `Due: ${date.toLocaleString(undefined, {
+  const localeTag = locale === "zh" ? "zh-CN" : "en-GB";
+  return date.toLocaleString(localeTag, {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  })}`;
+  });
 }
 
 // check if a task is overdue
@@ -60,7 +61,7 @@ export default function TaskList({
   onDeleteTask,
   onEditTask,
 }: TaskListProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const pendingTask = tasks.find((task) => task.id === confirmDeleteId) ?? null;
 
@@ -166,7 +167,7 @@ export default function TaskList({
                             {taskIsOverdue(task.dueDate, task.isCompleted)
                               ? t("taskList.overdue")
                               : t("taskList.due")}{" "}
-                            {formatDeadline(task.dueDate)}
+                            {formatDeadline(task.dueDate, locale)}
                           </span>
                         )}
 

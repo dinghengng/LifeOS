@@ -2,10 +2,34 @@
 
 import { useMemo, useState } from "react";
 import { Task, Priority } from "../../shared/types";
+import { useTranslation } from "../context/LanguageContext";
 
-const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+const WEEKDAY_KEYS = [
+  "day.sunday.short",
+  "day.monday.short",
+  "day.tuesday.short",
+  "day.wednesday.short",
+  "day.thursday.short",
+  "day.friday.short",
+  "day.saturday.short",
+] as const;
 
-// Same priority order used for sorting on the Tasks page 
+const MONTH_KEYS = [
+  "month.january",
+  "month.february",
+  "month.march",
+  "month.april",
+  "month.may",
+  "month.june",
+  "month.july",
+  "month.august",
+  "month.september",
+  "month.october",
+  "month.november",
+  "month.december",
+] as const;
+
+// Same priority order used for sorting on the Tasks page
 const priorityRank: Record<Priority, number> = {
   critical: 1,
   high: 2,
@@ -28,6 +52,15 @@ const priorityBadgeStyles: Record<Priority, string> = {
   none: "bg-slate-50 text-slate-600 border-slate-200",
 };
 
+const priorityLabelKeys: Record<
+  Priority,
+  "priority.critical" | "priority.high" | "priority.low" | "priority.none"
+> = {
+  critical: "priority.critical",
+  high: "priority.high",
+  low: "priority.low",
+  none: "priority.none",
+};
 
 function toSGT(d: Date) {
   const utc = d.getTime() + d.getTimezoneOffset() * 60000;
@@ -50,6 +83,7 @@ export default function TaskCalendar({ tasks }: TaskCalendarProps) {
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const { t, locale } = useTranslation();
 
   // Group tasks by due date, keyed by "YYYY-MM-DD"
   const tasksByDate = useMemo(() => {
@@ -70,9 +104,7 @@ export default function TaskCalendar({ tasks }: TaskCalendarProps) {
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
-  const monthLabel = viewDate
-    .toLocaleString("en-US", { month: "long" })
-    .toUpperCase();
+  const monthLabel = t(MONTH_KEYS[month]).toUpperCase();
 
   const firstDayOfWeek = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -97,8 +129,9 @@ export default function TaskCalendar({ tasks }: TaskCalendarProps) {
   };
 
   const selectedTasks = selectedKey ? tasksByDate.get(selectedKey) || [] : [];
+  const selectedLocale = locale === "zh" ? "zh-CN" : "en-GB";
   const selectedLabel = selectedKey
-    ? new Date(selectedKey + "T00:00:00").toLocaleDateString("en-GB", {
+    ? new Date(selectedKey + "T00:00:00").toLocaleDateString(selectedLocale, {
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -131,9 +164,9 @@ export default function TaskCalendar({ tasks }: TaskCalendarProps) {
       </div>
 
       <div className="grid grid-cols-7 gap-y-2 text-center">
-        {WEEKDAYS.map((wd, i) => (
+        {WEEKDAY_KEYS.map((key, i) => (
           <div key={i} className="text-xs font-semibold text-slate-400">
-            {wd}
+            {t(key)}
           </div>
         ))}
 
@@ -153,7 +186,9 @@ export default function TaskCalendar({ tasks }: TaskCalendarProps) {
               className="flex flex-col items-center justify-center gap-0.5 py-1"
               title={
                 hasTasks
-                  ? `${dayTasks.length} task${dayTasks.length > 1 ? "s" : ""} due`
+                  ? t("taskCalendar.tasksDueTooltip", {
+                      count: dayTasks.length,
+                    })
                   : undefined
               }
             >
@@ -170,10 +205,10 @@ export default function TaskCalendar({ tasks }: TaskCalendarProps) {
               </span>
               {hasTasks && (
                 <span className="flex gap-0.5">
-                  {dayTasks.slice(0, 3).map((t, idx) => (
+                  {dayTasks.slice(0, 3).map((task, idx) => (
                     <span
                       key={idx}
-                      className={`w-1 h-1 rounded-full ${priorityDotStyles[t.priority].split(" ")[0]}`}
+                      className={`w-1 h-1 rounded-full ${priorityDotStyles[task.priority].split(" ")[0]}`}
                     />
                   ))}
                 </span>
@@ -189,7 +224,9 @@ export default function TaskCalendar({ tasks }: TaskCalendarProps) {
             {selectedLabel}
           </h4>
           {selectedTasks.length === 0 ? (
-            <p className="text-sm text-slate-400">No tasks due this day.</p>
+            <p className="text-sm text-slate-400">
+              {t("taskCalendar.noTasksDue")}
+            </p>
           ) : (
             <ul className="flex flex-col gap-2">
               {selectedTasks.map((task) => (
@@ -210,7 +247,7 @@ export default function TaskCalendar({ tasks }: TaskCalendarProps) {
                     <span
                       className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${priorityBadgeStyles[task.priority]}`}
                     >
-                      {task.priority}
+                      {t(priorityLabelKeys[task.priority])}
                     </span>
                   )}
                 </li>

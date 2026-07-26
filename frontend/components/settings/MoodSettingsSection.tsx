@@ -37,15 +37,15 @@ const DEFAULT_ENGLISH_LABELS: Record<number, string> = {
 // Emoji pack names come from the backend as fixed lowercase slugs.
 const EMOJI_PACK_KEYS: Record<string, TranslationKey> = {
   classic: "emojiPack.classic",
-  energy: "emojiPack.energy",
-  animals: "emojiPack.animals",
-  food: "emojiPack.food",
+  vibes: "emojiPack.vibes",
+  catexpressions: "emojiPack.catExpressions",
   weather: "emojiPack.weather",
-  minimalist: "emojiPack.minimalist",
+  approvallevels: "emojiPack.approvalLevels",
 };
 
 function emojiPackLabel(pack: EmojiPack, t: (key: TranslationKey) => string): string {
-  const key = EMOJI_PACK_KEYS[pack.name.toLowerCase()];
+  const normalized = pack.name.replace(/\s+/g, "").toLowerCase();
+  const key = EMOJI_PACK_KEYS[normalized];
   return key ? t(key) : pack.name;
 }
 

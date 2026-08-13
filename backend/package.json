@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo 'No tests yet' && exit 0"
+    "test": "vitest run",
+    "test:unit": "vitest run __tests__/unit",
+    "test:integration": "vitest run __tests__/integration",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +29,8 @@
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
-    "@types/node": "^25.9.1"
+    "@types/node": "^25.9.1",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.10"
   }
 }
